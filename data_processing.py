@@ -1,7 +1,7 @@
 from faceit_api.faceit_v4 import FaceitData
 from faceit_api.faceit_v1 import FaceitData_v1
 
-from API_tokens import faceit_token
+from functions import load_api_keys
 
 import json
 import os
@@ -13,7 +13,9 @@ import requests
 
 import pandas as pd
 
-faceit_data = FaceitData(faceit_token)
+api_keys = load_api_keys()
+
+faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"))
 faceit_data_v1 = FaceitData_v1()
 
 ## Data paths

@@ -6,10 +6,11 @@ from datetime import datetime
 from faceit_api.faceit_v4 import FaceitData
 from faceit_api.faceit_v1 import FaceitData_v1
 
-from API_tokens import faceit_token, discord_token
 from data_processing import store_team_data, read_team_data, team_data_path
-from functions import find_team_name
+from functions import find_team_name, load_api_keys
 
+# Initialize the API keys
+api_keys = load_api_keys()
 
 class Faceit(commands.Cog):
     def __init__(self, client):
@@ -24,7 +25,7 @@ class Faceit(commands.Cog):
     # Fetching data from FACEIT API
     @commands.command()
     async def faceit(self, ctx, username):
-        faceit_data = FaceitData(faceit_token)
+        faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"))
 
         player_details = faceit_data.player_details(username)
 

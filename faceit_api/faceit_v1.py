@@ -7,11 +7,6 @@ class FaceitData_v1:
     """The Data API for Faceit"""
 
     def __init__(self):
-        """
-        Constructor Keyword arguments:
-
-        :param api_token: The api token used for the Faceit API (either client or server API types)
-        """
 
         self.base_url = 'https://faceit.com/api'
 

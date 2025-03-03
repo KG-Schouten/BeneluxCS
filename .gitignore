@@ -173,3 +173,6 @@ cython_debug/
 # ignore all data files in the data folder
 data/*
 
+# ignore the api key file
+tokens/api_keys.json
+
