@@ -2,6 +2,7 @@ import json
 from rapidfuzz import fuzz, process
 from datetime import *
 import sys  # Allows safe exit
+import mysql.connector
 
 # Path to the API keys file
 API_KEYS_FILE = "tokens/api_keys.json"
@@ -31,7 +32,7 @@ def load_api_keys():
         sys.exit(1) # Exit if file is missing
 
     # Validate that required keys exist and are not empty
-    required_keys = ["FACEIT_TOKEN", "DISCORD_TOKEN"]
+    required_keys = ["FACEIT_TOKEN", "DISCORD_TOKEN", "MYSQL_PASSWORD"]
     missing_keys = [key for key in required_keys if not api_keys.get(key)]
 
     if missing_keys:
