@@ -12,21 +12,9 @@ from functions import find_team_name, load_api_keys
 # Initialize the API keys
 api_keys = load_api_keys()
 
-class faceit(commands.Cog):
+class BeneluxHub(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    # Fetching data from FACEIT API
-    @commands.command()
-    async def faceit(self, ctx, username):
-        faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"))
-
-        player_details = faceit_data.player_details(username)
-
-        player_id = player_details["player_id"]
-
-        await ctx.send(player_id)
-
-
 def setup(client : commands.Bot):
-    client.add_cog(faceit(client))
+    client.add_cog(BeneluxHub(client))

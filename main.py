@@ -10,7 +10,9 @@ client = commands.Bot(command_prefix='!', intents=intents)
 
 extensions = {
     "main_cog",
+    "ESEA",
     "faceit",
+    "beneluxhub",
 }
 
 api_keys = load_api_keys()
