@@ -2,6 +2,31 @@ import json
 import requests
 import urllib.parse
 
+def check_response(res):
+    if res.status_code == 200:
+        return json.loads(res.content.decode('utf-8'))
+    elif res.status_code ==  400:
+        print("Bad request - The request was unacceptable, often due to missing a required parameter")
+        return res.status_code
+    elif res.status_code ==  401:
+        print("Unauthorized - Invalid or missing credentials")
+        return res.status_code
+    elif res.status_code ==  403:
+        print("Forbidden - The request was understood, but it has been refused or access is not allowed")
+        return res.status_code
+    elif res.status_code ==  404:
+        print("Not Found - The URI requested is invalid or the resource requested, such as a user, does not exist")
+        return res.status_code
+    elif res.status_code ==  429:
+        print("Too Many Requests - Rate limiting has been applied")
+        return res.status_code
+    elif res.status_code ==  503:
+        print("Service Unavailable - The service is temporarily unavailable")
+        return res.status_code
+    else:
+        print("No idea what response we got")
+        return
+
 
 class FaceitData:
     """The Data API for Faceit"""
@@ -35,10 +60,7 @@ class FaceitData:
 
         res = requests.get(api_url, headers=self.headers)
 
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
         
     def leagues_season_details(self, league_id, season_id):
         """
@@ -53,10 +75,7 @@ class FaceitData:
 
         res = requests.get(api_url, headers=self.headers)
 
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
 
     # Championships
@@ -78,10 +97,7 @@ class FaceitData:
 
         res = requests.get(api_url, headers=self.headers)
 
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def championship_matches(self, championship_id, type_of_match="all", starting_item_position=0, return_items=20):
         """
@@ -98,10 +114,8 @@ class FaceitData:
             self.base_url, championship_id, type_of_match, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        
+        return check_response(res)
 
     def championship_subscriptions(self, championship_id, starting_item_position=0, return_items=10):
         """
@@ -117,11 +131,8 @@ class FaceitData:
             self.base_url, championship_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
-
+        
+        return check_response(res)
     # Games
     def all_faceit_games(self, starting_item_position=0, return_items=20):
         """
@@ -134,11 +145,9 @@ class FaceitData:
 
         api_url = "{}/games?offset={}&limit={}".format(self.base_url, starting_item_position, return_items)
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
-
+        
+        return check_response(res)
+    
     def game_details(self, game_id):
         """
         Retrieve game details
@@ -150,10 +159,7 @@ class FaceitData:
         api_url = "{}/games/{}".format(self.base_url, game_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def game_details_parent(self, game_id=None):
         """
@@ -165,10 +171,7 @@ class FaceitData:
 
         api_url = "{}/games/{}/parent".format(self.base_url, game_id)
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Hubs
     def hub_details(self, hub_id, game=None, organizer=None):
@@ -192,10 +195,7 @@ class FaceitData:
                     api_url += "?expanded=organizer"
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def hub_matches(self, hub_id, type_of_match="all", starting_item_position=0, return_items=20):
         """
@@ -203,8 +203,8 @@ class FaceitData:
 
         :param hub_id: The ID of the hub (required)
         :param type_of_match: Kind of matches to return. Default is all, can be upcoming, ongoing, or past
-        :param starting_item_position: The starting item position. Default is 0
-        :param return_items: The number of items to return. Default is 20
+        :param starting_item_position: The starting item position. Default is (return_items should be a multiple of this!!)
+        :param return_items: The number of items to return. Default is 20 (Must be a multiple of starting_item_position)
         :return:
         """
 
@@ -212,10 +212,7 @@ class FaceitData:
             self.base_url, hub_id, type_of_match, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def hub_members(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -231,10 +228,7 @@ class FaceitData:
             self.base_url, hub_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def hub_roles(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -250,10 +244,7 @@ class FaceitData:
             self.base_url, hub_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def hub_statistics(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -269,10 +260,7 @@ class FaceitData:
             self.base_url, hub_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Leaderboards
     def championship_leaderboards(self, championship_id, starting_item_position=0, return_items=20):
@@ -289,10 +277,7 @@ class FaceitData:
             self.base_url, championship_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def championship_group_ranking(self, championship_id, group, starting_item_position=0, return_items=20):
         """
@@ -309,10 +294,7 @@ class FaceitData:
             self.base_url, championship_id, group, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def hub_leaderboards(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -328,10 +310,7 @@ class FaceitData:
             self.base_url, hub_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def hub_ranking(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -347,10 +326,7 @@ class FaceitData:
             self.base_url, hub_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def hub_season_ranking(self, hub_id, season, starting_item_position=0, return_items=20):
         """
@@ -367,10 +343,7 @@ class FaceitData:
             self.base_url, hub_id, season, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def leaderboard_ranking(self, leaderboard_id, starting_item_position=0, return_items=20):
         """
@@ -386,10 +359,7 @@ class FaceitData:
             self.base_url, leaderboard_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Matches
     def match_details(self, match_id):
@@ -403,10 +373,7 @@ class FaceitData:
         api_url = "{}/matches/{}".format(self.base_url, match_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def match_stats(self, match_id):
         """
@@ -419,10 +386,7 @@ class FaceitData:
         api_url = "{}/matches/{}/stats".format(self.base_url, match_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Organizers
     def organizer_details(self, name_of_organizer=None, organizer_id=None):
@@ -446,10 +410,7 @@ class FaceitData:
                     if organizer_id is not None:
                         api_url += "/{}".format(organizer_id)
                 res = requests.get(api_url, headers=self.headers)
-                if res.status_code == 200:
-                    return json.loads(res.content.decode('utf-8'))
-                else:
-                    return res.status_code
+                return check_response(res)
 
     def organizer_championships(self, organizer_id, starting_item_position=0, return_items=20):
         """
@@ -465,10 +426,7 @@ class FaceitData:
             self.base_url, organizer_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def organizer_games(self, organizer_id):
         """
@@ -482,10 +440,7 @@ class FaceitData:
             self.base_url, organizer_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def organizer_hubs(self, organizer_id, starting_item_position=0, return_items=20):
         """
@@ -501,10 +456,7 @@ class FaceitData:
             self.base_url, organizer_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def organizer_tournaments(self, organizer_id, type_of_tournament="upcoming", starting_item_position=0,
                               return_items=20):
@@ -522,10 +474,7 @@ class FaceitData:
             self.base_url, organizer_id, type_of_tournament, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Players
     def player_details(self, nickname):
@@ -546,10 +495,7 @@ class FaceitData:
         #     api_url += "&game={}".format(game)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def player_id_details(self, player_id):
         """
@@ -562,10 +508,7 @@ class FaceitData:
         api_url = "{}/players/{}".format(self.base_url, player_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def player_matches(self, player_id, game, from_timestamp=None, to_timestamp=None,
                        starting_item_position=0, return_items=20):
@@ -596,10 +539,7 @@ class FaceitData:
         api_url += "?game={}&from={}&to={}&limit={}".format(game, from_timestamp, to_timestamp, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def player_hubs(self, player_id, starting_item_position=0, return_items=20):
         """
@@ -615,10 +555,7 @@ class FaceitData:
             self.base_url, player_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def player_stats(self, player_id, game_id):
         """
@@ -632,10 +569,7 @@ class FaceitData:
         api_url = "{}/players/{}/stats/{}".format(self.base_url, player_id, game_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def player_tournaments(self, player_id, starting_item_position=0, return_items=20):
         """
@@ -651,10 +585,7 @@ class FaceitData:
             self.base_url, player_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Rankings
     def game_global_ranking(self, game_id, region, country=None, starting_item_position=0, return_items=20):
@@ -679,10 +610,7 @@ class FaceitData:
                 starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def player_ranking_of_game(self, game_id, region, player_id, country=None, return_items=20):
         """
@@ -706,10 +634,7 @@ class FaceitData:
             api_url += "?limit={}".format(return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Search
     def search_championships(self, name_of_championship, game=None, region=None, type_of_competition="all",
@@ -736,10 +661,7 @@ class FaceitData:
             api_url += "&region={}".format(region)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def search_hubs(self, name_of_hub, game=None, region=None, starting_item_position=0, return_items=20):
         """
@@ -762,10 +684,7 @@ class FaceitData:
             api_url += "&region={}".format(region)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def search_organizers(self, name_of_organizer, starting_item_position=0, return_items=20):
         """
@@ -781,10 +700,7 @@ class FaceitData:
             self.base_url, urllib.parse.quote_plus(name_of_organizer), starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def search_players(self, nickname, game=None, country_code=None, starting_item_position=0, return_items=20):
         """
@@ -807,10 +723,7 @@ class FaceitData:
             api_url += "&country={}".format(country_code)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def search_teams(self, nickname, game=None, starting_item_position=0, return_items=20):
         """
@@ -830,10 +743,7 @@ class FaceitData:
             api_url += "&game={}".format(urllib.parse.quote_plus(game))
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def search_tournaments(self, name_of_tournament, game=None, region=None, type_of_competition="all",
                            starting_item_position=0, return_items=20):
@@ -859,10 +769,7 @@ class FaceitData:
             api_url += "&region={}".format(region)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Teams
     def team_details(self, team_id):
@@ -875,10 +782,7 @@ class FaceitData:
         api_url = "{}/teams/{}".format(self.base_url, team_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def team_stats(self, team_id, game_id):
         """
@@ -892,10 +796,7 @@ class FaceitData:
         api_url = "{}/teams/{}/stats/{}".format(self.base_url, team_id, urllib.parse.quote_plus(game_id))
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def team_tournaments(self, team_id, starting_item_position=0, return_items=20):
         """
@@ -911,10 +812,7 @@ class FaceitData:
             self.base_url, team_id, starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     # Tournaments (no longer used)
     def all_tournaments(self, game=None, region=None, type_of_tournament="upcoming"):
@@ -938,10 +836,7 @@ class FaceitData:
             api_url += "&region={}".format(region)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def tournament_details(self, tournament_id, expanded=None):
         """
@@ -960,10 +855,7 @@ class FaceitData:
                 api_url += "?expanded=game"
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def tournament_brackets(self, tournament_id):
         """
@@ -976,10 +868,7 @@ class FaceitData:
         api_url = "{}/tournaments/{}/brackets".format(self.base_url, tournament_id)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def tournament_matches(self, tournament_id, starting_item_position=0, return_items=20):
         """
@@ -995,10 +884,7 @@ class FaceitData:
                                                                         starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
 
     def tournament_teams(self, tournament_id, starting_item_position=0, return_items=20):
         """
@@ -1014,7 +900,4 @@ class FaceitData:
                                                                       starting_item_position, return_items)
 
         res = requests.get(api_url, headers=self.headers)
-        if res.status_code == 200:
-            return json.loads(res.content.decode('utf-8'))
-        else:
-            return res.status_code
+        return check_response(res)
