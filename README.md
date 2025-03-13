@@ -5,7 +5,7 @@
 The **Benelux Counter-Strike Bot** is designed to provide ESEA match updates, LAN event information, and Benelux Hub stats directly in Discord.
 
 ## Setup and Configuration
-### Set Up API Tokens  
+### Set Up API Tokens and MySQL password  
 This bot requires API tokens from Faceit and Discord to fetch data from these services
 
 #### 🔧 **Steps to configure API tokens:**  
@@ -18,5 +18,6 @@ This bot requires API tokens from Faceit and Discord to fetch data from these se
    ```sh
    {
     "FACEIT_TOKEN": "your-faceit-token-here",
-    "DISCORD_TOKEN": "your-discord-token-here"
+    "DISCORD_TOKEN": "your-discord-token-here",
+    "MYSQL_PASSWORD": "your-mysql-password-here"
     }
