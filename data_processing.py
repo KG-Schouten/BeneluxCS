@@ -260,15 +260,18 @@ def read_team_data():
     return team_data
 
 
-def process_hub_data(return_items=100) -> tuple[list[dict], list[dict], list[dict]]:
+def process_hub_data(starting_item_position=0, return_items=100) -> tuple[list[dict], list[dict], list[dict]]:
     """
     Returns the data from the recent hub matches
 
     Args:
+        starting_item_position (int): Amount of matches to skip before gathering the data: (default=0)
+            - If return_items > 100, this arg will be ignored.
+            - Else return_items has to be a MULTIPLE of this!!!
         return_items (int | str): Specifies the amount of matches that will be gathered. It can be: (default=100) 
             - An integer, which will return the latests n matches where n is the integer
             - The string "ALL", which will return all matches played in the hub since the start
-    
+        
     Returns:
         tuple [list[dict], list[dict], list[dict]]
             Containing three lists of dicts:
@@ -282,17 +285,20 @@ def process_hub_data(return_items=100) -> tuple[list[dict], list[dict], list[dic
         loop = asyncio.get_running_loop()
         if loop.is_running():
             # Run the async function inside the existing event loop
-            return loop.run_until_complete(process_hub_data_async(return_items))
+            return loop.run_until_complete(process_hub_data_async(starting_item_position, return_items))
     except:
         # No event loop running, so we can safely use asyncio.run()
-        return asyncio.run(process_hub_data_async(return_items))
+        return asyncio.run(process_hub_data_async(starting_item_position, return_items))
 
 
-async def process_hub_data_async(return_items=100) -> tuple[list[dict], list[dict], list[dict]]:
+async def process_hub_data_async(starting_item_position=0, return_items=100) -> tuple[list[dict], list[dict], list[dict]]:
     """
     Async function to return the data from the recent hub matches
 
     Args:
+        starting_item_position (int): Amount of matches to skip before gathering the data: (default=0)
+            - If return_items > 100, this arg will be ignored.
+            - Else return_items has to be a MULTIPLE of this!!!
         return_items (int | str): Specifies the amount of matches that will be gathered. It can be: (default=100) 
             - An integer, which will return the latests n matches where n is the integer
             - The string "ALL", which will return all matches played in the hub since the start
@@ -319,7 +325,7 @@ async def process_hub_data_async(return_items=100) -> tuple[list[dict], list[dic
             print(f"Current length of data list: {len(data["items"])}")
             # Count up
             i += 100
-    elif isinstance(return_items, int):
+    elif isinstance(return_items, int) and isinstance(starting_item_position, int):
         if return_items > 100: # If more than 100 items are called, it will loop through the function untill all match data is fetched
             data = {"items": []}
             requested_count = return_items
@@ -338,7 +344,7 @@ async def process_hub_data_async(return_items=100) -> tuple[list[dict], list[dic
                 requested_count -= batch
                 amount_called += batch
         else: # If return_items < 100, just call the function once
-            data = faceit_data.hub_matches("801f7e0c-1064-4dd1-a960-b2f54f8b5193", return_items=return_items)
+            data = faceit_data.hub_matches("801f7e0c-1064-4dd1-a960-b2f54f8b5193", starting_item_position=int(starting_item_position), return_items=return_items)
     else:
         raise TypeError(f"return_items: ({return_items}) was not of type int or the required string")
 
