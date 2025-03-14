@@ -4,6 +4,9 @@ import json
 import re
 import datetime
 import pandas as pd
+import numpy as np
+from typing import *
+
 
 from data_processing import process_hub_data
 
@@ -175,22 +178,26 @@ def upload_data_query(table_name: str, data: dict, keys: list, primary_keys: lis
 
     return upload_query
 
-def gather_keys(db, cursor, table_name: str) -> list:
+def gather_keys(db: mysql.connector.connect, cursor: mysql.connector.cursor, table_name: str) -> Tuple[List[str], List[str]]:
     """
-    Gather all primary keys from a specific table
+    Gather all keys and primary keys from a specific table in the database.
+
+    This function retrieves the list of all column names (keys) and primary keys 
+    from the specified table using the information_schema views in the database.
 
     Args:
-        db (mysql.connector.connect)    : The active database connection.
-        cursor (mysql.connector.cursor) : The active cursor object.
-        table_name (str)                : name of the table.
+        db (mysql.connector.connect): The active database connection.
+        cursor (mysql.connector.cursor): The active cursor object used to execute queries.
+        table_name (str): The name of the table to retrieve keys from.
     
     Returns:
-        all_keys (list): list of all keys.
-        
-        primary_keys (list): list of all primary keys.
+        Tuple[List[str], List[str]]:
+            - all_keys (List[str]): A list of all column names (keys) in the table.
+            - primary_keys (List[str]): A list of primary key column names in the table.
     """
     global db_name
 
+    # SQL query to get all column names (keys) in the specified table
     query_all_keys = """
         SELECT 
             COLUMN_NAME
@@ -201,6 +208,7 @@ def gather_keys(db, cursor, table_name: str) -> list:
             AND TABLE_NAME = %s
     """
 
+    # SQL query to get primary key columns from the specified table
     query_primary_keys = """
         SELECT
             COLUMN_NAME
@@ -212,61 +220,79 @@ def gather_keys(db, cursor, table_name: str) -> list:
             AND CONSTRAINT_NAME IN ('PRIMARY', 'FOREIGN KEY');
     """
 
-    # Execute the query for all keys
+    # Execute the query for all keys (column names) in the table
     cursor.execute(query_all_keys, (db_name, table_name))
     all_keys_list = cursor.fetchall()
 
-    # Execute the query for primary keys
+    # Execute the query for primary keys in the table
     cursor.execute(query_primary_keys, (db_name, table_name))
     primary_keys_list = cursor.fetchall()
 
-    # Extract column names from the key lists
+    # Extract column names from the query results
     all_keys = [ak[0] for ak in all_keys_list]
     primary_keys = [pk[0] for pk in primary_keys_list]
 
+    # Return both all keys and primary keys as tuples of lists
     return all_keys, primary_keys
 
-def upload_hub_data(batch_data_match: list, batch_data_player: list, batch_data_team: list):
+def upload_hub_data(batch_data_match: List[Dict[str, any]], batch_data_player: List[Dict[str, any]], batch_data_team: List[Dict[str, any]]) -> None:
     """ 
-    Uploading the data dictionary of the hub matches to the database tables
+    Upload data from the provided dictionaries to their corresponding database tables: 'matches', 'teams', and 'player_statistics'.
+
+    This function processes and uploads data for three tables:
+    - 'matches' for match-related data
+    - 'teams' for team-related data
+    - 'player_statistics' for player-related statistics
 
     Args:
-        batch_data_match (lst)  : List of dicts with match data
-        batch_data_player (lst) : List of dicts with player data
-        batch_data_team (lst)   : List of dicts with team data
+        batch_data_match (List[Dict[str, any]]): List of dictionaries where each dictionary represents match data.
+        batch_data_player (List[Dict[str, any]]): List of dictionaries where each dictionary represents player data.
+        batch_data_team (List[Dict[str, any]]): List of dictionaries where each dictionary represents team data.
+        
+    Returns:
+        None: This function does not return any value but commits the data to the database.
     """
-    
+    # Start the database connection and cursor
     db, cursor = start_database()
 
     try:
-        # Get "matches" table query and tuple_data
+        # Process and upload "matches" data
         table_name = "matches"
         keys, primary_keys = gather_keys(db, cursor, table_name)
         sql_matches = upload_data_query(table_name, batch_data_match, keys, primary_keys)
         print(f"Created query for table: {table_name}")
 
-        columns = list(batch_data_match[0].keys())
-        batch_data_match = [tuple(d[col] for col in columns) for d in batch_data_match]
+        # Prepare match data as tuples with None for missing keys in the database
+        batch_data_match = [
+            tuple(d.get(col, None) for col in keys) 
+            for d in batch_data_match
+        ]
         
-        # Get "teams" table query
+        # Process and upload "teams" data
         table_name = "teams"
         keys, primary_keys = gather_keys(db, cursor, table_name)
-        sql_teams = upload_data_query(table_name, batch_data_match, keys, primary_keys)
+        sql_teams = upload_data_query(table_name, batch_data_team, keys, primary_keys)
         print(f"Created query for table: {table_name}")
 
-        columns = list(batch_data_team[0].keys())
-        batch_data_team = [tuple(d[col] for col in columns) for d in batch_data_team]
+        # Prepare team data as tuples with None for missing keys in the database
+        batch_data_team = [
+            tuple(d.get(col, None) for col in keys) 
+            for d in batch_data_team
+        ]
 
-        # Get "player_statistics" table query
+        # Process and upload "player_statistics" data
         table_name = "player_statistics"
         keys, primary_keys = gather_keys(db, cursor, table_name)
-        sql_player_statistics = upload_data_query(table_name, batch_data_match, keys, primary_keys)
+        sql_player_statistics = upload_data_query(table_name, batch_data_player, keys, primary_keys)
         print(f"Created query for table: {table_name}")
 
-        columns = list(batch_data_player[0].keys())
-        batch_data_player = [tuple(d[col] for col in columns) for d in batch_data_player]
+        # Prepare player data as tuples with None for missing keys in the database
+        batch_data_player = [
+            tuple(d.get(col, None) for col in keys) 
+            for d in batch_data_player
+        ]
 
-        # Upload the batch data to the tables
+        # Upload the processed data to their respective tables using executemany
         cursor.executemany(sql_matches, batch_data_match)
         print("Added the data to 'matches'")  
         cursor.executemany(sql_teams, batch_data_team)
@@ -275,80 +301,209 @@ def upload_hub_data(batch_data_match: list, batch_data_player: list, batch_data_
         print("Added the data to 'player_statistics'")  
 
     finally:
+        # Commit the transaction and close the database connection
         db.commit()
         close_database(db, cursor)
 
+def calculate_hltv():
+    db, cursor = start_database()
+    
+    ## Calculate HLTV 1.0 rating
+    avg_kpr = 0.679 # avg kill per round
+    avg_spr = 0.317 # avg survived rounds per round
+    avg_rmk = 1.277 # avg value calculated from rounds with multi-kills
+    
+    hltv_query = """
+        SELECT
+            p.player_id,
+            p.match_id,
+            p.kills,
+            p.deaths,
+            p.Double_Kills,
+            p.Triple_Kills,
+            p.Quadro_Kills,
+            p.Penta_Kills,
+            matches.Rounds
+        FROM player_statistics p
+        JOIN matches ON matches.match_id = p.match_id
+    """
+
+    cursor.execute(hltv_query)
+    res = cursor.fetchall()
+    columns = ['player_id', 'match_id', 'kills', 'deaths', 'double', 'triple', 'quadro', 'penta', 'rounds']
+    df = pd.DataFrame(res, columns=columns)
+
+    # print(df)
+    ratings = []
+    for index, row in df.iterrows():
+        # print(row)
+        player_id = row['player_id']
+        match_id = row['match_id']
+        kills = row['kills']
+        deaths = row['deaths']
+        rounds = int(row['rounds'])
+        double = row['double']
+        triple = row['triple']
+        quadro = row['quadro']
+        penta = row['penta']
+        single = kills - (2*double + 3*triple + 4*quadro + 5*penta)
+
+        kill_rating = kills / rounds / avg_kpr
+        survival_rating = (rounds - deaths) / rounds / avg_spr
+        rounds_with_multi_kill_rating = (single + 4*double + 9*triple + 16*quadro + 25*penta) / rounds / avg_rmk
+
+        hltv_rating = (kill_rating + 0.7*survival_rating + rounds_with_multi_kill_rating) / 2.7
+        
+        ratings.append((player_id, match_id, round(hltv_rating,2)))
+
+        # print(hltv_rating)
+
+    query_insert = """
+        INSERT INTO player_statistics(player_id, match_id, hltv_rating)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE hltv_rating = VALUES(hltv_rating)
+    """
+    cursor.executemany(query_insert, ratings)
+    db.commit()
+    
+
+    close_database(db, cursor)
+
+    return ratings
+
+def update_hub_data() -> None:
+    """
+    Updates the hub data by gathering the latest matches from an external API and appending them to the database.
+    
+    Args:
+        None
+    
+    Returns:
+        None
+    """
+    # Start the database connection
+    db, cursor = start_database()
+
+    # Gather the ID of the latest match in the database to know where to start fetching new data
+    query = """
+        SELECT
+            m.match_id
+        FROM matches m
+        ORDER BY m.start_time DESC
+        LIMIT 1
+    """
+    cursor.execute(query)
+    res = cursor.fetchall()
+
+    # Assuming there is at least one match, extract the latest match_id
+    last_match_id = res[0][0] if res else None
+    if last_match_id is None:
+        print("No matches found in the database.")
+        return
+
+    # Initialize variables for batch processing of matches, players, and teams
+    LOOP = True
+    last_batch = 0
+    batch = 5
+
+    # Initialize lists to store data for matches, players, and teams
+    batch_data_match: List[Dict[str, any]] = []
+    batch_data_player: List[Dict[str, any]] = []
+    batch_data_team: List[Dict[str, any]] = []
+
+    # Loop to gather new match data from the external API
+    while LOOP:
+        # Fetch a batch of match, player, and team data starting from the current batch position
+        single_batch_data_match, single_batch_data_player, single_batch_data_team = process_hub_data(starting_item_position=int(last_batch), return_items=int(batch))
+
+        # Check if any match in the batch matches the latest match ID in the database
+        index = next((i for i, d in enumerate(single_batch_data_match) if d["match_id"] == last_match_id), -1)
+        if index != -1:
+            LOOP = False  # Stop looping once the latest match is found
+        else:
+            last_batch += batch  # Increment the batch position to fetch the next set of matches
+
+        # Append the fetched data to the corresponding lists
+        batch_data_match.extend(single_batch_data_match)
+        batch_data_player.extend(single_batch_data_player)
+        batch_data_team.extend(single_batch_data_team)
+
+    # Upload the gathered match data to the database
+    upload_hub_data(batch_data_match, batch_data_player, batch_data_team)
+    
+    # Print the number of matches added to the database
+    matches_added = next(i for i, d in enumerate(batch_data_match) if d["match_id"] == last_match_id)
+    print(f"{matches_added} Matches added to the database")
+
+    # Commit the transaction and close the database connection
+    db.commit()
+    close_database(db, cursor)   
 
 if __name__ == "__main__":
     # reset_database()
     
-    db, cursor = start_database()
+    update_hub_data()
 
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=30)).timestamp()
+    # db, cursor = start_database()
+
+
+    # ### HLTV RATING CALCULATOR AND APPENDING TO DB
+    # ratings = calculate_hltv()
+
+    # start_date = (datetime.datetime.now() - datetime.timedelta(days=30)).timestamp()
 
     # query = """
     #     SELECT
-    #         player_statistics.player_id,
-    #         player_statistics.nickname,
-    #         COUNT(player_statistics.match_id) AS total_matches,
-    #         AVG(player_statistics.Kills) AS avg_kills,
-    #         AVG(player_statistics.Assists) AS avg_assists,
-    #         AVG(player_statistics.Deaths) AS avg_deaths,
-    #         AVG(player_statistics.ADR) AS avg_adr,
-    #         AVG(player_statistics.K_D_Ratio) AS avg_kdr
-    #     FROM player_statistics
-    #     JOIN matches ON matches.match_id = player_statistics.match_id
+    #         p.player_id,
+    #         (
+    #             SELECT p2.nickname
+    #             FROM player_statistics p2
+    #             WHERE p2.player_id = p.player_id
+    #             ORDER BY p2.match_id DESC
+    #             LIMIT 1
+    #         ) AS latest_nickname,
+
+    #         COUNT(p.match_id) AS matches_played,
+    #         SUM(p.result) AS wins,
+    #         ROUND(AVG(p.Kills), 0) AS avg_kills,
+    #         ROUND(AVG(p.Assists), 0) AS avg_assists,
+    #         ROUND(AVG(p.Deaths), 0) AS avg_deaths,
+    #         ROUND(AVG(p.ADR), 1) AS avg_adr,
+    #         ROUND(AVG(p.K_D_Ratio), 2) AS avg_kdr,
+    #         ROUND(AVG(p.hltv_rating), 2) AS avg_hltv,
+    #         SUM(p.Knife_Kills) AS knife_total,
+    #         SUM(p.Zeus_Kills) AS zeus_total
+    #     FROM player_statistics p
+    #     JOIN matches ON matches.match_id = p.match_id
     #     WHERE matches.start_time > %s
-    #     GROUP BY player_statistics.player_id
-    #     ORDER BY avg_adr DESC;
+    #     GROUP BY p.player_id
     # """
 
-    query = """
-        SELECT
-            p.player_id,
-            (
-                SELECT p2.nickname
-                FROM player_statistics p2
-                WHERE p2.player_id = p.player_id
-                ORDER BY p2.match_id DESC
-                LIMIT 1
-            ) AS latest_nickname,
+    # # Get player data into dataframe
+    # cursor.execute(query, (start_date,))
+    # res = cursor.fetchall()
+    # columns = ['player_id','nickname', 'matches_played', 'wins', 'kills', "assists", 'deaths', 'adr','kdr', 'hltv', 'knife_kills', 'zeus_kills']
+    # df = pd.DataFrame(res, columns=columns)
 
-            COUNT(p.match_id) AS matches_played,
-            AVG(p.Kills) AS avg_kills,
-            AVG(p.Assists) AS avg_assists,
-            AVG(p.Deaths) AS avg_deaths,
-            AVG(p.ADR) AS avg_adr,
-            AVG(p.K_D_Ratio) AS avg_kdr,
-            SUM(p.Knife_Kills) AS knife_total,
-            SUM(p.Zeus_Kills) AS zeus_total
-        FROM player_statistics p
-        JOIN matches ON matches.match_id = p.match_id
-        WHERE matches.start_time > %s
-        GROUP BY p.player_id
-    """
+    # # Get total matches played
+    # query = """
+    #     SELECT
+    #         COUNT(DISTINCT(matches.match_id)) AS total_matches
+    #     FROM matches
+    #     WHERE matches.start_time > %s
+    # """
+    # cursor.execute(query, (start_date,))
+    # res = cursor.fetchall()
+    # total_matches = res[0][0]
 
-    # Get player data into dataframe
-    cursor.execute(query, (start_date,))
-    res = cursor.fetchall()
-    columns = ['player_id','nickname', 'matches_played', 'kills', "assists", 'deaths', 'adr','kdr', 'knife_kills', 'zeus_kills']
-    df = pd.DataFrame(res, columns=columns)
+    # # Add match_percentage to df
+    # idx = 3
+    # df.insert(loc=idx, column='match_percentage', value=[int((matches_played / total_matches)*100) for matches_played in df.matches_played])
 
-    # Get total matches played
-    query = """
-        SELECT
-            COUNT(DISTINCT(matches.match_id)) AS total_matches
-        FROM matches
-        WHERE matches.start_time > %s
-    """
-    cursor.execute(query, (start_date,))
-    res = cursor.fetchall()
-    total_matches = res[0][0]
+    # # Add the win % to df
+    # df['wins'] = df['wins'].div(df.matches_played, axis=0).mul(100)
+    # df['wins'] = df['wins'].astype(float).round(1)
+    # # df = df.round({'wins': 1, 'kills': 0, 'assists': 0, 'deaths': 0, 'adr': 0, 'kdr': 2, 'hltv': 2})
 
-    # Add match_percentage to df
-    idx = 3
-    # df['match_percentage'] = int( (df.matches_played / total_matches)*100 )
-    df.insert(loc=idx, column='match_percentage', value=[int((matches_played / total_matches)*100) for matches_played in df.matches_played])
-
-    print(df.sort_values(by='matches_played', ascending=False).reset_index(drop=True).to_string())
+    # print(df[df['matches_played'] > 5].sort_values(by='wins', ascending=False).reset_index(drop=True))
         
