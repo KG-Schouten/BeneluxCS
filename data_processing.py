@@ -322,7 +322,7 @@ async def process_hub_data_async(starting_item_position=0, return_items=100) -> 
             data["items"].extend(data_batch["items"])
 
             # Print the length of the 
-            print(f"Current length of data list: {len(data["items"])}")
+            print(f"\rCurrent length of data list: {len(data["items"])}", end="")
             # Count up
             i += 100
     elif isinstance(return_items, int) and isinstance(starting_item_position, int):
@@ -398,7 +398,7 @@ async def process_hub_data_async(starting_item_position=0, return_items=100) -> 
     # Adding all matches to the queue
     j = 0
     for match in data:
-        print(f"{j} matches added to queue")
+        print(f"\r{j} matches added to queue", end="")
         j+=1
         await queue.put(match)
 
@@ -416,7 +416,7 @@ async def process_hub_data_async(starting_item_position=0, return_items=100) -> 
                 batch_data_player.extend(single_batch_data_player)
                 batch_data_team.extend(single_batch_data_team)
 
-                print(f"Current length of the batch list: {len(batch_data_match)}")
+                print(f"\rCurrent length of the batch list: {len(batch_data_match)}", end="")
             except Exception as e:
                 print(f"Error fetching data for a match: {e}")
             queue.task_done()
@@ -530,5 +530,9 @@ def modify_keys(d):
 
 ## Run this code only when program is run directly
 if __name__ == "__main__":
-    
+    # Allow standalone execution
+    import sys
+    import os
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
     process_hub_data(return_items=200)
