@@ -1,3 +1,8 @@
+# Allow standalone execution
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import mysql.connector
 import json
 import re
@@ -6,8 +11,7 @@ import pandas as pd
 import numpy as np
 from typing import *
 
-from functions import load_api_keys
-from data_processing import process_hub_data
+from data_processing import *
 
 from database.db_manage import start_database, close_database
 from database.db_down import *
@@ -15,167 +19,28 @@ from database.db_down import *
 # Constants
 db_name = "BeneluxCS"
 
+### -----------------------------------------------------------------
+### fACEIT Ranking Processing
+### -----------------------------------------------------------------
 
-def upload_data_query(table_name: str, data: dict, keys: list, primary_keys: list) -> str:
-    """
-    Creating the queries used for creating the tables based on the keys in the dictionary
 
-    Args:
-        table_name (str)    : Name of the table.
-        data (dict)         : Single level dictionary with keys-values.
-        keys (list)         : list of all keys
-        primary_keys (list) : list of all primary keys
-        
-    Returns:
-        upload_query (str)   : String of the upload query to use in the cursor.executemany command
-    """
+### -----------------------------------------------------------------
+### ESEA League Data Processing
+### -----------------------------------------------------------------
 
-    # Creating the upload query
-    upload_query = f"""
-        INSERT INTO {table_name} ({", ".join(keys)})
-        VALUES ({", ".join(['%s'] * len(keys))})
-        ON DUPLICATE KEY UPDATE
-        {", ".join([f"`{key}` = VALUES(`{key}`)" for key in keys if key not in primary_keys])}
-    """
+def update_esea_data(table_names) -> None:
+    pass
 
-    return upload_query
+### -----------------------------------------------------------------
+### Benelux Hub Data
+### -----------------------------------------------------------------
 
-def gather_keys(db: mysql.connector.connect, cursor: mysql.connector.cursor, table_name: str) -> Tuple[List[str], List[str]]:
-    """
-    Gather all keys and primary keys from a specific table in the database.
-
-    This function retrieves the list of all column names (keys) and primary keys 
-    from the specified table using the information_schema views in the database.
-
-    Args:
-        db (mysql.connector.connect): The active database connection.
-        cursor (mysql.connector.cursor): The active cursor object used to execute queries.
-        table_name (str): The name of the table to retrieve keys from.
-    
-    Returns:
-        Tuple[List[str], List[str]]:
-            - all_keys (List[str]): A list of all column names (keys) in the table.
-            - primary_keys (List[str]): A list of primary key column names in the table.
-    """
-    global db_name
-
-    # SQL query to get all column names (keys) in the specified table
-    query_all_keys = """
-        SELECT 
-            COLUMN_NAME
-        FROM
-            information_schema.COLUMNS
-        WHERE
-            TABLE_SCHEMA = %s
-            AND TABLE_NAME = %s
-    """
-
-    # SQL query to get primary key columns from the specified table
-    query_primary_keys = """
-        SELECT
-            COLUMN_NAME
-        FROM
-            information_schema.KEY_COLUMN_USAGE
-        WHERE
-            TABLE_SCHEMA = %s
-            AND TABLE_NAME = %s
-            AND CONSTRAINT_NAME IN ('PRIMARY', 'FOREIGN KEY');
-    """
-
-    # Execute the query for all keys (column names) in the table
-    cursor.execute(query_all_keys, (db_name, table_name))
-    all_keys_list = cursor.fetchall()
-
-    # Execute the query for primary keys in the table
-    cursor.execute(query_primary_keys, (db_name, table_name))
-    primary_keys_list = cursor.fetchall()
-
-    # Extract column names from the query results
-    all_keys = [ak[0] for ak in all_keys_list]
-    primary_keys = [pk[0] for pk in primary_keys_list]
-
-    # Return both all keys and primary keys as tuples of lists
-    return all_keys, primary_keys
-
-def upload_hub_data(batch_data_match: List[Dict[str, any]], batch_data_player: List[Dict[str, any]], batch_data_team: List[Dict[str, any]]) -> None:
-    """ 
-    Upload data from the provided dictionaries to their corresponding database tables: 'matches', 'teams', and 'player_statistics'.
-
-    This function processes and uploads data for three tables:
-    - 'matches' for match-related data
-    - 'teams' for team-related data
-    - 'player_statistics' for player-related statistics
-
-    Args:
-        batch_data_match (List[Dict[str, any]]): List of dictionaries where each dictionary represents match data.
-        batch_data_player (List[Dict[str, any]]): List of dictionaries where each dictionary represents player data.
-        batch_data_team (List[Dict[str, any]]): List of dictionaries where each dictionary represents team data.
-        
-    Returns:
-        None: This function does not return any value but commits the data to the database.
-    """
-    # Start the database connection and cursor
-    db, cursor = start_database()
-
-    try:
-        # Process and upload "matches" data
-        table_name = "matches"
-        keys, primary_keys = gather_keys(db, cursor, table_name)
-        sql_matches = upload_data_query(table_name, batch_data_match, keys, primary_keys)
-        print(f"Created query for table: {table_name}")
-
-        # Prepare match data as tuples with None for missing keys in the database
-        batch_data_match = [
-            tuple(d.get(col, None) for col in keys) 
-            for d in batch_data_match
-        ]
-        
-        # Process and upload "teams" data
-        table_name = "teams"
-        keys, primary_keys = gather_keys(db, cursor, table_name)
-        sql_teams = upload_data_query(table_name, batch_data_team, keys, primary_keys)
-        print(f"Created query for table: {table_name}")
-
-        # Prepare team data as tuples with None for missing keys in the database
-        batch_data_team = [
-            tuple(d.get(col, None) for col in keys) 
-            for d in batch_data_team
-        ]
-
-        # Process and upload "player_statistics" data
-        table_name = "player_statistics"
-        keys, primary_keys = gather_keys(db, cursor, table_name)
-        sql_player_statistics = upload_data_query(table_name, batch_data_player, keys, primary_keys)
-        print(f"Created query for table: {table_name}")
-
-        # Prepare player data as tuples with None for missing keys in the database
-        batch_data_player = [
-            tuple(d.get(col, None) for col in keys) 
-            for d in batch_data_player
-        ]
-
-        # Upload the processed data to their respective tables using executemany
-        cursor.executemany(sql_matches, batch_data_match)
-        print("Added the data to 'matches'")  
-        cursor.executemany(sql_teams, batch_data_team)
-        print("Added the data to 'teams'")  
-        cursor.executemany(sql_player_statistics, batch_data_player)
-        print("Added the data to 'player_statistics'")  
-
-    finally:
-        # Commit the transaction and close the database connection
-        db.commit()
-        close_database(db, cursor)
-
-def update_hub_data() -> None:
+def update_hub_data(table_names) -> None:
     """
     Updates the hub data by gathering the latest matches from an external API and appending them to the database.
     
     Args:
-        None
-    
-    Returns:
-        None
+        table_names (Dict): dictionary containing table names as keys in order of the data processing returns (db_general.py)
     """
     # Start the database connection
     db, cursor = start_database()
@@ -225,25 +90,187 @@ def update_hub_data() -> None:
         batch_data_team.extend(single_batch_data_team)
 
     # Upload the gathered match data to the database
-    upload_hub_data(batch_data_match, batch_data_player, batch_data_team)
+    
+    upload_data(table_names, (batch_data_match, batch_data_player, batch_data_team))
+    
+    calculate_hltv()
     
     # Print the number of matches added to the database
     matches_added = next(i for i, d in enumerate(batch_data_match) if d["match_id"] == last_match_id)
     print(f"{matches_added} Matches added to the database")
-
+    
     # Commit the transaction and close the database connection
     db.commit()
     close_database(db, cursor)
 
-def calculate_hltv():
+### -----------------------------------------------------------------
+### General Functions
+### -----------------------------------------------------------------
+
+def upload_data(table_names, data) -> None:
+    """ 
+    Upload data from the provided dictionaries to their corresponding database tables
+
+    Args:
+        table_names (Dict): dictionary containing table names as keys in order of the data processing returns (db_general.py)
+        data (Tuple[ List[ Dict[str, any] ] ]): The tuple returned by the data processing containing lists of data dictionaries (data_processing.py)
+    """
+    print(
+        """
+        
+        ---------------------------------------
+                Uploading data to tables:
+        ---------------------------------------
+        
+        """
+    )
+    
+    # Start the database connection and cursor
     db, cursor = start_database()
     
-    ## Check if the HLTV column exists in the 'matches' table
-    cursor.execute(
+    try:
+        ## Process and upload the data
+        for table_name, data in zip(table_names.keys(), data): 
+            ## Creating the query for the table
+            print(f"Creating query for table: {table_name}")
+            
+            keys, primary_keys = gather_keys(cursor, table_name)
+            sql = upload_data_query(table_name, keys, primary_keys)
+            
+            ## Preparing the data as tuples with None for the missing keys in the database
+            data_prepped = [
+                tuple(d.get(col, None) for col in keys)
+                for d in data
+            ]
+            
+            ## Upload the data
+            print(f"Adding the data to: {table_name}")  
+            cursor.executemany(sql, data_prepped)
+      
+    except Exception as e:
+        print(f"Error while uploading data for table: {table_name}: {e}")
+    
+    finally:
+        # Commit the transaction and close the database connection
+        db.commit()
+        close_database(db, cursor)
+
+def gather_keys(cursor: mysql.connector.cursor, table_name: str) -> Tuple[List[str], List[str]]:
+    """
+    Gather all keys and primary keys from a specific table in the database.
+
+    This function retrieves the list of all column names (keys) and primary keys 
+    from the specified table using the information_schema views in the database.
+
+    Args:
+        cursor (mysql.connector.cursor): The active cursor object used to execute queries.
+        table_name (str): The name of the table to retrieve keys from.
+    
+    Returns:
+        Tuple[List[str], List[str]]:
+            - all_keys (List[str]): A list of all column names (keys) in the table.
+            - primary_keys (List[str]): A list of primary key column names in the table.
+    """
+    global db_name
+
+    # SQL query to get all column names (keys) in the specified table
+    query_all_keys = """
+        SELECT 
+            COLUMN_NAME
+        FROM
+            information_schema.COLUMNS
+        WHERE
+            TABLE_SCHEMA = %s
+            AND TABLE_NAME = %s
+    """
+
+    # SQL query to get primary key columns from the specified table
+    query_primary_keys = """
+        SELECT
+            COLUMN_NAME
+        FROM
+            information_schema.KEY_COLUMN_USAGE
+        WHERE
+            TABLE_SCHEMA = %s
+            AND TABLE_NAME = %s
+            AND CONSTRAINT_NAME IN ('PRIMARY', 'FOREIGN KEY');
+    """
+
+    # Execute the query for all keys (column names) in the table
+    cursor.execute(query_all_keys, (db_name, table_name))
+    all_keys_list = cursor.fetchall()
+
+    # Execute the query for primary keys in the table
+    cursor.execute(query_primary_keys, (db_name, table_name))
+    primary_keys_list = cursor.fetchall()
+
+    # Extract column names from the query results
+    all_keys = [ak[0] for ak in all_keys_list]
+    primary_keys = [pk[0] for pk in primary_keys_list]
+
+    # Return both all keys and primary keys as tuples of lists
+    return all_keys, primary_keys
+
+def upload_data_query(table_name: str, keys: list, primary_keys: list) -> str:
+    """
+    Creating the queries used for creating the tables based on the keys in the dictionary
+
+    Args:
+        table_name (str)    : Name of the table
+        keys (list)         : list of all keys
+        primary_keys (list) : list of all primary keys
+        
+    Returns:
+        upload_query (str)   : String of the upload query to use in the cursor.executemany command
+    """
+    # Go through all keys and check if they are all primary keys. If so, create a query without the ON DUPLICATE KEY UPDATE
+    if all(key in primary_keys for key in keys):
+        upload_query = f"""
+            INSERT INTO {table_name} ({", ".join(keys)})
+            VALUES ({", ".join(['%s'] * len(keys))})
+            """
+        return upload_query
+    else:
+        # Creating the upload query
+        upload_query = f"""
+            INSERT INTO {table_name} ({", ".join(keys)})
+            VALUES ({", ".join(['%s'] * len(keys))})
+            ON DUPLICATE KEY UPDATE
+            {", ".join([f"`{key}` = VALUES(`{key}`)" for key in keys if key not in primary_keys])}
         """
+        return upload_query
+
+def calculate_hltv(table_name_stats, table_name_matches):
+    """
+    Calculates and uploads the HLTV 1.0 ratings for player stats of matches in the database
+    
+    Args:
+        table_name_stats: The table name of the player statistics in mySQL
+        table_name_matches: The table name of the match table in mySQL
+    """
+    print(
+        f"""
+        
+        ---------------------------------------
+            Calculating HLTV for {table_name_stats}:
+        ---------------------------------------
+        
+        """
+    )
+    
+    db, cursor = start_database()
+    
+    ## Preventing SQL injection
+    allowed_tables = {"esea_player_stats", "hub_player_stats"}  # Defining safe table names
+    if table_name_stats not in allowed_tables:
+        raise ValueError("Invalid table name!")
+    
+    ## Check if the HLTV column exists in the player_stats table
+    cursor.execute(
+        f"""
             SELECT COUNT(*)
             FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE table_name = 'player_statistics'
+            WHERE table_name = '{table_name_stats}'
             AND column_name = 'hltv_rating'
         """
     )
@@ -251,8 +278,8 @@ def calculate_hltv():
 
     if not column_exists:
         cursor.execute(
-            """
-                ALTER TABLE player_statistics
+            f"""
+                ALTER TABLE {table_name_stats}
                 ADD COLUMN hltv_rating VARCHAR(100)
             """
         )
@@ -262,24 +289,25 @@ def calculate_hltv():
     avg_spr = 0.317 # avg survived rounds per round
     avg_rmk = 1.277 # avg value calculated from rounds with multi-kills
 
-    hltv_query = """
+    hltv_query = f"""
         SELECT
             p.player_id,
             p.match_id,
+            p.match_round,
             p.kills,
             p.deaths,
             p.Double_Kills,
             p.Triple_Kills,
             p.Quadro_Kills,
             p.Penta_Kills,
-            matches.Rounds
-        FROM player_statistics p
-        JOIN matches ON matches.match_id = p.match_id
+            m.Rounds
+        FROM {table_name_stats} p
+        JOIN {table_name_matches} m ON m.match_id = p.match_id
     """
 
     cursor.execute(hltv_query)
     res = cursor.fetchall()
-    columns = ['player_id', 'match_id', 'kills', 'deaths', 'double', 'triple', 'quadro', 'penta', 'rounds']
+    columns = ['player_id', 'match_id', 'match_round', 'kills', 'deaths', 'double', 'triple', 'quadro', 'penta', 'rounds']
     df = pd.DataFrame(res, columns=columns)
 
     # print(df)
@@ -288,6 +316,7 @@ def calculate_hltv():
         # print(row)
         player_id = row['player_id']
         match_id = row['match_id']
+        match_round = row['match_round']
         kills = row['kills']
         deaths = row['deaths']
         rounds = int(row['rounds'])
@@ -303,15 +332,13 @@ def calculate_hltv():
 
         hltv_rating = (kill_rating + 0.7*survival_rating + rounds_with_multi_kill_rating) / 2.7
         
-        ratings.append((player_id, match_id, round(hltv_rating,2)))
+        ratings.append((player_id, match_id, match_round, round(hltv_rating,2)))
 
         # print(hltv_rating)
-
-
-
-    query_insert = """
-        INSERT INTO player_statistics(player_id, match_id, hltv_rating)
-        VALUES (%s, %s, %s)
+    
+    query_insert = f"""
+        INSERT INTO {table_name_stats}(player_id, match_id, match_round, hltv_rating)
+        VALUES (%s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE hltv_rating = VALUES(hltv_rating)
     """
     cursor.executemany(query_insert, ratings)
@@ -326,5 +353,6 @@ if __name__ == "__main__":
     import sys
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+    
+    calculate_hltv("esea_player_stats", "esea_maps")
     pass
