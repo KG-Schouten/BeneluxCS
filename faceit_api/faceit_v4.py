@@ -15,7 +15,7 @@ def check_response(res):
         print("Forbidden - The request was understood, but it has been refused or access is not allowed")
         return res.status_code
     elif res.status_code ==  404:
-        print("Not Found - The URI requested is invalid or the resource requested, such as a user, does not exist")
+        # print("Not Found - The URI requested is invalid or the resource requested, such as a user, does not exist")
         return res.status_code
     elif res.status_code ==  429:
         print("Too Many Requests - Rate limiting has been applied")
@@ -45,7 +45,6 @@ class FaceitData:
             'accept': 'application/json',
             'Authorization': 'Bearer {}'.format(self.api_token)
         }
-
 
     # Leagues (NEW!!!!)
     def leagues_details(self, league_id):
@@ -246,6 +245,21 @@ class FaceitData:
         res = requests.get(api_url, headers=self.headers)
         return check_response(res)
 
+    def hub_rules(self, hub_id):
+        """
+        Retrieve all rules from a hub
+
+        :param hub_id: The ID of the hub
+        :return:
+        """
+        
+        api_url = "{}/hubs/{}/rules".format(
+            self.base_url, hub_id
+        )
+        
+        res = requests.get(api_url, headers=self.headers)
+        return check_response(res)
+    
     def hub_statistics(self, hub_id, starting_item_position=0, return_items=20):
         """
         Retrieves statistics of a hub
