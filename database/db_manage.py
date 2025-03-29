@@ -7,10 +7,7 @@ import numpy as np
 from typing import *
 
 from functions import load_api_keys
-
-# Constants
-db_name = "BeneluxCS"
-
+from database.db_config import db_name
 
 def start_database():
     """Starting up the mySQL database so it can be used by the rest of the program"""
