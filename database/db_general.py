@@ -1,42 +1,57 @@
-import mysql.connector
-import json
-import re
-import datetime
-import pandas as pd
-import numpy as np
+# Allow standalone execution
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from typing import *
 
-from functions import load_api_keys
-from data_processing import process_hub_data
+from data_processing import process_hub_data, process_esea_data, gather_team_ids_json
 
 from database.db_down import *
-from database.db_up import upload_hub_data, calculate_hltv
+from database.db_up import calculate_hltv, upload_data
 from database.db_manage import start_database, close_database
+from database.db_config import table_names_esea, table_names_hub
 
-# Constants
-db_name = "BeneluxCS"
 
 def reset_database():
     """Completely resetting the database from scratch (resetting all tables)"""
+    global table_names_esea, table_names_hub
     try:
-        # Delete all tables
-        delete_tables()
+        confirm = input("Are you sure you want to reset the database? y/n")
+        if confirm.lower() == 'y': # Reset database
+            # Delete all tables
+            delete_tables()
 
-        # Create the tables again
-        create_tables()
+            # Create the tables again
+            create_tables(table_names_esea, table_names_hub)
 
-        # Append all match data of the hub back to the database
-        batch_data_match, batch_data_player, batch_data_team = process_hub_data(return_items='ALL')
-        upload_hub_data(batch_data_match, batch_data_player, batch_data_team)
-
-        # Add the HLTV ratings for all of the matches
-        calculate_hltv()
-
+            # Append all of the esea data back to the database
+            team_ids = gather_team_ids_json()
+            esea_data = process_esea_data(team_ids, "ALL")
+            upload_data(table_names_esea, esea_data)
+            calculate_hltv("esea_player_stats", "esea_maps")
+            
+            # Append all match data of the hub back to the database
+            batch_data = process_hub_data(return_items='ALL')
+            upload_data(table_names_hub, batch_data)
+            calculate_hltv("hub_player_stats", "hub_maps")
+        else:
+            print("Database reset aborted")
     except Exception as e:
         print(f"Error while resetting database: {e}")
 
 def delete_tables():
     """Completely resetting the database from scratch (resetting all tables)"""
+    print(
+    """
+    
+    ---------------------------------------
+            Deleting the tables:
+    ---------------------------------------
+    
+    """
+    )
+    
     db, cursor = start_database()
 
     try:
@@ -84,7 +99,14 @@ def create_table_query(table_name: str, data: dict, primary_keys=[], foreign_key
         if isinstance(sample_value, float): # Check if it is a float
             column_type = "FLOAT"
         elif isinstance(sample_value, int): # Check if it is an integer
-            column_type = "INT"
+            if sample_value > 2147483647:  # Max INT limit (32-bit)
+                column_type = "BIGINT"
+            else:
+                column_type = "INT"
+        elif isinstance(sample_value, str) and len(sample_value) == 36 and '-' in sample_value: # Check if UUID (string format with hyphens)
+            column_type = "VARCHAR(50)"
+        elif isinstance(sample_value, str) and sample_value.isdigit():
+            column_type = "BIGINT"
         else:
             column_type = "VARCHAR(255)" # Default to VARCHAR
         column_types.append(f"`{col}` {column_type}")
@@ -96,16 +118,13 @@ def create_table_query(table_name: str, data: dict, primary_keys=[], foreign_key
         table_keys.append(primary_string)
     
     if foreign_keys:
-        # Sort dict based on called table
-        foreign_key_dict = {}
-        for key, table in foreign_keys:
-            if table not in foreign_key_dict:
-                foreign_key_dict[table] = []
-            foreign_key_dict[table].append(key)
-        
-        # Create the strings
-        for table in foreign_key_dict:
-            foreign_string = f"FOREIGN KEY ({", ".join(foreign_key_dict[table])}) REFERENCES {table}({", ".join(foreign_key_dict[table])})"
+        for foreign_key in foreign_keys:
+            col_name = foreign_key[1]
+            if (isinstance(foreign_key[0], tuple) or isinstance(foreign_key[0], list)): # composite foreign key
+                foreign_key_columns = ', '.join(foreign_key[0])
+                foreign_string = f"FOREIGN KEY ({foreign_key_columns}) REFERENCES {col_name}({foreign_key_columns})"
+            else:
+                foreign_string = f"FOREIGN KEY ({foreign_key[0]}) REFERENCES {col_name}({foreign_key[0]})"
             table_keys.append(foreign_string)
 
     # Create the table query
@@ -117,24 +136,49 @@ def create_table_query(table_name: str, data: dict, primary_keys=[], foreign_key
 
     return table_query
 
-def create_tables():
-    """Creating the tables in the MySQL database"""
-
+def create_tables(table_names_esea, table_names_hub):
+    """
+    Creating the tables in the MySQL database
+    
+    Args:
+        table_names_esea (list): List of table name strings for the esea data processing return
+        table_names_hub (list): List of table name string for the hub data processing return
+    """
+    print(
+    """
+        
+    ---------------------------------------
+            Creating the tables:
+    ---------------------------------------
+        
+    """
+    )
+    
+    # Starting the database
     db, cursor = start_database()
     
-    batch_data_match, batch_data_player, batch_data_team = process_hub_data(return_items=1)
+    # Gather data for a single tean or hub match
+    team_ids = gather_team_ids_json()
+    esea_data = process_esea_data(team_ids, teams_to_return="SINGLE")
+    hub_data = process_hub_data(return_items=1)
 
     try:
-        ## Create the queries    
-        sql_matches = create_table_query("matches", batch_data_match[0], ["match_id"])
-        sql_teams = create_table_query("teams", batch_data_team[0], ["match_id", "team_id"], [("match_id", "matches")])
-        sql_player_statistics = create_table_query("player_statistics", batch_data_player[0], ["player_id", "match_id"], [("match_id", "teams"), ("team_id", "teams"), ("match_id", "matches")])
-
-        # Create the tables
-        cursor.execute(sql_matches)
-        cursor.execute(sql_teams)
-        cursor.execute(sql_player_statistics)
-
+        ## Creating ESEA Tables 
+        for (table_name, args), data in zip(table_names_esea.items(), esea_data):
+            print(f'Creating table for: {table_name}')
+            
+            sql_queries_esea = create_table_query(table_name, data[0], *args) # Creating the query
+            
+            cursor.execute(sql_queries_esea) # Creating the table
+        
+        ## Creating HUB Tables
+        for (table_name, args), data in zip(table_names_hub.items(), hub_data):
+            print(f'Creating table for: {table_name}')
+            
+            sql_queries_hub = create_table_query(table_name, data[0], *args) # Creating the query
+            
+            cursor.execute(sql_queries_hub) # Creating the table
+            
     finally:
         db.commit()
         close_database(db,cursor)
@@ -145,8 +189,8 @@ if __name__ == "__main__":
     import sys
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-    reset_database()
+    
+    
 
 
 
