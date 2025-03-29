@@ -54,7 +54,7 @@ class FaceitData_v1:
         :param league_id: The ID of the league
         :return:
         """
-    
+        
         URL = f'{self.base_url}/championships/v1/matches?participantId={team_id}&participantType=TEAM&championshipId={league_id}&limit=20&offset=0&sort=ASC'
 
         res = requests.get(URL)
@@ -75,7 +75,20 @@ class FaceitData_v1:
 
         return check_response(res)
 
+    def player_friend_list(self, player_id: str, starting_item_position: 0=int, return_items: 20=int) -> dict | int:
+        """
+        Retrieve the friend list from a specific player
+        
+        : param player_id: The ID of the player
+        :return:
+        """
 
-
+        URL = "{}/recommender/v1/friends/{}?offset={}&limit={}".format(
+            self.base_url, player_id, starting_item_position, return_items
+        )
+        
+        res = requests.get(URL)
+        
+        return check_response(res)
 
     
