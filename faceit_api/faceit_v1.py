@@ -1,47 +1,61 @@
+# Allow standalone execution
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import aiohttp
 
-from rate_limit import rate_limiter, rate_monitor
-from response_handler import check_response
-from logging_config import logger
-
+from faceit_api.response_handler import check_response
+from faceit_api.sliding_window import RateLimitException
 
 class FaceitData_v1:
     """The Data API for Faceit"""
 
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, dispatcher: RateLimitException):
         """ Initialize the FaceitData_v1 class"""
 
         self.base_url = 'https://faceit.com/api'
-        self.session = session
+        self.session = aiohttp.ClientSession()
+        self.dispatcher = dispatcher
+        
+    async def _get(self, url:str) -> dict | int:
+        """ Helper function to fetch data from a GET request """
+        async with self.session.get(url) as response:
+            return await check_response(response)
     
+    async def _post(self, url:str, body:dict) -> dict | int:
+        """ Helper function to fetch data from a POST request """
+        async with self.session.post(url, json=body) as response:
+            return await check_response(response)
+    
+    async def _get_with_params(self, url:str, params:dict) -> dict | int:
+        """ Helper function to fetch data from a GET request with parameters """
+        async with self.session.get(url, params=params) as response:
+            return await check_response(response)
+    
+
     async def all_leagues(self) -> dict | int:
         """ Retrieve all leagues from Faceit """
         
         URL = f'{self.base_url}/team-leagues/v2/leagues/a14b8616-45b9-4581-8637-4dfd0b5f6af8/seasons'
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
     
-    async def league_season_stages(self, season_id: str) -> dict | int:
+    async def league_season_stages(self, season_id: list[str]|str) -> dict | int:
         """
         Retrieve all stages from a specific league season
 
-        :param season_id: The ID of the season
+        :param season_id: The ID of the season (list of IDs or a single ID)
         :return:
         """
         
         URL = "https://www.faceit.com/api/team-leagues/v1/get_filters"
+
+        body = {
+            'seasonId': season_id
+        }
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._post, URL, body)
     
     async def league_season_stage_teams(self, conference_id: str, starting_item_position: int=0, return_items: int=20) -> dict | int:
         """
@@ -55,12 +69,7 @@ class FaceitData_v1:
             conference_id, conference_id, int(starting_item_position), int(return_items)
         )
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
     
     async def league_team_details(self, team_id: str) -> dict | int:
         """
@@ -72,30 +81,29 @@ class FaceitData_v1:
     
         URL = f'{self.base_url}/team-leagues/v1/teams/{team_id}/profile/leagues/summary'
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
     
-    async def league_team_matches(self, team_id: str, league_id: str) -> dict | int:
+    async def league_team_matches(self, team_id: str, championship_id: list[str] | str) -> dict | int:
         """
         Retrieve league matches for a team
 
         :param team_id: The ID of the team
-        :param league_id: The ID of the league
+        :param championship_id: The ID of the championship (list of IDs or a single ID)
         :return:
         """
-        
-        URL = f'{self.base_url}/championships/v1/matches?participantId={team_id}&participantType=TEAM&championshipId={league_id}&limit=20&offset=0&sort=ASC'
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        URL = f'{self.base_url}/championships/v1/matches'
+        
+        params = {
+            "participantId" : team_id,
+            "participantType" : "TEAM",
+            "championshipId" : championship_id,
+            "limit" : "20",
+            "offset" : "0",
+            "sort" : "ASC"
+        }
+        
+        return await self.dispatcher.run(self._get_with_params, URL, params)
             
     async def league_team_details_batch(self, team_ids: list[str]) -> dict | int:
         """
@@ -105,18 +113,11 @@ class FaceitData_v1:
         :return:
         """
         
-        URL = "https://www.faceit.com/api/teams/v3/teams/batch-get"
+        URL = "https://www.faceit.com/api/team-leagues/v2/teams:batchGet"
 
-        body = {
-            "ids": team_ids
-        }
+        body = {"team_ids":team_ids}
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, json=body) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._post, URL, body)
     
     async def league_team_players(self, team_id: str) -> dict | int:
         """
@@ -128,13 +129,24 @@ class FaceitData_v1:
 
         URL = f'{self.base_url}/team-leagues/v2/teams/{team_id}/members/active'
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
+    async def player_details_batch(self, player_ids: list[str]) -> dict | int:
+        """
+        Retrieve player details for a batch of players
+
+        :param player_ids: The IDs of the players
+        :return:
+        """
+        
+        URL = "https://www.faceit.com/api/user-summary/v2/list"
+
+        body = {
+            "ids": player_ids
+        }
+
+        return await self.dispatcher.run(self._post, URL, body)
+    
     async def player_friend_list(self, player_id: str, starting_item_position: int=0, return_items: int=20) -> dict | int:
         """
         Retrieve the friend list from a specific player
@@ -149,12 +161,7 @@ class FaceitData_v1:
             self.base_url, player_id, starting_item_position, return_items
         )
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
     
     async def player_hubs(self, player_id: str, return_items: int=10, starting_item_position: int=0) -> dict | int:
         """
@@ -170,12 +177,7 @@ class FaceitData_v1:
             self.base_url, player_id, return_items, starting_item_position
         )
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
 
     

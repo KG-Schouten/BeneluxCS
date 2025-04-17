@@ -1,15 +1,18 @@
+# Allow standalone execution
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import urllib.parse
 import aiohttp
 
-from rate_limit import rate_limiter, rate_monitor
-from response_handler import check_response
-from logging_config import logger
-
+from faceit_api.sliding_window import RequestDispatcher
+from faceit_api.response_handler import check_response
 
 class FaceitData:
     """The Data API for Faceit"""
 
-    def __init__(self, session: aiohttp.ClientSession, api_token):
+    def __init__(self, api_token, dispatcher:RequestDispatcher):
         """
         Constructor Keyword arguments:
 
@@ -18,13 +21,29 @@ class FaceitData:
 
         self.api_token = api_token
         self.base_url = 'https://open.faceit.com/data/v4'
-        self.session = session
+        self.session = aiohttp.ClientSession()
+        self.dispatcher = dispatcher
 
         self.headers = {
             'accept': 'application/json',
             'Authorization': 'Bearer {}'.format(self.api_token)
         }
 
+    async def _get(self, url:str) -> dict | int:
+        """ Helper function to fetch data from a GET request """
+        async with self.session.get(url, headers=self.headers) as response:
+            return await check_response(response)
+    
+    async def _post(self, url:str, body:dict) -> dict | int:
+        """ Helper function to fetch data from a POST request """
+        async with self.session.post(url, json=body, headers=self.headers) as response:
+            return await check_response(response)
+    
+    async def _get_with_params(self, url:str, params:dict) -> dict | int:
+        """ Helper function to fetch data from a GET request with parameters """
+        async with self.session.get(url, params=params, headers=self.headers) as response:
+            return await check_response(response)
+    
     # Leagues (NEW!!!!)
     async def leagues_details(self, league_id):
         """
@@ -36,12 +55,7 @@ class FaceitData:
 
         URL = "{}/leagues/{}".format(self.base_url, league_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
         
     async def leagues_season_details(self, league_id, season_id):
         """
@@ -54,12 +68,7 @@ class FaceitData:
 
         URL = "{}/leagues/{}/seasons/{}".format(self.base_url, league_id, season_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
 
     # Championships
@@ -79,12 +88,7 @@ class FaceitData:
             elif expanded.lower() == 'organizer':
                 URL += '?expanded=organizer'
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
             
     async def championship_matches(self, championship_id, type_of_match="all", starting_item_position=0, return_items=20):
         """
@@ -100,12 +104,7 @@ class FaceitData:
         URL = "{}/championships/{}/matches?type={}&offset={}&limit={}".format(
             self.base_url, championship_id, type_of_match, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def championship_subscriptions(self, championship_id, starting_item_position=0, return_items=10):
         """
@@ -120,12 +119,7 @@ class FaceitData:
         URL = "{}/championships/{}/subscriptions?offset={}&limit={}".format(
             self.base_url, championship_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
     # Games
     async def all_faceit_games(self, starting_item_position=0, return_items=20):
         """
@@ -138,12 +132,7 @@ class FaceitData:
 
         URL = "{}/games?offset={}&limit={}".format(self.base_url, starting_item_position, return_items)
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
     
     async def game_details(self, game_id):
         """
@@ -155,12 +144,7 @@ class FaceitData:
 
         URL = "{}/games/{}".format(self.base_url, game_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def game_details_parent(self, game_id=None):
         """
@@ -172,12 +156,7 @@ class FaceitData:
 
         URL = "{}/games/{}/parent".format(self.base_url, game_id)
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Hubs
     async def hub_details(self, hub_id, game=None, organizer=None):
@@ -200,12 +179,7 @@ class FaceitData:
                 if organizer:
                     URL += "?expanded=organizer"
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def hub_matches(self, hub_id, type_of_match="all", starting_item_position=0, return_items=20):
         """
@@ -221,12 +195,7 @@ class FaceitData:
         URL = "{}/hubs/{}/matches?type={}&offset={}&limit={}".format(
             self.base_url, hub_id, type_of_match, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def hub_members(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -241,12 +210,7 @@ class FaceitData:
         URL = "{}/hubs/{}/members?offset={}&limit={}".format(
             self.base_url, hub_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def hub_roles(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -261,12 +225,7 @@ class FaceitData:
         URL = "{}/hubs/{}/roles?offset={}&limit={}".format(
             self.base_url, hub_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def hub_rules(self, hub_id):
         """
@@ -280,12 +239,7 @@ class FaceitData:
             self.base_url, hub_id
         )
         
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
     
     async def hub_statistics(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -300,12 +254,7 @@ class FaceitData:
         URL = "{}/hubs/{}/stats?offset={}&limit={}".format(
             self.base_url, hub_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Leaderboards
     async def championship_leaderboards(self, championship_id, starting_item_position=0, return_items=20):
@@ -321,12 +270,7 @@ class FaceitData:
         URL = "{}/leaderboards/championships/{}?offset={}&limit={}".format(
             self.base_url, championship_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def championship_group_ranking(self, championship_id, group, starting_item_position=0, return_items=20):
         """
@@ -342,12 +286,7 @@ class FaceitData:
         URL = "{}/leaderboards/championships/{}/groups/{}?offset={}&limit={}".format(
             self.base_url, championship_id, group, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def hub_leaderboards(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -362,12 +301,7 @@ class FaceitData:
         URL = "{}/leaderboards/hubs/{}?offset={}&limit={}".format(
             self.base_url, hub_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def hub_ranking(self, hub_id, starting_item_position=0, return_items=20):
         """
@@ -382,12 +316,7 @@ class FaceitData:
         URL = "{}/leaderboards/hubs/{}/general?offset={}&limit={}".format(
             self.base_url, hub_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def hub_season_ranking(self, hub_id, season, starting_item_position=0, return_items=20):
         """
@@ -403,12 +332,7 @@ class FaceitData:
         URL = "{}/leaderboards/hubs/{}/seasons/{}?offset={}&limit={}".format(
             self.base_url, hub_id, season, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def leaderboard_ranking(self, leaderboard_id, starting_item_position=0, return_items=20):
         """
@@ -423,12 +347,7 @@ class FaceitData:
         URL = "{}/leaderboards/{}?offset={}&limit={}".format(
             self.base_url, leaderboard_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Matches
     async def match_details(self, match_id):
@@ -441,12 +360,7 @@ class FaceitData:
 
         URL = "{}/matches/{}".format(self.base_url, match_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def match_stats(self, match_id):
         """
@@ -458,12 +372,7 @@ class FaceitData:
 
         URL = "{}/matches/{}/stats".format(self.base_url, match_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Organizers
     async def organizer_details(self, name_of_organizer=None, organizer_id=None):
@@ -487,12 +396,7 @@ class FaceitData:
                     if organizer_id is not None:
                         URL += "/{}".format(organizer_id)
                 
-                async with rate_limiter:
-                    rate_monitor.register_request()
-                    rate_monitor.debug_log()
-                    
-                    async with self.session.get(URL, headers=self.headers) as response:
-                        return await check_response(response)
+                return await self.dispatcher.run(self._get, URL)
 
     async def organizer_championships(self, organizer_id, starting_item_position=0, return_items=20):
         """
@@ -507,12 +411,7 @@ class FaceitData:
         URL = "{}/organizers/{}/championships?offset={}&limit={}".format(
             self.base_url, organizer_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def organizer_games(self, organizer_id):
         """
@@ -525,12 +424,7 @@ class FaceitData:
         URL = "{}/organizers/{}/games".format(
             self.base_url, organizer_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def organizer_hubs(self, organizer_id, starting_item_position=0, return_items=20):
         """
@@ -545,12 +439,7 @@ class FaceitData:
         URL = "{}/organizers/{}/hubs?offset={}&limit={}".format(
             self.base_url, organizer_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def organizer_tournaments(self, organizer_id, type_of_tournament="upcoming", starting_item_position=0,
                               return_items=20):
@@ -567,12 +456,7 @@ class FaceitData:
         URL = "{}/organizers/{}/tournaments?type={}&offset={}&limit={}".format(
             self.base_url, organizer_id, type_of_tournament, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Players
     async def player_details(self, nickname):
@@ -592,12 +476,7 @@ class FaceitData:
         # if game is not None:
         #     URL += "&game={}".format(game)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def player_id_details(self, player_id):
         """
@@ -609,12 +488,7 @@ class FaceitData:
 
         URL = "{}/players/{}".format(self.base_url, player_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def player_matches(self, player_id, game, from_timestamp=None, to_timestamp=None,
                        starting_item_position=0, return_items=20):
@@ -644,12 +518,7 @@ class FaceitData:
 
         URL += "?game={}&from={}&to={}&limit={}".format(game, from_timestamp, to_timestamp, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def player_hubs(self, player_id, starting_item_position=0, return_items=20):
         """
@@ -664,12 +533,7 @@ class FaceitData:
         URL = "{}/players/{}/hubs?offset={}&limit={}".format(
             self.base_url, player_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def player_stats(self, player_id, game_id):
         """
@@ -682,12 +546,7 @@ class FaceitData:
 
         URL = "{}/players/{}/stats/{}".format(self.base_url, player_id, game_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def player_tournaments(self, player_id, starting_item_position=0, return_items=20):
         """
@@ -702,12 +561,7 @@ class FaceitData:
         URL = "{}/players/{}/tournaments?offset={}&limit={}".format(
             self.base_url, player_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Rankings
     async def game_global_ranking(self, game_id, region, country=None, starting_item_position=0, return_items=20):
@@ -731,12 +585,7 @@ class FaceitData:
             URL += "?offset={}&limit={}".format(
                 starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def player_ranking_of_game(self, game_id, region, player_id, country=None, return_items=20):
         """
@@ -759,12 +608,7 @@ class FaceitData:
         else:
             URL += "?limit={}".format(return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Search
     async def search_championships(self, name_of_championship, game=None, region=None, type_of_competition="all",
@@ -790,12 +634,7 @@ class FaceitData:
         elif region is not None:
             URL += "&region={}".format(region)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def search_hubs(self, name_of_hub, game=None, region=None, starting_item_position=0, return_items=20):
         """
@@ -817,12 +656,7 @@ class FaceitData:
         elif region is not None:
             URL += "&region={}".format(region)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def search_organizers(self, name_of_organizer, starting_item_position=0, return_items=20):
         """
@@ -837,12 +671,7 @@ class FaceitData:
         URL = "{}/search/organizers?name={}&offset={}&limit={}".format(
             self.base_url, urllib.parse.quote_plus(name_of_organizer), starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def search_players(self, nickname, game=None, country_code=None, starting_item_position=0, return_items=20):
         """
@@ -864,12 +693,7 @@ class FaceitData:
         elif country_code is not None:
             URL += "&country={}".format(country_code)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def search_teams(self, nickname, game=None, starting_item_position=0, return_items=20):
         """
@@ -888,12 +712,7 @@ class FaceitData:
         if game is not None:
             URL += "&game={}".format(urllib.parse.quote_plus(game))
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def search_tournaments(self, name_of_tournament, game=None, region=None, type_of_competition="all",
                            starting_item_position=0, return_items=20):
@@ -918,12 +737,7 @@ class FaceitData:
         elif region is not None:
             URL += "&region={}".format(region)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Teams
     async def team_details(self, team_id):
@@ -935,12 +749,7 @@ class FaceitData:
 
         URL = "{}/teams/{}".format(self.base_url, team_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def team_stats(self, team_id, game_id):
         """
@@ -953,12 +762,7 @@ class FaceitData:
 
         URL = "{}/teams/{}/stats/{}".format(self.base_url, team_id, urllib.parse.quote_plus(game_id))
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def team_tournaments(self, team_id, starting_item_position=0, return_items=20):
         """
@@ -973,12 +777,7 @@ class FaceitData:
         URL = "{}/teams/{}/tournaments?offset={}&limit={}".format(
             self.base_url, team_id, starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     # Tournaments (no longer used)
     async def all_tournaments(self, game=None, region=None, type_of_tournament="upcoming"):
@@ -1001,12 +800,7 @@ class FaceitData:
         elif region is not None:
             URL += "&region={}".format(region)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def tournament_details(self, tournament_id, expanded=None):
         """
@@ -1024,12 +818,7 @@ class FaceitData:
             elif expanded.lower() == "game":
                 URL += "?expanded=game"
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def tournament_brackets(self, tournament_id):
         """
@@ -1041,12 +830,7 @@ class FaceitData:
 
         URL = "{}/tournaments/{}/brackets".format(self.base_url, tournament_id)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def tournament_matches(self, tournament_id, starting_item_position=0, return_items=20):
         """
@@ -1061,12 +845,7 @@ class FaceitData:
         URL = "{}/tournaments/{}/matches?offset={}&limit={}".format(self.base_url, tournament_id,
                                                                         starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
 
     async def tournament_teams(self, tournament_id, starting_item_position=0, return_items=20):
         """
@@ -1081,9 +860,4 @@ class FaceitData:
         URL = "{}/tournaments/{}/teams?offset={}&limit={}".format(self.base_url, tournament_id,
                                                                       starting_item_position, return_items)
 
-        async with rate_limiter:
-            rate_monitor.register_request()
-            rate_monitor.debug_log()
-            
-            async with self.session.get(URL, headers=self.headers) as response:
-                return await check_response(response)
+        return await self.dispatcher.run(self._get, URL)
