@@ -8,7 +8,7 @@ from typing import *
 from data_processing import process_hub_data, process_esea_data, gather_team_ids_json
 
 from database.db_down import *
-from database.db_up import calculate_hltv, upload_data
+from database.db_up import *
 from database.db_manage import start_database, close_database
 from database.db_config import table_names_esea, table_names_hub
 
@@ -65,6 +65,11 @@ def delete_tables():
         # Loop through and drop each table
         for table in tables:
             table_name = table[0]
+            
+            # Exclude 'player_country' table from deletion
+            if table_name == 'players_country':
+                continue
+            
             cursor.execute(f"DROP TABLE IF EXISTS {table_name};")
             print(f"Dropped table: {table_name}")
 
@@ -133,6 +138,8 @@ def create_table_query(table_name: str, data: dict, primary_keys=[], foreign_key
         {", ".join(column_types)}, {", ".join(table_keys)}
     );
     """
+    
+    print(table_query)
 
     return table_query
 
@@ -169,7 +176,7 @@ def create_tables(table_names_esea, table_names_hub):
             
             sql_queries_esea = create_table_query(table_name, data[0], *args) # Creating the query
             
-            cursor.execute(sql_queries_esea) # Creating the table
+            # cursor.execute(sql_queries_esea) # Creating the table
         
         ## Creating HUB Tables
         for (table_name, args), data in zip(table_names_hub.items(), hub_data):
@@ -177,7 +184,7 @@ def create_tables(table_names_esea, table_names_hub):
             
             sql_queries_hub = create_table_query(table_name, data[0], *args) # Creating the query
             
-            cursor.execute(sql_queries_hub) # Creating the table
+            # cursor.execute(sql_queries_hub) # Creating the table
             
     finally:
         db.commit()
@@ -190,8 +197,7 @@ if __name__ == "__main__":
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     
-    
-
+    create_tables(table_names_esea, table_names_hub) # Creating the tables
 
 
 

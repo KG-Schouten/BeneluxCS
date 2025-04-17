@@ -20,12 +20,12 @@ from database.db_down import *
 db_name = "BeneluxCS"
 
 ### -----------------------------------------------------------------
-### fACEIT Ranking Processing
+### FACEIT Ranking
 ### -----------------------------------------------------------------
 
 
 ### -----------------------------------------------------------------
-### ESEA League Data Processing
+### ESEA League Data 
 ### -----------------------------------------------------------------
 
 def update_esea_data(table_names) -> None:
@@ -103,6 +103,71 @@ def update_hub_data(table_names) -> None:
     db.commit()
     close_database(db, cursor)
 
+### -----------------------------------------------------------------
+### Player Country Data
+### -----------------------------------------------------------------
+
+def update_players_country_data(data: Union[pd.DataFrame, List[Union[Tuple, List]], Dict[str, List]]) -> None:
+    """
+    Update the players_country table in the database with players and their country codes.
+    
+    Args:
+        data: A DataFrame, list of tuples/lists, or a dict with keys 'player_id', 'player_name', 'country'.
+    """
+    expected_keys = {'player_id', 'player_name', 'country'}
+    
+    # === Normalize the data to a dataframe ===
+    if isinstance(data, pd.DataFrame):
+        df = data.copy()
+    elif isinstance(data, dict):
+        if not expected_keys.issubset(data.keys()):
+            print(f"Data dictionary must contain keys: {expected_keys}")
+            return
+        df = pd.DataFrame(data)
+    elif isinstance(data, list):
+        try:
+            df = pd.DataFrame(data, columns=['player_id', 'player_name', 'country'])
+        except Exception as e:
+            print(f"List input must contain tuples/lists with keys: {expected_keys}. Error: {e}")
+            return
+    else:
+        print("Input data must be a DataFrame, list of tuples/lists, or a dict.")
+        return
+    
+    # === Validate the DataFrame ===
+    if df['player_id'].duplicated().any():
+        print("Error: 'player_id' values must be unique.")
+        return
+
+    if not pd.api.types.is_string_dtype(df['player_name']):
+        print("Error: 'player_name' must be of string type.")
+        return
+
+    if not df['country'].apply(lambda x: isinstance(x, str) and re.match(r'^[A-Z]{2}$', x)).all():
+        print("Error: 'country' must be valid 2-letter ISO country codes.")
+        return
+
+    # === Upload the DataFrame to the Database ===
+    db, cursor = start_database()
+    
+    # Create the query to insert or update player data in the players_country table
+    query = """
+        INSERT INTO players_country (player_id, player_name, country)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE player_name = VALUES(player_name), country = VALUES(country)
+    """
+    
+    try:
+        values = [tuple(row) for row in df.itertuples(index=False, name=None)]
+        cursor.executemany(query, values)
+        db.commit()
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+    except Exception as e:
+        print(f"Error while uploading players_country data: {e}")
+    finally:
+        close_database(db, cursor)
+    
 ### -----------------------------------------------------------------
 ### General Functions
 ### -----------------------------------------------------------------
