@@ -23,6 +23,7 @@ def start_database():
     api_keys = load_api_keys()
     ## Load password for MySQL database
     mysql_password = api_keys["MYSQL_PASSWORD"]
+    postgres_password = api_keys["POSTGRES_PASSWORD"]
 
     db = mysql.connector.connect(
         host="localhost",
@@ -30,8 +31,6 @@ def start_database():
         passwd=mysql_password,
         database=db_name
     )
-    
-    # postgres_password = api_keys["POSTGRES_PASSWORD"]
     
     # db = psycopg2.connect(
     #     host = "nozomi.proxy.rlwy.net",
