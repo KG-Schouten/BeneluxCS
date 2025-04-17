@@ -156,6 +156,32 @@ def gather_esea_stats(season: int|list) -> pd.DataFrame:
     
     return df
 
+def gather_players_country() -> pd.DataFrame:
+    """
+    Gathers the players country from the database
+
+    Returns:
+        df
+    """
+    
+    ## Start the database and cursor
+    db, cursor = start_database()
+
+    query = f"""
+        SELECT *      
+        FROM players_country p
+    """
+
+    # Get player data into dataframe
+    cursor.execute(query)
+    res = cursor.fetchall()
+    columns = ['player_id','player_name', 'country']
+    df = pd.DataFrame(res, columns=columns)
+
+    return df
+
+
+
 if __name__ == "__main__":
     # Allow standalone execution
     import sys
