@@ -7,7 +7,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[
         logging.FileHandler("faceit_api.log"), # Logs to file
-        logging.StreamHandler() # Logs to console
+        # logging.StreamHandler() # Logs to console
     ]
 )
 
