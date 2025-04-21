@@ -3,14 +3,8 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import json
 import os
-import random
 import pandas as pd
-from datetime import datetime, timedelta
-import re
-import time
-from typing import Dict, Any, Callable, Optional
 
 # AI imports
 from model.model_utils import load_model, predict, preprocess_data
@@ -68,11 +62,14 @@ async def process_hub_data(competition_id: str, items_to_return: int|str=100) ->
         ## Dataframe with the matches and teams that played in these matches (df_matches, df_teams_matches)
         print("Gathering hub matches...")
         df_matches, df_teams_matches = await gather_hub_matches(competition_id, faceit_data=faceit_data)
-        
+
         if items_to_return != "ALL":
             df_matches = df_matches.head(items_to_return)
             df_teams_matches = df_teams_matches[df_teams_matches['match_id'].isin(df_matches['match_id'])]
         
+        match_ids = df_matches['match_id'].unique().tolist()
+        df_matches, df_teams_matches = await process_match_details_batch(match_ids, event_ids=[competition_id]*len(match_ids), faceit_data=faceit_data)
+
         ## Dataframe with team details (df_teams)
         print("Gathering hub team details...")
         team_ids = list(df_teams_matches['team_id'].unique())
@@ -100,8 +97,20 @@ async def gather_hub_matches(competition_id: str, faceit_data: FaceitData):
     
     Returns:
         tuple:
-            - df_matches: DataFrame containing match data
-            - df_teams_matches: DataFrame containing team match data
+            - df_matches: DataFrame containing match data with columns:
+                - match_id: The ID of the match
+                - competition_id: The ID of the competition
+                - competition_type: The type of competition (e.g., tournament, league)
+                - competition_name: The name of the competition
+                - organizer_id: The ID of the organizer
+                - match_time: The time the match was configured
+                - demo_url: The URL of the demo file
+                - best_of: The number of rounds in the match
+                - winner: The ID of the winning team
+                - status: The status of the match (e.g., finished, cancelled)
+            - df_teams_matches: DataFrame containing team match data with columns:
+                - team_id: The ID of the team
+                - match_id: The ID of the match
 
     """
     tasks = [faceit_data.hub_matches(competition_id, starting_item_position=i, return_items=100) for i in range(0, 1000, 100)]
@@ -125,7 +134,6 @@ async def gather_hub_matches(competition_id: str, faceit_data: FaceitData):
                 "competition_name": match.get('competition_name', None),
                 "organizer_id": match.get('organizer_id', None),
                 "match_time": match.get('configured_at', None),
-                "demo_url": match.get('demo_url', None),
                 "best_of": match.get('best_of', None),
                 "winner": winning_id,
                 "status": match.get('status', None),          

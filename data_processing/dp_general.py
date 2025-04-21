@@ -111,6 +111,65 @@ async def fetch_and_check_player_details(player_id: str, check: bool=True):
 ### Match processing functions
 ### -----------------------------------------------------------------
 
+async def process_match_details_batch(match_ids: list[str], faceit_data: FaceitData, **kwargs) -> pd.DataFrame:
+    """
+    Processes match details for a batch of match IDs.
+
+    Args:
+        match_ids (list): List of match IDs to process
+        faceit_data (FaceitData): FaceitData object for API calls
+        **kwargs: Additional arguments for processing
+            - event_ids (list): The ID of the event to filter matches by (so championship_id for ESEA)
+    
+    Returns:
+        df_matches (pd.DataFrame): DataFrame containing match details
+    """
+    event_ids = kwargs.get('event_ids', [])
+    tasks = [process_match_details(match_id, event_id=event_id, faceit_data=faceit_data) for match_id, event_id in zip(match_ids, event_ids)]
+    results = await gather_with_progress(tasks, desc="Processing match details", unit="matches")
+
+    df_matches = pd.DataFrame([row[0] for row in results])
+    df_teams_matches = pd.DataFrame([item for row in results for item in row[1]])
+
+    return df_matches, df_teams_matches
+
+async def process_match_details(match_id: str, event_id=None, faceit_data: FaceitData = None) -> dict:
+    try:
+            # data_team_matches = await faceit_data_v1.league_team_matches(team_id, championship_id)
+            match_details = await faceit_data.match_details(match_id)
+
+            winning_fac = match_details['results'].get('winner', None)
+            winning_id = match_details['teams'][winning_fac]['faction_id']
+            match_dict = {
+                "match_id": match_id,
+                "event_id": event_id,
+                "competition_id": match_details.get("competition_id", None),
+                "competition_type": match_details.get("competition_type", None),
+                "competition_name": match_details.get("competition_name", None),
+                "organizer_id": match_details.get("organizer_id", None),
+                "match_time": match_details.get("configured_at", None),
+                "best_of": match_details.get("best_of", None),
+                "winner_id": winning_id,
+                "status": match_details.get("status", None),
+                "round": match_details.get("round", None),
+                "group": match_details.get("group", None),
+                "demo_url": match_details.get("demo_url", None),
+            }
+            match_team_list = []
+            for team in match_details['teams'].values():
+                match_team_dict = {
+                    "match_id": match_id,
+                    "team_id": team['faction_id'],
+                    "team_name": team.get("name", None),
+                    "team_avatar": team.get("avatar", None),
+                }
+                match_team_list.append(match_team_dict)
+
+            return match_dict, match_team_list
+    except Exception as e:
+        print(f"Error processing match ID {match_id}: {e}")
+        return None
+
 async def process_match_stats_batch(match_ids, faceit_data: FaceitData) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: 
     """
     Processes match stats for a batch of match IDs.

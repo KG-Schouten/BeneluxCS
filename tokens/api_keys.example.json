@@ -1,5 +1,5 @@
 {
     "FACEIT_TOKEN": "your-faceit-token-here",
     "DISCORD_TOKEN": "your-discord-token-here",
-    "MYSQL_PASSWORD": "your-mysql-password-here"
+    "POSTGRES_PASSWORD": "your-postgresql-password-here"
 }

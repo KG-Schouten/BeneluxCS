@@ -112,35 +112,51 @@ def process_single_season(season_data: dict, season_id: str, season_number: str)
 ### ESEA League Data Processing
 ### -----------------------------------------------------------------
 
-async def process_esea_teams_data(season_number: str | int):
-    """ The main function to process all data of the benelux teams in ESEA 
-    
+async def process_esea_teams_data(**kwargs) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """The main function to process all data of the Benelux teams in ESEA.
     Args:
-        season_number (str): The number of the season to process, can be:
-            - "ALL" for all seasons
-            - int for a specific season number
-    
+        **kwargs: Additional optional keyword arguments:
+            - season_number (str | int | list):
+                - "ALL" to process all seasons
+                - A specific season number (str | int)
+                - A list of season numbers (str | int)
+            - season_id (str | int | list): The ID(s) of the season(s) to process. Can be:
+                - "ALL" to process all seasons
+                - A single season ID (as string)
+                - A list of season IDs
+            - team_id (str or list[str]): The ID(s) of the team(s) to process. Can be:
+                - A single team ID (as string)
+                - A list of team IDs
+            - match_amount (int | str): The number of matches to process. Default is 'ALL'. (will take the most recent matches)
+                - 'ALL' to process all matches
+                - A specific number of matches (int)
+            - match_amount_type (str): How the match_amount is determined
+                - 'ANY' to process the latest n matches of all available matches
+                - 'TEAM' to process the latest n matches of each team
+                - 'SEASON' to process the latest n matches of each season
     Returns:
         tuple:
-            - df_seasons: DataFrame with the season data
-            - df_teams_benelux: DataFrame with the benelux teams for each season and division
-            - df_matches: DataFrame with the matches data
-            - df_teams_matches: DataFrame with the teams in the matches
-            - df_teams: DataFrame with the team details
-            - df_maps: DataFrame with the maps data
-            - df_teams_maps: DataFrame with the teams in the maps
-            - df_players_stats: DataFrame with the player stats data
-            - df_players: DataFrame with the player details
+            - df_seasons (pd.DataFrame): DataFrame containing season data
+            - df_teams_benelux (pd.DataFrame): DataFrame containing team data
+            - df_matches (pd.DataFrame): DataFrame containing match data
+            - df_teams_matches (pd.DataFrame): DataFrame containing team match data
+            - df_teams (pd.DataFrame): DataFrame containing team details
+            - df_maps (pd.DataFrame): DataFrame containing map data
+            - df_teams_maps (pd.DataFrame): DataFrame containing team map data
+            - df_players_stats (pd.DataFrame): DataFrame containing player stats data
+            - df_players (pd.DataFrame): DataFrame containing player details
     """
     print(
     f"""
         
-    ------------------------------------------------------------
-        Processing ESEA team data for season: {season_number}
-    ------------------------------------------------------------
-    
+    ---------------------------------
+        Processing ESEA team data
+    ---------------------------------
     """
     )
+    # Load the kwargs 
+    match_amount = kwargs.get("match_amount", "ALL") # Get the match amount from the kwargs (default is "ALL")
+    match_amount_type = kwargs.get("match_amount_type", "ANY") # Get the match amount type from the kwargs (default is "ANY")
 
     async with RequestDispatcher(request_limit=350, interval=10, concurrency=5) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
         # Initialize the FaceitData object with the API token and dispatcher
@@ -153,21 +169,33 @@ async def process_esea_teams_data(season_number: str | int):
         df_seasons = await process_esea_season_data(faceit_data_v1=faceit_data_v1)
         ## Dataframe with the benelux teams for each season and division (df_teams_benelux)
         print('Gathering ESEA benelux team data...')
-        df_teams_benelux = gather_team_ids_json()
+        df_teams_benelux = gather_team_ids_json(kwargs=kwargs) # Get the team ids from the json file
+        if df_teams_benelux.empty or df_teams_benelux is None:
+            print("No teams found in the json file for the given kwargs.")
+            return None
+
+        # Gather the match_ids 
+        season_numbers = df_teams_benelux['season_number'].unique().tolist() # Get the season numbers from the teams dataframe     
+        tasks = [gather_esea_matches_season(df_seasons, df_teams_benelux, season_number, faceit_data_v1=faceit_data_v1) for season_number in season_numbers]
+        results = await gather_with_progress(tasks, desc="Processing ESEA match ids", unit='seasons')
+        df_esea_matches = pd.concat(results, ignore_index=True) # Concatenate the results into a single dataframe
         
-        ## Dataframes with the matches and teams in these matches (df_matches, df_teams_matches)
-        print('Gathering ESEA match data...')
-        if season_number == "ALL":
-            # Get all season numbers
-            season_numbers = df_teams_benelux['season_number'].unique()
-            # Gather the matches for all seasons
-            tasks = [gather_esea_matches_season(df_seasons, df_teams_benelux, season_number, faceit_data_v1=faceit_data_v1) for season_number in season_numbers]
-            results = await gather_with_progress(tasks, desc="Processing ESEA matches", unit='seasons')
+        if match_amount: # Only keep the matches that are specified in the kwargs
+            if match_amount == "ALL":
+                pass
             
-            df_matches = pd.concat([result[0] for result in results], ignore_index=True)
-            df_teams_matches = pd.concat([result[1] for result in results], ignore_index=True)
-        elif isinstance(season_number, int): # Get the data from the specific season number
-            df_matches, df_teams_matches = await gather_esea_matches_season(df_seasons, df_teams_benelux, season_number, faceit_data_v1=faceit_data_v1)
+            elif isinstance(match_amount, int):
+                if match_amount_type == "ANY":
+                    df_esea_matches = df_esea_matches.sort_values(by='match_time', ascending=False).head(match_amount).reset_index(drop=True)
+                elif match_amount_type == "TEAM":
+                    df_esea_matches = df_esea_matches.sort_values(by='match_time', ascending=False).groupby('team_id').head(match_amount).reset_index(drop=True)
+                elif match_amount_type == "SEASON":
+                    df_esea_matches = pd.merge(df_esea_matches, df_seasons, on='championship_id', how='left')
+                    df_esea_matches = df_esea_matches.sort_values(by='match_time', ascending=False).groupby('season_id').head(match_amount).reset_index(drop=True)
+
+        match_ids = df_esea_matches['match_id'].unique().tolist() # Get the match ids from the matches
+        championship_ids = df_esea_matches['championship_id'].unique().tolist() # Get the championship ids from the matches
+        df_matches, df_teams_matches = await process_match_details_batch(match_ids, faceit_data=FaceitData, event_ids=championship_ids) # Get the match details for the matches in the matches
         
         ## Dataframe with the team details (df_teams)
         print('Gathering ESEA team details...')
@@ -203,7 +231,14 @@ async def process_esea_teams_data(season_number: str | int):
     return df_seasons, df_teams_benelux, df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players
     
 async def gather_esea_matches_season(df_seasons: pd.DataFrame, df_teams_benelux: pd.DataFrame, season_number: int, faceit_data_v1: FaceitData_v1) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """ Gather the matches of all benelux teams in a season"""
+    """ 
+    Gather the matches of all benelux teams in a season
+    
+    Returns:
+        pd.DataFrame: A pandas dataframe containing the match data
+        with the following columns:
+        'match_id', 'championship_id', 'match_time'
+    """
     try:
         # season_id = df_seasons.loc[df_seasons['season_number'] == int(season_number), 'season_id'].values[0]
 
@@ -225,62 +260,43 @@ async def gather_esea_matches_season(df_seasons: pd.DataFrame, df_teams_benelux:
         
         results = await asyncio.gather(*tasks)  # Run all tasks concurrently
         
-        extracted_matches = [
-            match
+        match_list = [
+            {
+                'match_id': match['origin']['id'],
+                'championship_id': match.get('championshipId', None),
+                'match_time': match['origin'].get('schedule'),
+            }
             for result in results
             if isinstance(result, dict)
             if result['payload']['items'] is not None
             for match in result['payload']['items']
+            if match['origin']['id'] is not None
+            if not any(faction['id'] == 'bye' for faction in match['factions'])
         ]
         
-        ## Create the match list and team match dataframes
-        match_list = []
-        team_match_list = []
-        team_match_set = set()
-
-        for match in extracted_matches:
-            if not any(faction['id'] == 'bye' for faction in match['factions']):
-                match_id = match['origin']['id']
-                match_list.append(
-                    {
-                        'match_id': match_id,
-                        'championship_id': match['championshipId'],
-                        'group': match['group'],
-                        'round': match['round'],
-                        'status': match['status'],
-                        'winner': match.get('winner', None),
-                        'match_time' : match['origin'].get('schedule', None)
-                    }
-                )
-                
-                for team in match['factions']:
-                    team_id = team['id']
-                    if (team_id, match_id) not in team_match_set and team_id != 'bye':
-                        team_match_set.add((team_id, match_id))
-                        
-                        team_match_list.append(
-                            {
-                                'team_id': team_id,
-                                'match_id': match_id
-                            }
-                        )
-
-        df_matches = pd.DataFrame(match_list)
-        df_teams_matches = pd.DataFrame(team_match_list)
-        
-        return df_matches, df_teams_matches
+        df_esea_matches = pd.DataFrame(match_list)
+        return df_esea_matches
     except Exception as e:
         print(f"Error gathering ESEA matches for teams in season {season_number}: {e}")
         return None
 
-def gather_team_ids_json(URL: str = "data\\league_teams.json") -> pd.DataFrame:
+def gather_team_ids_json(**kwargs) -> pd.DataFrame:
     """
     Reads a JSON file containing team names and their corresponding team IDs.
 
     Args:
-        URL (str, optional): The file path to the JSON file containing team IDs.
-                             Defaults to "data/league_teams.json".
-
+        **kwargs: Additional optional keyword arguments:
+            - season_number (str | int | list):
+                - "ALL" to process all seasons
+                - A specific season number (str | int)
+                - A list of season numbers (str | int)
+            - season_id (str | int | list): (Default is None)
+                - "ALL" to process all seasons
+                - A single season ID (as string)
+                - A list of season IDs
+            - team_id (str or list[str]): (Default is None)
+                - A single team ID (as string)
+                - A list of team IDs 
     Returns:
         pd.Dataframe: A pandas DataFrame containing the following columns:
             - season_id: The ID of the season
@@ -289,6 +305,16 @@ def gather_team_ids_json(URL: str = "data\\league_teams.json") -> pd.DataFrame:
             - team_name: The name of the team
             - team_id: The ID of the team
     """
+    # Data path
+    # Path to the API keys file
+    BASE_DIR = os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    URL = os.path.join(BASE_DIR, 'data', 'league_teams.json')
+
+    # Load the kwargs 
+    season_number = kwargs.get("season_number", None) # Get the season number from the kwargs (default is "ALL")
+    season_id = kwargs.get("season_id", None) # Get the season id from the kwargs (default is None)
+    team_id = kwargs.get("team_id", None) # Get the team id from the kwargs (default is None)
+
     try:
         with open(URL, 'r', encoding='utf-8') as f:  # Open the file in read mode with UTF-8 encoding
             team_ids = json.load(f)  # Load the JSON content into a Python dictionary
@@ -308,6 +334,94 @@ def gather_team_ids_json(URL: str = "data\\league_teams.json") -> pd.DataFrame:
                         })
             df_teams = pd.DataFrame(rows)
             
+            # Filter the dataframe based on the kwargs
+            if season_number is not None: # Filtering based on season_number
+                
+                if season_number == "ALL":
+                    pass
+                
+                elif isinstance(season_number, str or int):
+                    try:
+                        season_number = int(season_number) # try to convert the season number to an integer
+
+                        if season_number in df_teams['season_number'].values:
+                            df_teams = df_teams[df_teams['season_number'] == season_number]
+                        else:
+                            print(f"Invalid season number: {season_number}. Not in the dataframe.")
+                            return None
+                    except ValueError:
+                        print(f"Invalid season number: {season_number}. Must be an integer (or able to be converted to).")
+                        return None
+                
+                elif isinstance(season_number, list): # Check if the season number is a list of integers
+                    try:
+                        if all(isinstance(int(season), int) for season in season_number):
+                            season_numbers = [int(season) for season in season_number]
+                            if all(season in df_teams['season_number'].values for season in season_numbers):
+                                df_teams = df_teams[df_teams['season_number'].isin(season_numbers)]
+                            else:
+                                print(f"Invalid season number in list: {season_number}. Not in the dataframe.")
+                                return None
+                        else:
+                            print(f"Invalid season number in list: {season_number}. Must be an integer (or able to be converted to).")
+                            return None
+                    except Exception as e:
+                        print(f"Error while filtering season numbers from season_number list: {e}")
+                        return None
+                
+                else:
+                    print(f"Invalid season number type: {season_number}.")
+                    return None
+            elif season_id is not None:
+                
+                if season_id == "ALL":
+                    pass
+                
+                elif isinstance(season_id, str):
+                    if season_id in df_teams['season_id'].values:
+                        df_teams = df_teams[df_teams['season_id'] == season_id]
+                    else:
+                        print(f"Invalid season id: {season_id}. Not in the dataframe.")
+                        return None
+                
+                elif isinstance(season_id, list):
+                    try:
+                        if all(isinstance(szn_id, str) for szn_id in season_id):
+                            if all(szn_id in df_teams['season_id'].values for szn_id in season_id):
+                                df_teams = df_teams[df_teams['season_id'].isin(season_id)]
+                            else:
+                                print(f"Invalid season id in list: {season_id}. Not in the dataframe.")
+                                return None
+                        else:
+                            print(f"Invalid season id in list: {season_id}. Must be a string.")
+                            return None
+                    except Exception as e:
+                        print(f"Error while filtering season ids from season_id list: {e}")
+                        return None
+            
+            if team_id is not None:
+                if isinstance(team_id, str):
+                    if team_id in df_teams['team_id'].values:
+                        df_teams = df_teams[df_teams['team_id'] == team_id]
+                    else:
+                        print(f"Invalid team id: {team_id}. Not in the dataframe.")
+                        return None
+                
+                elif isinstance(team_id, list):
+                    try:
+                        if all(isinstance(tid, str) for tid in team_id):
+                            if all(tid in df_teams['team_id'].values for tid in team_id):
+                                df_teams = df_teams[df_teams['team_id'].isin(team_id)]
+                            else:
+                                print(f"Invalid team id in list: {team_id}. Not in the dataframe.")
+                                return None
+                        else:
+                            print(f"Invalid team id in list: {team_id}. Must be a string.")
+                            return None
+                    except Exception as e:
+                        print(f"Error while filtering team ids from team_id list: {e}")
+                        return None
+
             return df_teams
     except FileNotFoundError:
         print(f"Error: The file '{URL}' was not found.")
@@ -530,4 +644,8 @@ if __name__ == "__main__":
     import sys
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+    df = gather_team_ids_json(season_number='ALL')
+
+    print(df)
     

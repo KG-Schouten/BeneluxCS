@@ -1,12 +1,16 @@
+# Allow standalone execution
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import json
 from rapidfuzz import fuzz, process
 from datetime import *
 import sys  # Allows safe exit
-import mysql.connector
 
 # Path to the API keys file
-API_KEYS_FILE = "tokens/api_keys.json"
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+API_KEYS_FILE = os.path.join(BASE_DIR, 'tokens', 'api_keys.json')
 
 ## Find a team based on the fuzzy search of the user input
 def find_team_name(user_input, team_data):
@@ -32,7 +36,7 @@ def load_api_keys():
         sys.exit(1) # Exit if file is missing
 
     # Validate that required keys exist and are not empty
-    required_keys = ["FACEIT_TOKEN", "DISCORD_TOKEN", "MYSQL_PASSWORD"]
+    required_keys = ["FACEIT_TOKEN", "DISCORD_TOKEN", "POSTGRES_PASSWORD"]
     missing_keys = [key for key in required_keys if not api_keys.get(key)]
 
     if missing_keys:
@@ -45,8 +49,4 @@ def load_api_keys():
 
 ## Only run if this script is run directly
 if __name__ == "__main__":
-    with open("C:/Python codes/BeneluxCS/DiscordBot/data/team_data.json", 'r') as file:
-        team_data = json.load(file)
-
-    user_input = "Souls Heart"
-    print(find_team_name(user_input, team_data))
+    load_api_keys()

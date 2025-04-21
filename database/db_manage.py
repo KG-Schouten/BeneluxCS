@@ -3,15 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import mysql.connector
 import psycopg2
-
-import json
-import re
-import datetime
-import pandas as pd
-import numpy as np
-from typing import *
 
 from functions import load_api_keys
 from database.db_config import db_name
@@ -22,23 +14,15 @@ def start_database():
     global db_name
     api_keys = load_api_keys()
     ## Load password for MySQL database
-    mysql_password = api_keys["MYSQL_PASSWORD"]
     postgres_password = api_keys["POSTGRES_PASSWORD"]
-
-    db = mysql.connector.connect(
-        host="localhost",
-        user="Koen",
-        passwd=mysql_password,
-        database=db_name
-    )
     
-    # db = psycopg2.connect(
-    #     host = "nozomi.proxy.rlwy.net",
-    #     port = 20571,
-    #     user = "postgres",
-    #     password = postgres_password,
-    #     database = "railway"
-    # )
+    db = psycopg2.connect(
+        host = "nozomi.proxy.rlwy.net",
+        port = 20571,
+        user = "postgres",
+        password = postgres_password,
+        database = "railway"
+    )
     
     cursor = db.cursor()
 
@@ -48,8 +32,7 @@ def close_database(db, cursor):
     """Closing the database connection"""
     db.close()
     cursor.close()
-    
-    
+     
 if __name__ == "__main__":
     # Allow standalone execution
     import sys

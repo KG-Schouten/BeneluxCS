@@ -56,3 +56,14 @@ table_names_hub = {
         [('player_id', 'hub_players'), (('match_id', 'match_round'), 'hub_maps')]
     ]
 }
+
+VALID_PG_TYPES = {
+    "SMALLINT", "INTEGER", "BIGINT",
+    "REAL", "DOUBLE PRECISION", "NUMERIC",
+    "SERIAL", "BIGSERIAL",
+    "BOOLEAN",
+    "CHAR", "VARCHAR", "TEXT",
+    "DATE", "TIMESTAMP", "TIME",
+    "UUID",
+    "BYTEA"
+}

@@ -11,10 +11,9 @@ import pandas as pd
 import numpy as np
 from typing import *
 
-from data_processing import *
-
 from database.db_manage import start_database, close_database
 from database.db_down import *
+from database.db_config import table_names_esea, table_names_hub
 
 # Constants
 db_name = "BeneluxCS"
@@ -29,6 +28,7 @@ db_name = "BeneluxCS"
 ### -----------------------------------------------------------------
 
 def update_esea_data(table_names) -> None:
+    
     pass
 
 ### -----------------------------------------------------------------
