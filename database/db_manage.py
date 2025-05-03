@@ -6,12 +6,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import psycopg2
 
 from functions import load_api_keys
-from database.db_config import db_name
 
 def start_database():
     """Starting up the mySQL database so it can be used by the rest of the program"""
 
-    global db_name
     api_keys = load_api_keys()
     ## Load password for MySQL database
     postgres_password = api_keys["POSTGRES_PASSWORD"]
@@ -25,7 +23,7 @@ def start_database():
     )
     
     cursor = db.cursor()
-
+    
     return db, cursor
 
 def close_database(db, cursor):
