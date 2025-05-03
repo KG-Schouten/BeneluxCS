@@ -177,8 +177,8 @@ data/*
 # ignore the api key file
 tokens/api_keys.json
 
-# ignore all files in the data_pickle folder
-data_pickle/*
+# ignore all files in the data_pickele folder with a .pkl extension
+data_pickle/*.pkl
 
 # ignore the to-do list file
 to_do.txt
