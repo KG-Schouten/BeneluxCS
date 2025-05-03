@@ -180,3 +180,6 @@ tokens/api_keys.json
 # ignore all files in the data_pickle folder
 data_pickle/*
 
+# ignore the to-do list file
+to_do.txt
+
