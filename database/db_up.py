@@ -3,17 +3,20 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import mysql.connector
-import json
+import psycopg2.extras
+
 import re
 import datetime
 import pandas as pd
 import numpy as np
 from typing import *
+import asyncio
 
 from database.db_manage import start_database, close_database
 from database.db_down import *
-from database.db_config import table_names_esea, table_names_hub
+from database.db_config import *
+
+from data_processing.dp_events import process_esea_teams_data, process_hub_data, process_championship_data
 
 # Constants
 db_name = "BeneluxCS"
@@ -27,9 +30,97 @@ db_name = "BeneluxCS"
 ### ESEA League Data 
 ### -----------------------------------------------------------------
 
-def update_esea_data(table_names) -> None:
+def update_esea_data(**kwargs) -> None:
+    """
+    Updates the ESEA league data by gathering the latest matches from an external API and appending them to the database.
     
-    pass
+    Args:
+        **kwargs: Additional keyword arguments for the function.
+            - update_type (str): Type of update to perform. Options are 'ALL', 'NEW', "SINGLE" (default: 'ALL').
+    """
+    ## Gather the kwargs
+    update_type = kwargs.get("update_type", "ALL")
+    if update_type not in ["ALL", "NEW", "SINGLE"]:
+        print("Invalid update_type. Use 'ALL' or 'NEW'.")
+        return
+    
+    ## Gather the data from the data processing function
+    if update_type == "ALL":
+        # Gather all of the data from ESEA
+        results = asyncio.run(process_esea_teams_data(season_number="ALL"))
+    elif update_type == "SINGLE":
+        results = asyncio.run(process_esea_teams_data(season_number=52, match_amount=1))
+    elif update_type == "NEW":
+        ## Gather the columns ['match_id', 'match_time', 'status', 'event_id'] from matches from the matches table in the database where the event_id is in the seasons table
+        try:
+            db, cursor = start_database()
+            query = """
+                SELECT m.match_id, m.match_time, m.status, m.event_id
+                FROM matches m
+                INNER JOIN seasons s ON m.event_id = s.event_id;
+            """
+            cursor.execute(query)
+            results = cursor.fetchall()
+            # Make results into a dataframe
+            df = pd.DataFrame(results, columns=['match_id', 'match_time', 'status', 'event_id'])
+            df = df.sort_values(by='match_time', ascending=False)
+        except Exception as e:
+            print(f"Error while fetching data from the matches table: {e}")
+            return
+        finally:
+            close_database(db, cursor)
+        
+
+        # if df is empty, set the last_match_time to 0
+        if df.empty:
+            print("No matches found in the database.")
+            last_match_time = 0
+        # Try to set the last_match_time to the match_time of the furthest away scheduled match in the database
+        elif df[df['status'] == 'SCHEDULED'].empty:
+            last_match_time = df['match_time'].min()
+        # Else set the last_match_time to the last finished match in the database
+        else:
+            last_match_time = df[df['status'] == 'FINISHED']['match_time'].max()
+        
+        # Cap the last_match_time to the current time
+        current_time = datetime.datetime.now().timestamp()
+        if last_match_time > current_time:
+            last_match_time = current_time
+        
+        # Round the last_match_time down to the start of the day
+        last_match_time = safe_convert_to_datetime(last_match_time)
+        
+        results = asyncio.run(process_esea_teams_data(season_number="ALL", from_timestamp=last_match_time))
+        
+    df_seasons, df_events, df_teams_benelux, df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = results
+
+    for table_name in table_names.keys():
+        df = eval(f"df_{table_name}")
+        if df is None:
+            print(f"Dataframe {table_name} is None. Skipping...")
+            continue
+        else:
+            upload_data(table_name, df)
+
+def safe_convert_to_datetime(last_match_time):
+    # Ensure last_match_time is a number (either int or float)
+    if not isinstance(last_match_time, (int, float)):
+        raise ValueError("Invalid timestamp provided")
+
+    # Special case for 0 timestamp (Unix epoch)
+    if last_match_time == 0:
+        return 0  # Directly return 0 as timestamp
+
+    # Check if last_match_time is a valid timestamp (should be non-negative and not too large)
+    if last_match_time < 0 or last_match_time > 253402300800:  # Maximum valid timestamp (year 9999)
+        raise ValueError("Timestamp out of valid range")
+
+    # If in milliseconds, convert to seconds
+    if last_match_time > 9999999999:  # If it's a timestamp in milliseconds
+        last_match_time /= 1000
+
+    # Convert to datetime
+    return datetime.datetime.fromtimestamp(last_match_time).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
 
 ### -----------------------------------------------------------------
 ### Benelux Hub Data
@@ -172,45 +263,47 @@ def update_players_country_data(data: Union[pd.DataFrame, List[Union[Tuple, List
 ### General Functions
 ### -----------------------------------------------------------------
 
-def upload_data(table_names, data) -> None:
+def upload_data(table_name, df: pd.DataFrame) -> None:
     """ 
     Upload data from the provided dictionaries to their corresponding database tables
 
     Args:
-        table_names (Dict): dictionary containing table names as keys in order of the data processing returns (db_general.py)
-        data (Tuple[ List[ Dict[str, any] ] ]): The tuple returned by the data processing containing lists of data dictionaries (data_processing.py)
+        table_name (str)    : Name of the table to upload data to
+        table_config (list) : List of keys for the table
+        df (pd.DataFrame)   : DataFrame containing the data to upload
     """
     print(
-        """
-        
-        ---------------------------------------
-                Uploading data to tables:
-        ---------------------------------------
-        
+        f"""
+        ----------------------------------------------
+            Uploading data to {table_name} table:
+        ----------------------------------------------
         """
     )
-    
-    # Start the database connection and cursor
-    db, cursor = start_database()
-    
     try:
-        ## Process and upload the data
-        for table_name, data in zip(table_names.keys(), data): 
-            ## Creating the query for the table
-            print(f"Creating query for table: {table_name}")
-            
-            keys, primary_keys = gather_keys(cursor, table_name)
-            sql = upload_data_query(table_name, keys, primary_keys)
-            
-            ## Preparing the data as tuples with None for the missing keys in the database
-            data_prepped = [
-                tuple(d.get(col, None) for col in keys)
-                for d in data
-            ]
-            
-            ## Upload the data
-            print(f"Adding the data to: {table_name}")  
-            cursor.executemany(sql, data_prepped)
+        db, cursor = start_database()
+        
+        keys, primary_keys = gather_keys(table_name)
+        if not keys or not primary_keys:
+            print(f"Error: No keys found for table {table_name} - {keys} {primary_keys}.")
+            return
+        
+        sql = upload_data_query(table_name, keys, primary_keys)
+        
+        ## Preparing the data as tuples with None for the missing keys in the database
+        data = [
+            tuple(d.get(col, None) for col in keys)
+            for d in df.to_dict(orient='records')
+        ]
+        
+        ## Uploading the data to the database 
+        if not data:
+            print(f"Error: No data to upload for table {table_name}.")
+        else:
+            # Start the database connection and cursor
+            psycopg2.extras.execute_values(
+                cursor, sql, data, page_size=1000, template=None, fetch=False
+            )
+            # cursor.executemany(sql, data)
       
     except Exception as e:
         print(f"Error while uploading data for table: {table_name}: {e}")
@@ -220,24 +313,10 @@ def upload_data(table_names, data) -> None:
         db.commit()
         close_database(db, cursor)
 
-def gather_keys(cursor: mysql.connector.cursor, table_name: str) -> Tuple[List[str], List[str]]:
+def gather_keys(table_name: str) -> Tuple[List[str], List[str]]:
     """
-    Gather all keys and primary keys from a specific table in the database.
-
-    This function retrieves the list of all column names (keys) and primary keys 
-    from the specified table using the information_schema views in the database.
-
-    Args:
-        cursor (mysql.connector.cursor): The active cursor object used to execute queries.
-        table_name (str): The name of the table to retrieve keys from.
-    
-    Returns:
-        Tuple[List[str], List[str]]:
-            - all_keys (List[str]): A list of all column names (keys) in the table.
-            - primary_keys (List[str]): A list of primary key column names in the table.
+    Gather all keys and primary keys from the specified table in the database
     """
-    global db_name
-
     # SQL query to get all column names (keys) in the specified table
     query_all_keys = """
         SELECT 
@@ -258,21 +337,35 @@ def gather_keys(cursor: mysql.connector.cursor, table_name: str) -> Tuple[List[s
         WHERE
             TABLE_SCHEMA = %s
             AND TABLE_NAME = %s
-            AND CONSTRAINT_NAME IN ('PRIMARY', 'FOREIGN KEY');
+            AND CONSTRAINT_NAME IN (
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.TABLE_CONSTRAINTS
+                WHERE TABLE_SCHEMA = %s
+                AND TABLE_NAME = %s
+                AND CONSTRAINT_TYPE IN ('PRIMARY KEY', 'UNIQUE')
+           );
     """
-
-    # Execute the query for all keys (column names) in the table
-    cursor.execute(query_all_keys, (db_name, table_name))
-    all_keys_list = cursor.fetchall()
-
-    # Execute the query for primary keys in the table
-    cursor.execute(query_primary_keys, (db_name, table_name))
-    primary_keys_list = cursor.fetchall()
-
-    # Extract column names from the query results
-    all_keys = [ak[0] for ak in all_keys_list]
-    primary_keys = [pk[0] for pk in primary_keys_list]
-
+    try:
+        # Start the database connection and cursor
+        db, cursor = start_database()
+        
+        # Execute the query for all keys (column names) in the table
+        cursor.execute(query_all_keys, ('public', table_name))
+        all_keys_list = cursor.fetchall()
+        all_keys = [ak[0] for ak in all_keys_list]
+        
+        # Execute the query for primary keys in the table
+        cursor.execute(query_primary_keys, ('public', table_name, 'public', table_name))
+        primary_keys_list = cursor.fetchall()
+        primary_keys = [pk[0] for pk in primary_keys_list]
+        
+    except Exception as e:
+        print(f"Error while connecting to the database: {e}")
+        return [], []
+    finally:
+        # Close the database connection
+        close_database(db, cursor)
+    
     # Return both all keys and primary keys as tuples of lists
     return all_keys, primary_keys
 
@@ -290,134 +383,35 @@ def upload_data_query(table_name: str, keys: list, primary_keys: list) -> str:
     """
     # Go through all keys and check if they are all primary keys. If so, create a query without the ON DUPLICATE KEY UPDATE
     if all(key in primary_keys for key in keys):
+        # upload_query = f"""
+        #     INSERT INTO {table_name} ({", ".join(keys)})
+        #     VALUES ({", ".join(["%s"] * len(keys))})
+        # """
         upload_query = f"""
             INSERT INTO {table_name} ({", ".join(keys)})
-            VALUES ({", ".join(['%s'] * len(keys))})
-            """
+            VALUES %s
+        """
         return upload_query
     else:
         # Creating the upload query
+        # upload_query = f"""
+        #     INSERT INTO {table_name} ({", ".join(keys)})
+        #     VALUES ({", ".join(["%s"] * len(keys))})
+        #     ON CONFLICT ({', '.join(primary_keys)})
+        #     DO UPDATE SET
+        #         {", ".join([f"{key} = EXCLUDED.{key}" for key in keys if key not in primary_keys])};
+        # """
         upload_query = f"""
             INSERT INTO {table_name} ({", ".join(keys)})
-            VALUES ({", ".join(['%s'] * len(keys))})
-            ON DUPLICATE KEY UPDATE
-            {", ".join([f"`{key}` = VALUES(`{key}`)" for key in keys if key not in primary_keys])}
+            VALUES %s
+            ON CONFLICT ({', '.join(primary_keys)})
+            DO UPDATE SET
+                {", ".join([f"{key} = EXCLUDED.{key}" for key in keys if key not in primary_keys])};
         """
-        return upload_query
-
-def calculate_hltv(table_name_stats, table_name_matches):
-    """
-    Calculates and uploads the HLTV 1.0 ratings for player stats of matches in the database
-    
-    Args:
-        table_name_stats: The table name of the player statistics in mySQL
-        table_name_matches: The table name of the match table in mySQL
-    """
-    print(
-        f"""
-        
-        ---------------------------------------
-            Calculating HLTV for {table_name_stats}:
-        ---------------------------------------
-        
-        """
-    )
-    
-    db, cursor = start_database()
-    
-    ## Preventing SQL injection
-    allowed_tables = {"esea_player_stats", "hub_player_stats"}  # Defining safe table names
-    if table_name_stats not in allowed_tables:
-        raise ValueError("Invalid table name!")
-    
-    ## Check if the HLTV column exists in the player_stats table
-    cursor.execute(
-        f"""
-            SELECT COUNT(*)
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE table_name = '{table_name_stats}'
-            AND column_name = 'hltv_rating'
-        """
-    )
-    column_exists = cursor.fetchone()[0] > 0 # If it exists, column_exists > 0
-
-    if not column_exists:
-        cursor.execute(
-            f"""
-                ALTER TABLE {table_name_stats}
-                ADD COLUMN hltv_rating VARCHAR(100)
-            """
-        )
-
-    ## Calculate HLTV 1.0 rating
-    avg_kpr = 0.679 # avg kill per round
-    avg_spr = 0.317 # avg survived rounds per round
-    avg_rmk = 1.277 # avg value calculated from rounds with multi-kills
-
-    hltv_query = f"""
-        SELECT
-            p.player_id,
-            p.match_id,
-            p.match_round,
-            p.kills,
-            p.deaths,
-            p.Double_Kills,
-            p.Triple_Kills,
-            p.Quadro_Kills,
-            p.Penta_Kills,
-            m.Rounds
-        FROM {table_name_stats} p
-        JOIN {table_name_matches} m ON m.match_id = p.match_id
-    """
-
-    cursor.execute(hltv_query)
-    res = cursor.fetchall()
-    columns = ['player_id', 'match_id', 'match_round', 'kills', 'deaths', 'double', 'triple', 'quadro', 'penta', 'rounds']
-    df = pd.DataFrame(res, columns=columns)
-
-    # print(df)
-    ratings = []
-    for index, row in df.iterrows():
-        # print(row)
-        player_id = row['player_id']
-        match_id = row['match_id']
-        match_round = row['match_round']
-        kills = row['kills']
-        deaths = row['deaths']
-        rounds = int(row['rounds'])
-        double = row['double']
-        triple = row['triple']
-        quadro = row['quadro']
-        penta = row['penta']
-        single = kills - (2*double + 3*triple + 4*quadro + 5*penta)
-
-        kill_rating = kills / rounds / avg_kpr
-        survival_rating = (rounds - deaths) / rounds / avg_spr
-        rounds_with_multi_kill_rating = (single + 4*double + 9*triple + 16*quadro + 25*penta) / rounds / avg_rmk
-
-        hltv_rating = (kill_rating + 0.7*survival_rating + rounds_with_multi_kill_rating) / 2.7
-        
-        ratings.append((player_id, match_id, match_round, round(hltv_rating,2)))
-
-        # print(hltv_rating)
-    
-    query_insert = f"""
-        INSERT INTO {table_name_stats}(player_id, match_id, match_round, hltv_rating)
-        VALUES (%s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE hltv_rating = VALUES(hltv_rating)
-    """
-    cursor.executemany(query_insert, ratings)
-    db.commit()
-    
-    close_database(db, cursor)
-
-    return ratings   
+        return upload_query   
 
 if __name__ == "__main__":
     # Allow standalone execution
     import sys
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    
-    calculate_hltv("esea_player_stats", "esea_maps")
-    pass
