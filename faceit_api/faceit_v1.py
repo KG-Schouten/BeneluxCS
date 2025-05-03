@@ -17,7 +17,7 @@ class FaceitData_v1:
         self.base_url = 'https://faceit.com/api'
         self.session = aiohttp.ClientSession()
         self.dispatcher = dispatcher
-        
+    
     async def _get(self, url:str) -> dict | int:
         """ Helper function to fetch data from a GET request """
         async with self.session.get(url) as response:
@@ -33,8 +33,15 @@ class FaceitData_v1:
         async with self.session.get(url, params=params) as response:
             return await check_response(response)
     
-
-    async def all_leagues(self) -> dict | int:
+    
+    async def league_details(self) -> dict | int:
+        """ Retrieve league details from Faceit """
+        
+        URL = f'{self.base_url}/team-leagues/v2/leagues/a14b8616-45b9-4581-8637-4dfd0b5f6af8'
+        
+        return await self.dispatcher.run(self._get, URL)
+    
+    async def league_seasons(self) -> dict | int:
         """ Retrieve all leagues from Faceit """
         
         URL = f'{self.base_url}/team-leagues/v2/leagues/a14b8616-45b9-4581-8637-4dfd0b5f6af8/seasons'
@@ -179,5 +186,25 @@ class FaceitData_v1:
         
         return await self.dispatcher.run(self._get, URL)
 
-
+    async def championship_details(self, championship_id: str) -> dict | int:
+        """
+        Retrieve championship details from Faceit
+        
+        :param championship_id: The ID of the championship
+        :return:
+        """
+        
+        URL = f"https://www.faceit.com/api/championships/v1/championship/{championship_id}"
+        return await self.dispatcher.run(self._get, URL)
     
+    async def hub_details(self, hub_id: str) -> dict | int:
+        """
+        Retrieve club details from Faceit
+        
+        :param hub_id: The ID of the hub
+        :return:
+        """
+        
+        URL = f"https://www.faceit.com/api/hubs/v1/hub/{hub_id}"
+        
+        return await self.dispatcher.run(self._get, URL)
