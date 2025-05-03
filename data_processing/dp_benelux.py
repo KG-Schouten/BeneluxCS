@@ -11,80 +11,76 @@ from datetime import datetime, timedelta
 import re
 import time
 from typing import Dict, Any, Callable, Optional
-import asyncio
+
+# AI imports
+from model.model_utils import load_model, predict, preprocess_data
 
 # API imports
+import asyncio
 from faceit_api.faceit_v4 import FaceitData
 from faceit_api.faceit_v1 import FaceitData_v1
+from faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
+from faceit_api.async_progress import gather_with_progress
+
+# function imports
 from functions import load_api_keys
 
-## Data paths
-team_data_path = "C:/Python codes/BeneluxCS/DiscordBot/data/team_data.json"
+async def process_player_country_details(player_ids: list) -> pd.DataFrame:
+    async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
+        # Initialize the FaceitData object with the API token and dispatcher
+        api_keys = load_api_keys()
+        faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"), dispatcher)
+        faceit_data_v1 = FaceitData_v1(dispatcher)
+        
+        tasks = [check_benelux(player_id, faceit_data_v1) for player_id in player_ids]
+        results = await gather_with_progress(tasks, desc="checking players", unit="players")
+        
+        df_players_country_details = pd.DataFrame(results)
+        
+    return df_players_country_details
 
-async def check_all_players(player_ids: list, player_names: list, PRINT: bool=False):
-    """
-    Small wrapper to get result of a list of player_ids
-    
-    Args:
-        player_ids (list): A list of player IDs
-        player_names (list): A list of player names
-        PRINT (bool): True if you want to print confirmation of benelux (default=False)
-
-    Returns:
-        pd.Dataframe: A dataframe containing the results of the benelux check for each player being:
-            - player_id (str): faceit player id
-            - player_name (str): player nickname
-            - bnlx_country (str): The most common benelux country from friendlist
-            - all_country (str): The most common country from friendlist
-            - benelux_sum (int): The number of friends from Benelux
-            - friend_frac (float): The fraction of friends from Benelux
-            - is_benelux_hub (bool): True if the player is in a hub with benelux country requirements
-            - InHub (bool): True if the player is in the Benelux hub
-    """
-    tasks = [check_benelux(player_id, player_name, PRINT) for player_id, player_name in zip(player_ids, player_names)]
-    results = await asyncio.gather(*tasks) # Run all tasks concurrently
-    
-    # Convert results to a dataframe
-    columns = ['player_id', 'player_name', 'bnlx_country', 'all_country', 'benelux_sum', 'friend_frac', 'is_benelux_hub', 'InHub']
-    df_results = pd.DataFrame(results, columns=columns)
-    
-    return df_results
-
-async def check_benelux(player_id: str, player_name: str, PRINT: bool=False):
+async def check_benelux(player_id: str, faceit_data_v1: FaceitData_v1) -> tuple:
     """
     General code block for checking if a player is benelux
     
     Args:
         player_id (str): faceit player id
-        player_name (str): player nickname
-        PRINT (bool): True if you want to print confirmation of benelux (default=False)
         
     Returns:
-        tuple: (
-            player_id (str), 
-            player_name (str),
-            bnlx_country (str),
-            all_country (str),
-            benelux_sum (int),
-            friend_frac (float),
-            is_benelux_hub (bool),
-            InHub (bool)
-            )
+        dict: {
+            'player_id': player_id,
+            'bnlx_country': bnlx_country,
+            'all_country': all_country,
+            'benelux_sum': benelux_sum,
+            'friend_frac': friend_frac,
+            'is_benelux_hub': is_benelux_hub,
+            'InHub': InHub
+        }
     """ 
     # Faceit friendslist check
-    check_friends_tuple  = await check_friends_faceit(player_id, player_name, PRINT)
+    results_check_friends_faceit = await check_friends_faceit(player_id, faceit_data_v1=faceit_data_v1)
     
-    if check_friends_tuple is None:
-        return player_id, player_name, None, None, None, None, None, None
+    if results_check_friends_faceit is None:
+        bnlx_country, all_country, benelux_sum, friend_frac = None, None, None, None
     else:
-        bnlx_country, all_country, benelux_sum, friend_frac = check_friends_tuple
+        bnlx_country, all_country, benelux_sum, friend_frac = results_check_friends_faceit
     
     # Faceit hub requirements and Benelux hub check
-    is_benelux_hub, InHub = await check_benelux_hub(player_id)
+    is_benelux_hub, InHub = await check_benelux_hub(player_id, faceit_data_v1=faceit_data_v1)
     
-    return player_id, player_name, bnlx_country, all_country, benelux_sum, friend_frac, is_benelux_hub, InHub 
+    benelux_dict = {
+        'player_id': player_id,
+        'bnlx_country': bnlx_country,
+        'all_country': all_country,
+        'benelux_sum': benelux_sum,
+        'friend_frac': friend_frac,
+        'is_benelux_hub': is_benelux_hub,
+        'InHub': InHub
+    }
+    
+    return benelux_dict
 
-async def check_friends_faceit(player_id: str, player_name: str, PRINT: bool=False):
+async def check_friends_faceit(player_id: str, faceit_data_v1: FaceitData_v1):
     """
     Function to check if a player is benelux based on their faceit friendslist
     
@@ -106,7 +102,7 @@ async def check_friends_faceit(player_id: str, player_name: str, PRINT: bool=Fal
     # Constants
     benelux_codes = ['nl', 'be', 'lu']
     # Get friend ids
-    df_friends = await get_friend_list_faceit(player_id, player_name)
+    df_friends = await get_friend_list_faceit(player_id, faceit_data_v1)
     
     if df_friends is not None:
         country_count = df_friends.get('country', None)
@@ -125,16 +121,13 @@ async def check_friends_faceit(player_id: str, player_name: str, PRINT: bool=Fal
         
         # Determine the most common country from friendlist
         all_country = country_count.idxmax() if not country_count.empty else None
-            
-        if PRINT:
-            print(f"{player_name} has {benelux_sum} friends from Benelux: {friend_frac}")
-            
+   
         return bnlx_country, all_country, benelux_sum, friend_frac
     else:
-        print(f"Friend list for {player_name} is private or not available.")
+        print(f"Friend list for {player_id} is private or not available.")
         return None # Returns none if the friend list is private
 
-async def get_friend_list_faceit(player_id: str, player_name: str = None) -> pd.DataFrame:
+async def get_friend_list_faceit(player_id: str, faceit_data_v1: FaceitData_v1) -> pd.DataFrame:
     try:
         friend_list = []
         batch_start = 0
@@ -152,10 +145,10 @@ async def get_friend_list_faceit(player_id: str, player_name: str = None) -> pd.
         df = pd.DataFrame.from_dict(friend_list)
         return df
     except Exception as e:
-        print(f"Exception while loading faceit friend list for {player_name}: {e}")
+        print(f"Exception while loading faceit friend list for {player_id}: {e}")
         return None
 
-async def check_benelux_hub(player_id) -> bool:
+async def check_benelux_hub(player_id, faceit_data_v1: FaceitData_v1) -> bool:
     """
     Function to check if a player is in a hub with benelux country requirements
     Args:
@@ -208,7 +201,7 @@ async def check_benelux_hub(player_id) -> bool:
     
     return is_benelux_hub, InHub
 
-async def get_hub_players(hub_id: str = '3e549ae1-d6a7-47d4-98cd-a6077a4da07c') -> list:
+async def get_hub_players(faceit_data: FaceitData_v1) -> list:
     """
     Function to get all the players playing in the benelux hub
     
@@ -217,6 +210,7 @@ async def get_hub_players(hub_id: str = '3e549ae1-d6a7-47d4-98cd-a6077a4da07c') 
     Returns:
         list: A list of player IDs in the hub
     """
+    hub_id = '3e549ae1-d6a7-47d4-98cd-a6077a4da07c' # For benelux hub
     hub_ids = []
     batch_start = 0
     batch_size = 50
@@ -232,4 +226,35 @@ async def get_hub_players(hub_id: str = '3e549ae1-d6a7-47d4-98cd-a6077a4da07c') 
         print(f"Exception while loading hub players: {e}")
     
     return hub_ids
- 
+
+def update_player_country(df_players: pd.DataFrame, df_players_country: pd.DataFrame) -> pd.DataFrame:
+    """
+    Updates the df_players DataFrame with the player country details from a dataframe df_players_country (either from the data/players_country.json file or from the database)
+    """
+    
+    df_merged = df_players.merge(
+        df_players_country,
+        on='player_id',
+        how='left',
+        suffixes=('', '_new')
+    )
+
+    for col in df_merged.columns:
+        if col.endswith('_new'):
+            # Check if the column is in the original dataframe
+            original_col = col[:-4]  # Remove '_new' suffix to get the original column name
+            if original_col in df_merged.columns:
+                # Combine the new column with the original column, keeping non-null values from the new column
+                df_merged[original_col] = df_merged[original_col].combine_first(df_merged[col])
+                # Drop the new column
+                df_merged.drop(columns=[col], inplace=True)
+            else:
+                # If the original column doesn't exist, just rename the new column to the original name
+                df_merged.rename(columns={col: original_col}, inplace=True)
+        else:
+            # If the column doesn't end with '_new', just keep it as is
+            df_merged.rename(columns={col: col}, inplace=True)
+
+    df_players = df_merged.copy()
+    
+    return df_players
