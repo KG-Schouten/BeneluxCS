@@ -3,6 +3,10 @@ import time
 from collections import deque
 from faceit_api.logging_config import logger
 
+request_limit = 350  # Maximum number of calls allowed in the time window
+interval = 10  # Time window in seconds
+concurrency = 7 # Number of concurrent requests
+
 class RateLimitException(Exception):
     """Custom exception for rate limit errors."""
     pass
