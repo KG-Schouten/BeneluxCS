@@ -4,24 +4,22 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import json
-import os
 import pandas as pd
 from dateutil import parser
 
-# AI imports
-from model.model_utils import load_model, predict, preprocess_data
-
 # API imports
-from faceit_api.faceit_v4 import FaceitData
-from faceit_api.faceit_v1 import FaceitData_v1
-from faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
-from faceit_api.async_progress import gather_with_progress
+from data_processing.faceit_api.faceit_v4 import FaceitData
+from data_processing.faceit_api.faceit_v1 import FaceitData_v1
+from data_processing.faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
+from data_processing.faceit_api.async_progress import gather_with_progress
 
 # dp imports
 from data_processing.dp_general import *
 
-# function imports
-from functions import load_api_keys
+# Load api keys from .env file
+from dotenv import load_dotenv
+load_dotenv()
+FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 
 ### -----------------------------------------------------------------
 ### ESEA Data Processing
@@ -60,8 +58,7 @@ async def process_esea_teams_data(**kwargs) -> tuple[pd.DataFrame, pd.DataFrame,
 
     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
         # Initialize the FaceitData object with the API token and dispatcher
-        api_keys = load_api_keys()
-        faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"), dispatcher)
+        faceit_data = FaceitData(FACEIT_TOKEN, dispatcher)
         faceit_data_v1 = FaceitData_v1(dispatcher)
         
         ## Dataframe with the season data (df_seasons)
@@ -112,10 +109,13 @@ async def process_esea_teams_data(**kwargs) -> tuple[pd.DataFrame, pd.DataFrame,
         ## Filter the matches based on the from_timestamp
         df_esea_matches = df_esea_matches.loc[df_esea_matches['match_time'] >= int(from_timestamp), :].reset_index(drop=True)
         
-        match_ids = df_esea_matches['match_id'].unique().tolist()
-
+        # Create dataframe with match_id and event_id for unique match_ids
+        df_matches_events = df_esea_matches[['match_id', 'event_id']].drop_duplicates()
+        
+        match_ids = df_matches_events['match_id'].to_list()
+        event_ids = df_matches_events['event_id'].to_list()
+        
         ## Processing matches in esea
-        event_ids = df_esea_matches.loc[df_esea_matches['match_id'].isin(match_ids), 'event_id'].to_list()
         df_events = df_events.loc[df_events['event_id'].isin(event_ids), :].reset_index(drop=True)
         df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(
             match_ids=match_ids, 
@@ -133,6 +133,9 @@ async def process_esea_teams_data(**kwargs) -> tuple[pd.DataFrame, pd.DataFrame,
             on='event_id',
             how='left'
         )
+        
+        # Explode df_teams_benelux on event_id
+        df_teams_benelux= df_teams_benelux.explode('event_id')
         
         ## Modify the keys in all dataframes using modify_keys function
         df_seasons = modify_keys(df_seasons)
@@ -441,7 +444,7 @@ def gather_team_ids_json(**kwargs) -> pd.DataFrame:
 ### Hub Data Processing
 ### -----------------------------------------------------------------
 
-async def process_hub_data(hub_id: str, items_to_return: int|str=100) -> pd.DataFrame:
+async def process_hub_data(hub_id: str, items_to_return: int|str=100, **kwargs) -> pd.DataFrame:
     """
     The main function to process the data for a hub
     
@@ -450,6 +453,8 @@ async def process_hub_data(hub_id: str, items_to_return: int|str=100) -> pd.Data
         items_to_return (int | str): Specifies the amount of matches that will be gathered. It can be: (default=100) 
             - An integer, which will return the latests n matches where n is the integer
             - The string "ALL", which will return all matches played in the hub since the start
+        **kwargs: Additional optional keyword arguments:
+            - from_timestamp (int | str): The start timestamp (UNIX) for the matches to be gathered. (default is 0)
     Returns:
         tuple:
             - df_events: DataFrame containing event details
@@ -470,18 +475,21 @@ async def process_hub_data(hub_id: str, items_to_return: int|str=100) -> pd.Data
     )
     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
         # Initialize the FaceitData object with the API token and dispatcher
-        api_keys = load_api_keys()
-        faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"), dispatcher)
+        faceit_data = FaceitData(FACEIT_TOKEN, dispatcher)
         faceit_data_v1 = FaceitData_v1(dispatcher)
         
         ## Gathering event details
         df_events = await gather_event_details(event_id=hub_id, event_type="hub", faceit_data_v1=faceit_data_v1)
         
         ## Gathering matches in hub
-        df_matches = await gather_hub_matches(hub_id, faceit_data=faceit_data)
+        df_hub_matches = await gather_hub_matches(hub_id, faceit_data=faceit_data)
         if items_to_return != "ALL":
-            df_matches = df_matches.sort_values(by='match_time', ascending=False).head(items_to_return)
-        match_ids = df_matches['match_id'].unique().tolist()
+            df_hub_matches = df_hub_matches.sort_values(by='match_time', ascending=False).head(items_to_return)
+            
+        ## Filter the matches based on the from_timestamp
+        df_hub_matches = df_hub_matches.loc[df_hub_matches['match_time'] >= int(kwargs.get("from_timestamp", 0)), :].reset_index(drop=True)
+        
+        match_ids = df_hub_matches['match_id'].unique().tolist()
         
         # Processing matches in hub
         event_ids = [hub_id]*len(match_ids)
@@ -554,7 +562,7 @@ async def gather_hub_matches(hub_id: str, faceit_data: FaceitData):
 ### Championship Data Processing (also includes championships that are hosted in hub queues and LANs)
 ### --------------------------------------------------------------------------------------------------------
 
-async def process_championship_data(championship_id: str, event_type: str, items_to_return: int|str="ALL") -> pd.DataFrame:
+async def process_championship_data(championship_id: str, event_type: str, items_to_return: int|str="ALL", **kwargs) -> pd.DataFrame:
     """
     The main function to process the data for a championship
     
@@ -564,6 +572,8 @@ async def process_championship_data(championship_id: str, event_type: str, items
         items_to_return (int | str): Specifies the amount of matches that will be gathered. It can be: (default="ALL") 
             - An integer, which will return the latests n matches where n is the integer
             - The string "ALL", which will return all matches played in the hub since the start
+        **kwargs: Additional optional keyword arguments:
+            - from_timestamp (int | str): The start timestamp (UNIX) for the matches to be gathered. (default is 0)
     Returns:
         tuple:
             - df_events: DataFrame containing event details
@@ -585,8 +595,7 @@ async def process_championship_data(championship_id: str, event_type: str, items
     
     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
         # Initialize the FaceitData object with the API token and dispatcher
-        api_keys = load_api_keys()
-        faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"), dispatcher)
+        faceit_data = FaceitData(FACEIT_TOKEN, dispatcher)
         faceit_data_v1 = FaceitData_v1(dispatcher)
         
         ## Gathering event details
@@ -598,6 +607,9 @@ async def process_championship_data(championship_id: str, event_type: str, items
             df_championship_matches = await gather_championship_matches(championship_id, faceit_data=faceit_data)
             if items_to_return != "ALL":
                 df_championship_matches = df_championship_matches.sort_values(by='match_time', ascending=False).head(items_to_return)
+                
+            ## Filter the matches based on the from_timestamp
+            df_championship_matches = df_championship_matches.loc[df_championship_matches['match_time'] >= int(kwargs.get("from_timestamp", 0)), :].reset_index(drop=True)
             match_ids = df_championship_matches['match_id'].unique().tolist()
             
         elif event_type == "championship_hub":

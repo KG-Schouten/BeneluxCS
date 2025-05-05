@@ -3,27 +3,21 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import json
-import os
-import random
 import pandas as pd
-from datetime import datetime, timedelta
-import re
-import time
-from typing import Dict, Any, Callable, Optional
 
 # AI imports
-from model.model_utils import load_model, predict, preprocess_data
+from data_processing.model.model_utils import load_model, predict, preprocess_data
 
 # API imports
-import asyncio
-from faceit_api.faceit_v4 import FaceitData
-from faceit_api.faceit_v1 import FaceitData_v1
-from faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
-from faceit_api.async_progress import gather_with_progress
+from data_processing.faceit_api.faceit_v4 import FaceitData
+from data_processing.faceit_api.faceit_v1 import FaceitData_v1
+from data_processing.faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
+from data_processing.faceit_api.async_progress import gather_with_progress
 
-# function imports
-from functions import load_api_keys
+# Load api keys from .env file
+from dotenv import load_dotenv
+load_dotenv()
+FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 
 async def process_player_country_details(player_ids: list) -> pd.DataFrame:
     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency

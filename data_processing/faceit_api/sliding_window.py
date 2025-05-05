@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections import deque
-from faceit_api.logging_config import logger
+from data_processing.faceit_api.logging_config import logger
 
 request_limit = 350  # Maximum number of calls allowed in the time window
 interval = 10  # Time window in seconds

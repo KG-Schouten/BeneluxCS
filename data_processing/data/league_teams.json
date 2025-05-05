@@ -1,0 +1,301 @@
+{
+    "seasons": [
+        {
+            "season_id": "18dc2875-1b17-45e0-9e9b-a336ed0aecbb",
+            "season_number": 53,
+            "regions": [
+                {
+                    "region_id": "d7298ce1-144c-4734-8d29-1d6360032a54",
+                    "region_name": "North America",
+                    "divisions": [
+                        {
+                            "division_name": "Advanced",
+                            "teams": {
+                                "Fisher College": "d19ba1db-0a65-4197-8f84-d7c44cfd835b",
+                                "Lazer Cats": "e1a41f56-9364-424a-85c8-fa8f84932a73"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "region_id": "d43ffd28-0da6-44d1-8392-5e41e2015f9a",
+                    "region_name": "Europe",
+                    "divisions": [
+                        {
+                            "division_name": "Advanced",
+                            "teams": {
+                                "Lazer Cats": "e1a41f56-9364-424a-85c8-fa8f84932a73"
+                            }
+                        },
+                        {
+                            "division_name": "Main",
+                            "teams": {
+                                "Souls Heart X": "41a52178-4858-48c1-afc9-bfa0a5b07959",
+                                "Souls Heart Y" : "2d88773b-5756-4ddc-be2b-6455ed3ee661"
+                            }
+                        },
+                        {
+                            "division_name": "Intermediate",
+                            "teams": {
+                                "Senshi eSports" : "2972bfee-55d7-40f4-be0b-9297425c5a3e",
+                                "NIP Impact" : "d74c5ac9-c23e-445f-b2b4-9ff1a7d0b6ab",
+                                "Addicted Esport": "950a5365-d411-4aa3-ae53-3c622fcce2bf",
+                                "Myth Esports" : "6bb0008b-e18f-4723-a265-cc6f8538efe4",
+                                "REXO Gaming" : "cdc647c5-a646-42dd-9652-61daf227eaef",
+                                "mCon Esports" : "b8df37a1-1f7e-4845-bfb9-313b2a6bbf42",
+                                "Elite Klan Violet" : "70ca9226-d8fe-45b2-8bbf-daa3e306f6ad",
+                                "Silly Strikers" : "981c75dd-63e2-4981-b84e-3bfb07edd752"
+                            }
+                        },
+                        {
+                            "division_name": "Entry",
+                            "teams": {
+                                "ECV Esports" : "4e53c613-424b-4e02-99dc-1b57a9654311",
+                                "Pertinax Esports": "b3e21e6e-7e76-4cba-b3af-b65b91833d6c",
+                                "Team Outcasts" : "8f5ccd5e-f0c8-4aa7-be73-a5fdf0b063c3",
+                                "Nocturn Esports" : "c8af50fd-7e4e-47aa-8ba4-8cf3c6bfa292",
+                                "FullShockGamers" : "7e716052-f488-4a6d-aaf9-3afcf3a89fcc",
+                                "Baksteen" : "81d0d801-8766-42b6-876d-e1d590a228b1"
+                            }
+                        },
+                        {
+                            "division_name": "Open10",
+                            "teams": {
+                                "Connector One" : "f1d7ef7b-40d6-4713-b07c-c87803e89a1b",
+                                "Born2Throw" : "404df7e8-1dbf-4247-8868-7478619f0e85",
+                                "Sierra" : "13a60ede-d70f-4957-b6e4-dd5e1d16373b",
+                                "Neumatic" : "cfad4d71-3684-45ce-af9d-6291b8468399",
+                                "mysod" : "ba981d0d-6a5c-401b-acf0-6c4d328d1413",
+                                "Bangs" : "f5793789-233a-4f4c-b36b-e0bf41b25399",
+                                "MidasDrakes" : "7ef4c9ee-b615-47a5-82fd-90ee96991278",
+                                "Matamoros": "ad2d57a5-cc29-4dd9-870a-52046dea2c6d",
+                                "VIBEmix" : "966935aa-e5a5-499c-8ad5-a88d3857d4a9",
+                                "Okedan 100": "6540d97f-013a-4dea-8c1e-054860c7f66d",
+                                "CHINABOYS" : "9936cc1d-09cf-4599-9781-d4b907435ae2",
+                                "WHATEVER" : "28b271f8-c368-4d5b-856e-ec95dffc0cb9" 
+                            }
+                        },
+                        {
+                            "division_name": "Open1-8",
+                            "teams": {
+                                "Zonked Esports NXT" : "faf3bf48-f560-440a-a418-4d22e49569fd"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "season_id": "2f203265-fc76-4ce5-98a3-6fd1f4717c14",
+            "season_number": 52,
+            "regions": [
+                {
+                    "region_id": "6cc7c8e8-8cdb-42cc-b30d-feeba15a711b",
+                    "region_name": "North America",
+                    "divisions": [
+                        {
+                            "division_name": "Advanced",
+                            "teams": {
+                                "Fisher College": "d19ba1db-0a65-4197-8f84-d7c44cfd835b"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "region_id": "d19b36bc-3d02-4cd1-b467-6e29b9d1785d",
+                    "region_name": "Europe",
+                    "divisions": [
+                        {
+                            "division_name": "Main",
+                            "teams": {
+                                "NIP Impact" : "d74c5ac9-c23e-445f-b2b4-9ff1a7d0b6ab",
+                                "Foxnyr" : "828dc640-5b66-4fc9-bc17-3a63f61fa23a"
+                            }
+                        },
+                        {
+                            "division_name": "Intermediate",
+                            "teams": {
+                                "Senshi eSports" : "2972bfee-55d7-40f4-be0b-9297425c5a3e",
+                                "Myth Esports" : "6bb0008b-e18f-4723-a265-cc6f8538efe4",
+                                "AOMA Esports" : "cdc647c5-a646-42dd-9652-61daf227eaef",
+                                "mCon Esports" : "b8df37a1-1f7e-4845-bfb9-313b2a6bbf42",
+                                "Souls Heart AC" : "6d76087e-7743-43e4-b906-5070e7c10211",
+                                "Elite Klan Violet" : "70ca9226-d8fe-45b2-8bbf-daa3e306f6ad",
+                                "LocalVuurwolf" : "41a52178-4858-48c1-afc9-bfa0a5b07959",
+                                "Silly Strikers" : "981c75dd-63e2-4981-b84e-3bfb07edd752",
+                                "Paarful" : "d2361f5f-ef61-426b-804a-48da947df944",
+                                "FullShockGamers" : "7e716052-f488-4a6d-aaf9-3afcf3a89fcc"
+                            }
+                        },
+                        {
+                            "division_name": "Open10",
+                            "teams": {
+                                "Connector One" : "f1d7ef7b-40d6-4713-b07c-c87803e89a1b",
+                                "Zonked Esports" : "922f83a8-270b-4e4f-ac60-217742586b18",
+                                "Nocturn Esports" : "c8af50fd-7e4e-47aa-8ba4-8cf3c6bfa292",
+                                "Ignite Red" : "c3c0b091-d318-4485-8ba5-d15c4935b21e",
+                                "Bangs" : "f5793789-233a-4f4c-b36b-e0bf41b25399",
+                                "Yapybaras" : "4efe161d-abdf-4e17-92c9-b6347ec08672",
+                                "monkaRON" : "94c9ebe8-ce25-4847-b05c-5f062824c5b5",
+                                "Okedan 100" : "6540d97f-013a-4dea-8c1e-054860c7f66d",
+                                "BruinFruit" : "8aead11a-89ce-4261-b232-41ae95db4da0",
+                                "Loebas" : "9936cc1d-09cf-4599-9781-d4b907435ae2",
+                                "Baksteen" : "81d0d801-8766-42b6-876d-e1d590a228b1",
+                                "Goeievraag" : "4e53c613-424b-4e02-99dc-1b57a9654311"
+                            }
+                        },
+                        {
+                            "division_name": "Open9",
+                            "teams": {
+                                "ECV Esports" : "9f7239a9-81b4-4e5c-9b9c-c1c27c78a643",
+                                "WHATEVER" : "28b271f8-c368-4d5b-856e-ec95dffc0cb9",
+                                "Stabiel" : "e13fb541-65b3-44de-9e50-4cf8bf5ee00d"
+                            }
+                        },
+                        {
+                            "division_name": "Open1-8",
+                            "teams": {
+                                "Zonked Esports NXT" : "faf3bf48-f560-440a-a418-4d22e49569fd",
+                                "Zero K-D Heroes" : "276a9c32-e303-4107-bbca-4bbf53a121cf" 
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "season_id": "e60308e0-fa19-4266-a509-aa68fcd512d9",
+            "season_number": 51,
+            "regions": [
+                {
+                    "region_id": "bb755e89-c3b2-4f68-8641-9143efdcf28f",
+                    "region_name": "North America",
+                    "divisions": [
+                        {
+                            "division_name": "Main",
+                            "teams": {
+                                "Fisher College": "d19ba1db-0a65-4197-8f84-d7c44cfd835b"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "region_id": "94d33ba8-6e20-499f-9695-51c224b9e20f",
+                    "region_name": "Europe",
+                    "divisions": [
+                        {
+                            "division_name": "Advanced",
+                            "teams": {
+                                "Souls Heart": "2d88773b-5756-4ddc-be2b-6455ed3ee661"
+                            }
+                        },
+                        {
+                            "division_name": "Main",
+                            "teams": {
+                                "Addicted Esport": "950a5365-d411-4aa3-ae53-3c622fcce2bf", 
+                                "EX-EC Brugge": "befc852c-06f8-4168-b803-554f6dc06c49"
+                            }
+                        },
+                        {
+                            "division_name": "Intermediate",
+                            "teams": {
+                                "Senshi eSports": "2972bfee-55d7-40f4-be0b-9297425c5a3e", 
+                                "NIP Impact": "d74c5ac9-c23e-445f-b2b4-9ff1a7d0b6ab", 
+                                "Zonked Esports": "6bb0008b-e18f-4723-a265-cc6f8538efe4", 
+                                "Myth Esports": "bfcbf7b3-a021-460a-aded-bdbf7e3a6591", 
+                                "K1tchen Gamers": "41a52178-4858-48c1-afc9-bfa0a5b07959", 
+                                "Supafly": "981c75dd-63e2-4981-b84e-3bfb07edd752", 
+                                "AOMA Esports": "cdc647c5-a646-42dd-9652-61daf227eaef", 
+                                "Voice_Enable_0": "faf8cb9b-0834-41c8-b126-863c518204ce", 
+                                "Neustrimmers": "b8df37a1-1f7e-4845-bfb9-313b2a6bbf42", 
+                                "Paarful": "d2361f5f-ef61-426b-804a-48da947df944", 
+                                "Take Flyte EU": "da611a74-33e1-4f6a-b7d8-415119896b4e", 
+                                "FC Mallorca": "6d76087e-7743-43e4-b906-5070e7c10211", 
+                                "Team Aztec": "3c664f15-45a1-4e05-80af-53f7ab224ac4"
+                            }    
+                        },
+                        {
+                            "division_name": "Open10",
+                            "teams": {
+                                "Zonked Black Pearl": "8aead11a-89ce-4261-b232-41ae95db4da0", 
+                                "Connector One": "f1d7ef7b-40d6-4713-b07c-c87803e89a1b", 
+                                "Zonked Crimson": "bad5d18c-0823-4195-b8df-dd4aa4027dfe", 
+                                "Ashes": "1fe57c7a-be87-45f2-83c2-13b6f6ee516d", 
+                                "Schizogaming": "c301ff21-4fb8-4d5f-9ebc-b80bba4a071f", 
+                                "Goeievraag": "4e53c613-424b-4e02-99dc-1b57a9654311", 
+                                "OrangeBattalion": "b9facebc-9a54-42d2-9fdc-841fb53a2cbf", 
+                                "Project Eversio": "bbc4f947-4b65-48c8-b941-9e7a7760e4c3", 
+                                "Baksteen": "294ef111-210e-426c-b96f-b36249dc10fc"
+                            }
+                        },
+                        {
+                            "division_name": "Open",
+                            "teams": {
+                                "Nocturn Esports": "c8af50fd-7e4e-47aa-8ba4-8cf3c6bfa292", 
+                                "Okedan 100": "6540d97f-013a-4dea-8c1e-054860c7f66d", 
+                                "Born2Throw": "3ed29691-3b98-44bf-b410-e5236a4943b3", 
+                                "monkaRON": "94c9ebe8-ce25-4847-b05c-5f062824c5b5", 
+                                "Naked Cowboys": "6e9d951a-0ca3-437e-b64e-be79017c4aea"
+                            }  
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "season_id": "c689888b-fa4a-4110-ba5f-ba5c5242c584",
+            "season_number": 50,
+            "regions": [
+                {
+                    "region_id": "e9e6c566-709b-4c99-adbf-0bb0a86ec928",
+                    "region_name": "Europe",
+                    "divisions": [
+                        {
+                            "division_name": "Advanced",
+                            "teams": {
+                                "Tutel": "2d88773b-5756-4ddc-be2b-6455ed3ee661"
+                            }
+                        },
+                        {
+                            "division_name": "Main",
+                            "teams": {
+                                "Senshi eSports": "2972bfee-55d7-40f4-be0b-9297425c5a3e",
+                                "NIP Impact": "d74c5ac9-c23e-445f-b2b4-9ff1a7d0b6ab",
+                                "EX-EC Brugge": "befc852c-06f8-4168-b803-554f6dc06c49"
+                            }
+                        },
+                        {
+                            "division_name": "Intermediate",
+                            "teams": {
+                                "Addicted Esport": "950a5365-d411-4aa3-ae53-3c622fcce2bf",
+                                "Zonked Esports": "6bb0008b-e18f-4723-a265-cc6f8538efe4",
+                                "Myth Esports": "41a52178-4858-48c1-afc9-bfa0a5b07959",
+                                "Permitta Quokka": "4386983d-6032-4be2-b76a-1e3cb0f65d11",
+                                "Old Guy n Kids": "b8df37a1-1f7e-4845-bfb9-313b2a6bbf42",
+                                "Supafly": "981c75dd-63e2-4981-b84e-3bfb07edd752",
+                                "mCon Esports": "6d76087e-7743-43e4-b906-5070e7c10211",
+                                "Voice_Enable_0": "faf8cb9b-0834-41c8-b126-863c518204ce"
+                            }
+                        },
+                        {
+                            "division_name": "Open",
+                            "teams": {
+                                "Take Flyte": "da611a74-33e1-4f6a-b7d8-415119896b4e",
+                                "Paarful": "d2361f5f-ef61-426b-804a-48da947df944",
+                                "Kreatures": "95e15dae-9349-4693-9ef6-f72ec83569e1",
+                                "AOMA Esports": "cdc647c5-a646-42dd-9652-61daf227eaef",
+                                "Ashes": "1fe57c7a-be87-45f2-83c2-13b6f6ee516d",
+                                "Connector One": "f1d7ef7b-40d6-4713-b07c-c87803e89a1b",
+                                "Anime Alliance": "ae0bb369-8bbc-46a1-a3ec-06781309b5f1",
+                                "Prins": "daabc68e-ad6e-4547-8b85-5632a4522fa7",
+                                "Zonked Crimson": "bad5d18c-0823-4195-b8df-dd4aa4027dfe",
+                                "Beyond the Norm": "c4cf0284-18ca-46c9-b5fa-18adf75a6966",
+                                "IntoTheBed": "8c0a3c7d-4f87-4e75-81f5-93895dfe08d1"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

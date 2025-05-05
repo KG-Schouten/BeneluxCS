@@ -1,0 +1,335 @@
+[
+  {
+    "event_id": "12096eed-0a0e-4abc-8ff1-69a121e4fc45",
+    "event_name": "Benelux Premier",
+    "event_type": "championship_hub",
+    "event_description": "Benelux Premier is a competitive league for the best teams in the Benelux region.",
+    "event_avatar": "https://distribution.faceit-cdn.net/images/ac1a3514-63a0-4396-8f41-a36729e72e5d.jpeg",
+    "event_banner": "",
+    "event_start": "1742054400",
+    "organizer_id": "84192f8b-ac6d-410e-9051-cca291fdb328",
+    "organizer_name": "Senshi eSports",
+    "maps": ["de_dust2", "de_mirage", "de_inferno", "de_nuke", "de_anubis", "de_ancient", "de_train"],
+    "event_stages": [
+      {
+        "stage_id": 1,
+        "stage_name": "Group Stage",
+        "stage_type": "group",
+        "format": "doubleElimination",
+        "groups": [
+          {
+            "group_id": 1,
+            "group_name": "Group A",
+            "teams": [
+              "a809c291-c2aa-4d35-9391-68b8141ca5ea",
+              "7963d85c-7f7d-4441-ab3b-2d93803d9227",
+              "56d483ae-f74b-4731-a76d-865b1df59942",
+              "cf3aa4cb-03ef-4788-9fc1-83ef0290a95f"
+            ],
+            "matches": [
+              {
+                "match_id": "1-6163f9d7-04c8-4d18-9bd1-07e9a402aa92",
+                "round": 1,
+                "winner_to": { "group_id": 1, "round": 3 },
+                "loser to": { "group_id": 1, "round": 4 }
+              },
+              {
+                "match_id": "1-876dc97e-b6f6-4c67-ae1a-e93197820594",
+                "round": 2,
+                "winner_to": { "group_id": 1, "round": 3 },
+                "loser to": { "group_id": 1, "round": 4 }
+              },
+              {
+                "match_id": "1-c20e3210-1fcb-4d0b-8293-0277ecd79252",
+                "round": 3,
+                "winner_to": { "group_id": 5, "round": null },
+                "loser to": { "group_id": 5, "round": null }
+              },
+              {
+                "match_id": "1-8eba4ec1-78a5-462c-be8a-ae1cda2e5e06",
+                "round": 4,
+                "winner_to": { "group_id": 4, "round": null },
+                "loser to": null
+              }
+            ]
+          },
+          {
+            "group_id": 2,
+            "teams": [
+              "a7d50f47-5e69-449e-985c-890e2151a700",
+              "6b25786d-88b6-44c7-81ff-e62cb861ae5e",
+              "9ae919f9-5256-449f-a6ed-384d43ff35af",
+              "4d4e2a4f-66be-448a-9c04-e3eec501ad7c"
+            ],
+            "matches": [
+              {
+                "match_id": "1-5df75f32-1336-48b2-a5e5-148613560056",
+                "round": 1,
+                "winner_to": { "group_id": 2, "round": 3 },
+                "loser to": { "group_id": 2, "round": 4 }
+              },
+              {
+                "match_id": "1-2c44986d-7241-49d1-a0ae-7b94107f408c",
+                "round": 2,
+                "winner_to": { "group_id": 2, "round": 3 },
+                "loser to": { "group_id": 2, "round": 4 }
+              },
+              {
+                "match_id": "1-a25422bf-a2f3-4cca-99cc-434dcbc37a7e",
+                "round": 3,
+                "winner_to": { "group_id": 5, "round": null },
+                "loser to": { "group_id": 5, "round": null }
+              },
+              {
+                "match_id": "1-eb03b6a5-39a1-4d53-9921-c710e22825b8",
+                "round": 4,
+                "winner_to": { "group_id": 4, "round": null },
+                "loser to": null
+              }
+            ]
+          },
+          {
+            "group_id": 3,
+            "teams": [
+              "b18cf699-c068-4bd6-9784-c12c076facfd",
+              "8e92bcb1-1f0b-4c76-a32f-f005caea3e80",
+              "620ce8ad-2c14-4df9-a829-616e35297450",
+              "86df8199-0b67-4a54-84d3-533e3a0d7492"
+            ],
+            "matches": [
+              {
+                "match_id": "1-550113e6-4397-46ec-a74e-63c12791332a",
+                "round": 1,
+                "winner_to": { "group_id": 3, "round": 3 },
+                "loser to": { "group_id": 3, "round": 4 }
+              },
+              {
+                "match_id": "1-42a2689f-8773-4c18-b5b4-5b021ea0a855",
+                "round": 2,
+                "winner_to": { "group_id": 3, "round": 3 },
+                "loser to": { "group_id": 3, "round": 4 }
+              },
+              {
+                "match_id": "1-ceb79fa8-9a6b-47c5-a0ee-e1b8b0a41193",
+                "round": 3,
+                "winner_to": { "group_id": 5, "round": null },
+                "loser to": { "group_id": 5, "round": null }
+              },
+              {
+                "match_id": "1-30a710ac-c689-4561-88d0-1c2005f7a6b8",
+                "round": 4,
+                "winner_to": { "group_id": 4, "round": null },
+                "loser to": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": 2,
+        "stage_name": "Swiss Stage",
+        "stage_type": "group",
+        "format": "swiss",
+        "groups": [
+          {
+            "group_id": 4,
+            "group_name": "Swiss",
+            "teams": [
+              "9ae919f9-5256-449f-a6ed-384d43ff35af",
+              "56d483ae-f74b-4731-a76d-865b1df59942",
+              "620ce8ad-2c14-4df9-a829-616e35297450"
+            ],
+            "matches": [
+              {
+                "match_id": "1-bf2d3b99-1aa5-4b6d-a59f-9aeeec8a2e0e",
+                "round": 1,
+                "winner_to": null,
+                "loser to": null
+              },
+              {
+                "match_id": "1-17c08bfa-352b-4180-9057-7a68c020e55c",
+                "round": 2,
+                "winner_to": null,
+                "loser to": null
+              },
+              {
+                "match_id": "1-54b35a7a-16d0-4f2e-ab6b-b86ea8d68b98",
+                "round": 3,
+                "winner_to": null,
+                "loser to": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": 3,
+        "stage_name": "Knockout Stage",
+        "stage_type": "knockout",
+        "format": "bracket",
+        "groups": [
+          {
+            "group_id": 5,
+            "group_name": "Quarterfinals",
+            "teams": [
+              "a809c291-c2aa-4d35-9391-68b8141ca5ea",
+              "56d483ae-f74b-4731-a76d-865b1df59942",
+              "a7d50f47-5e69-449e-985c-890e2151a700",
+              "b18cf699-c068-4bd6-9784-c12c076facfd",
+              "6b25786d-88b6-44c7-81ff-e62cb861ae5e",
+              "cf3aa4cb-03ef-4788-9fc1-83ef0290a95f",
+              "8e92bcb1-1f0b-4c76-a32f-f005caea3e80",
+              "9ae919f9-5256-449f-a6ed-384d43ff35af"
+            ],
+            "matches": [
+              {
+                "match_id": "1-dc5997d2-0508-4c8e-b153-3d983645b2b1",
+                "round": 1,
+                "winner_to": { "group_id": 6, "round": 1 },
+                "loser to": null
+              },
+              {
+                "match_id": "1-64cae49a-d9d9-4336-935b-101751f07590",
+                "round": 2,
+                "winner_to": { "group_id": 6, "round": 1 },
+                "loser to": null
+              },
+              {
+                "match_id": null,
+                "round": 3,
+                "winner_to": { "group_id": 6, "round": 2 },
+                "loser to": null
+              },
+              {
+                "match_id": "1-f170c994-6fee-4433-8b68-fe95bbb2be48",
+                "round": 4,
+                "winner_to": { "group_id": 6, "round": 2 },
+                "loser to": null
+              }
+            ]
+          },
+          {
+            "group_id": 6,
+            "group_name": "Semifinals",
+            "teams": [
+              "a809c291-c2aa-4d35-9391-68b8141ca5ea",
+              "b18cf699-c068-4bd6-9784-c12c076facfd",
+              "8e92bcb1-1f0b-4c76-a32f-f005caea3e80",
+              "6b25786d-88b6-44c7-81ff-e62cb861ae5e"
+            ],
+            "matches": [
+              {
+                "match_id": "1-68496f53-53c1-41f5-9214-64f4bc445c9f",
+                "round": 1,
+                "winner_to": { "group_id": 7, "round": 1 },
+                "loser to": null
+              },
+              {
+                "match_id": "1-f9d7974e-68ce-41b6-a8b4-af57db3a28a7",
+                "round": 2,
+                "winner_to": { "group_id": 7, "round": 1 },
+                "loser to": null
+              }
+            ]
+          },
+          {
+            "group_id": 7,
+            "group_name": "Final",
+            "teams": [
+              "b18cf699-c068-4bd6-9784-c12c076facfd",
+              "6b25786d-88b6-44c7-81ff-e62cb861ae5e"
+            ],
+            "matches": [
+              {
+                "match_id": null,
+                "round": 1,
+                "winner_to": null,
+                "loser to": null
+              }
+            ]
+          }
+        ]
+      }
+    ], 
+    "teams": [
+      {
+        "team_id": "a809c291-c2aa-4d35-9391-68b8141ca5ea",
+        "team_name": "Lokale Vuurwolven",
+        "avatar": null,
+        "team_id_linked": "41a52178-4858-48c1-afc9-bfa0a5b07959"
+      },
+      {
+        "team_id": "56d483ae-f74b-4731-a76d-865b1df59942",
+        "team_name": "Supafly Esports",
+        "avatar": null,
+        "team_id_linked": "981c75dd-63e2-4981-b84e-3bfb07edd752"
+      },
+      {
+        "team_id": "cf3aa4cb-03ef-4788-9fc1-83ef0290a95f",
+        "team_name": "Baksteen",
+        "avatar": null,
+        "team_id_linked": "81d0d801-8766-42b6-876d-e1d590a228b1"
+      },
+      {
+        "team_id": "7963d85c-7f7d-4441-ab3b-2d93803d9227",
+        "team_name": "Gang Members",
+        "avatar": null,
+        "team_id_linked": "97293fc1-4007-4cc1-a095-bb0be2b21735"
+      },
+      {
+        "team_id": "a7d50f47-5e69-449e-985c-890e2151a700",
+        "team_name": "Senshi Esports",
+        "avatar": null,
+        "team_id_linked": "2972bfee-55d7-40f4-be0b-9297425c5a3e"
+      },
+      {
+        "team_id": "6b25786d-88b6-44c7-81ff-e62cb861ae5e",
+        "team_name": "Goeievraag",
+        "avatar": null,
+        "team_id_linked": "4e53c613-424b-4e02-99dc-1b57a9654311"
+      },
+      {
+        "team_id": "9ae919f9-5256-449f-a6ed-384d43ff35af",
+        "team_name": "Myth Esports",
+        "avatar": null,
+        "team_id_linked": "6bb0008b-e18f-4723-a265-cc6f8538efe4"
+      },
+      {
+        "team_id": "4d4e2a4f-66be-448a-9c04-e3eec501ad7c",
+        "team_name": "ROCM Esports",
+        "avatar": null,
+        "team_id_linked": "8256fa8d-726c-4bb1-a866-c402e5cab39a"
+      },
+      {
+        "team_id": "2d652782-56a5-4e3a-be7d-a6ee5b1e2ac5",
+        "team_name": "ROCM Esports",
+        "avatar": null,
+        "team_id_linked": "8256fa8d-726c-4bb1-a866-c402e5cab39a"
+      },
+      {
+        "team_id": "b18cf699-c068-4bd6-9784-c12c076facfd",
+        "team_name": "Soul's Heart Academy",
+        "avatar": null,
+        "team_id_linked": "6d76087e-7743-43e4-b906-5070e7c10211"
+      },
+      {
+        "team_id": "8e92bcb1-1f0b-4c76-a32f-f005caea3e80",
+        "team_name": "LBOMBA",
+        "avatar": null,
+        "team_id_linked": null
+      },
+      {
+        "team_id": "620ce8ad-2c14-4df9-a829-616e35297450",
+        "team_name": "Connector One",
+        "avatar": null,
+        "team_id_linked": "f1d7ef7b-40d6-4713-b07c-c87803e89a1b"
+      },
+      {
+        "team_id": "86df8199-0b67-4a54-84d3-533e3a0d7492",
+        "team_name": "ECV Esports",
+        "avatar": null,
+        "team_id_linked": "9f7239a9-81b4-4e5c-9b9c-c1c27c78a643"
+      }
+    ]
+  }
+]

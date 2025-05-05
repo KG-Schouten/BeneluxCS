@@ -4,29 +4,13 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import json
-import os
-import random
 import pandas as pd
-from datetime import datetime, timedelta
 import re
-import time
-from typing import Dict, Any, Callable, Optional
-
-# AI imports
-from model.model_utils import load_model, predict, preprocess_data
 
 # API imports
-import asyncio
-from faceit_api.faceit_v4 import FaceitData
-from faceit_api.faceit_v1 import FaceitData_v1
-from faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
-from faceit_api.async_progress import gather_with_progress
-
-# function imports
-from functions import load_api_keys
-
-## Data paths
-team_data_path = "C:/Python codes/BeneluxCS/DiscordBot/data/team_data.json"
+from data_processing.faceit_api.faceit_v4 import FaceitData
+from data_processing.faceit_api.faceit_v1 import FaceitData_v1
+from data_processing.faceit_api.async_progress import gather_with_progress
 
 def modify_keys(d):
     """
@@ -149,9 +133,18 @@ async def process_match_details_batch(match_ids: list[str], faceit_data: FaceitD
     tasks = [process_match_details(match_id=match_id, event_id=event_id, faceit_data=faceit_data) for match_id, event_id in zip(match_ids, event_ids)]
     results = await gather_with_progress(tasks, desc="Processing match details", unit="matches")
 
-    df_matches = pd.DataFrame([row[0] for row in results if results is not None if row is not None if row[0] is not None])
-    df_teams_matches = pd.DataFrame([item for row in results for item in row[1] if results is not None if row is not None if row[1] is not None if item is not None])
-
+    df_matches = pd.DataFrame([
+        row[0]
+        for row in results or []
+        if row and isinstance(row, (list, tuple)) and len(row) > 1 and row[1]
+    ])
+    df_teams_matches = pd.DataFrame([
+        item
+        for row in results or [] 
+        if row and isinstance(row, (list, tuple)) and len(row) > 1 and row[1]
+        for item in row[1] if item is not None
+    ])
+    
     # Modify the keys to work with the database
     df_matches = modify_keys(df_matches)
     df_teams_matches = modify_keys(df_teams_matches)
@@ -236,7 +229,7 @@ async def process_match_stats_batch(match_ids, faceit_data: FaceitData) -> tuple
     
     return df_maps, df_teams_maps, df_players_stats
 
-async def process_match_stats(match_id, faceit_data: FaceitData) -> tuple[list[Dict], list[Dict], list[Dict]]:
+async def process_match_stats(match_id, faceit_data: FaceitData) -> tuple[list[dict], list[dict], list[dict]]:
     try:
         match_stats = await faceit_data.match_stats(match_id)
         

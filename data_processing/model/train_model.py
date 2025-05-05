@@ -7,12 +7,10 @@ from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import joblib
-import pandas as pd
 import asyncio
 
 from database.db_down import gather_players_country
-from data_processing import check_all_players
-from model.model_utils import preprocess_data
+from data_processing.model.model_utils import preprocess_data
 
 def train_and_save_model(model_path: str = 'model/model.pkl') -> None:
     """

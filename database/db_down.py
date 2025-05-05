@@ -3,158 +3,136 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import mysql.connector
-import json
-import re
+import psycopg2
 import datetime
 import pandas as pd
-import numpy as np
-from typing import *
 
 from database.db_up import *
 from database.db_manage import start_database, close_database
 
-def gather_hub_stats(days=30):
-    """
-    Gathers the hub stats from all player over a select time frame (for use in for example the discord bot)
-
-    Args:
-        days (int): Amount of days to gather the data from (default = 30)
-            - Can be 'ALL' in which case all data is being gotten
-
-    Returns:
-        df
-    """
-     
-    ## Start the database and cursor
-    db, cursor = start_database()
-
-    ## Set up the timeframe over which to gather the data
-    if days == 'ALL':
-        start_date = 0
+def gather_update_matches(event_type, event_id) -> pd.DataFrame:
+    ## Create the query to get the matches
+    if event_type == 'esea':
+        query = """
+            SELECT 
+                m.match_id, 
+                m.match_time, 
+                m.status, 
+                m.event_id
+            FROM matches m
+            INNER JOIN seasons s ON m.event_id = s.event_id;
+        """
+    elif event_type in ['hub', 'championship', 'championship_hub'] and event_id is not None:
+        query = f"""
+            SELECT 
+                m.match_id, 
+                m.match_time, 
+                m.status, 
+                m.internal_event_id
+            FROM matches m
+            LEFT JOIN events e ON m.internal_event_id = e.internal_event_id
+            WHERE e.event_id = {event_id};
+        """
     else:
-        start_date = (datetime.now() - timedelta(days=days)).timestamp()
-
-    query = f"""
-        SELECT
-            p.player_id,
-            (
-                SELECT p2.player_name
-                FROM hub_player_stats p2
-                WHERE p2.player_id = p.player_id
-                ORDER BY p.match_id, p.match_round DESC
-                LIMIT 1
-            ) AS last_name,
-            
-            p3.country,
-            COUNT(DISTINCT CONCAT(m.match_id, '-', m.match_round)) AS maps_played,
-            SUM(p.result) AS wins,
-            ROUND(AVG(p.Kills), 0) AS avg_kills,
-            ROUND(AVG(p.Assists), 0) AS avg_assists,
-            ROUND(AVG(p.Deaths), 0) AS avg_deaths,
-            ROUND(AVG(p.ADR), 1) AS avg_adr,
-            ROUND(AVG(p.K_D_Ratio), 2) AS avg_kdr,
-            ROUND(AVG(p.hltv_rating), 2) AS avg_hltv,
-            SUM(p.Knife_Kills) AS knife_total,
-            SUM(p.Zeus_Kills) AS zeus_total
-            
-        FROM hub_player_stats p
-        JOIN hub_maps m ON (m.match_id, m.match_round) = (p.match_id, p.match_round)
-        JOIN hub_matches m2 ON m2.match_id = m.match_id
-        JOIN hub_players p3 ON p3.player_id = p.player_id
-        WHERE m2.match_time > %s
-        GROUP BY p.player_id, last_name
-        ORDER BY p.player_id
-    """
-
-    # Get player data into dataframe
-    cursor.execute(query, (start_date,))
-    res = cursor.fetchall()
-    columns = ['player_id','player_name', 'country', 'matches_played', 'wins', 'kills', "assists", 'deaths', 'adr','kdr', 'hltv', 'knife_kills', 'zeus_kills']
-    df = pd.DataFrame(res, columns=columns)
-
-    # Get total matches played
-    query = f"""
-        SELECT
-            COUNT(DISTINCT CONCAT(m.match_id, '-', m.match_round)) AS total_matches
-        FROM hub_maps m
-        JOIN hub_matches m2 ON m2.match_id = m.match_id
-        WHERE m2.match_time > %s
-    """
-    cursor.execute(query, (start_date,))
-    res = cursor.fetchall()
-    total_matches = res[0][0]
-
-    # Add match_percentage to df
-    idx = 3
-    df.insert(loc=idx, column='match_percentage', value=[int((matches_played / total_matches)*100) for matches_played in df.matches_played])
-
-    # Add the win % to df
-    df['wins'] = df['wins'].div(df.matches_played, axis=0).mul(100)
-    df['wins'] = df['wins'].astype(float).round(1)
+        print(f"Invalid event_type: {event_type} or event_id: {event_id}")
+        return pd.DataFrame()
+    
+    try:
+        db, cursor = start_database()
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df = pd.DataFrame(res, columns=['match_id', 'match_time', 'status', 'event_id'])
+        df = df.sort_values(by='match_time', ascending=False)
+    except psycopg2.Error as e:
+        print(f"Error gathering matches: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error gathering matches: {e}")
+        return pd.DataFrame()
+    finally:
+        # Close the database connection
+        close_database(db, cursor)
     
     return df
-
-def gather_esea_stats(season: int|list) -> pd.DataFrame:
+        
+def gather_upcoming_matches_esea() -> pd.DataFrame:
     """
-    Gathers the hub stats from all player over a select time frame (for use in for example the discord bot)
-
-    Args:
-        season (int | list): The esea season(s) to gather stats from
-
-    Returns:
-        df
+    Gathers the upcoming matches in ESEA from the database
     """
-    
-    # Preparing the sql
-    if isinstance(season, int):
-        seasons = (season,)
-    
-    seasons_sql = ", ".join(map(str, seasons))
-    
-    ## Start the database and cursor
-    db, cursor = start_database()
-
-    query = f"""
-        SELECT
-            p.player_id,
-            (
-                SELECT p2.player_name
-                FROM esea_player_stats p2
-                WHERE p2.player_id = p.player_id
-                ORDER BY p.match_id, p.match_round DESC
-                LIMIT 1
-            ) AS last_name,
-            
-            p3.country,
-            COUNT(DISTINCT CONCAT(m.match_id, '-', m.match_round)) AS maps_played,
-            SUM(p.result) AS wins,
-            ROUND(AVG(p.Kills), 0) AS avg_kills,
-            ROUND(AVG(p.Assists), 0) AS avg_assists,
-            ROUND(AVG(p.Deaths), 0) AS avg_deaths,
-            ROUND(AVG(p.ADR), 1) AS avg_adr,
-            ROUND(AVG(p.K_D_Ratio), 2) AS avg_kdr,
-            ROUND(AVG(p.hltv_rating), 2) AS avg_hltv,
-            SUM(p.Knife_Kills) AS knife_total,
-            SUM(p.Zeus_Kills) AS zeus_total
-            
-        FROM esea_player_stats p
-        JOIN esea_maps m ON (m.match_id, m.match_round) = (p.match_id, p.match_round)
-        JOIN esea_matches m2 ON m2.match_id = m.match_id
-        JOIN esea_players p3 ON p3.player_id = p.player_id
-        JOIN esea_seasons s ON s.season_id = m2.season_id
-        WHERE p3.country IN ('nl', 'be', 'lu') AND s.season_number in ({seasons_sql})
-        GROUP BY p.player_id, last_name
-        ORDER BY p.player_id
+    query = """
+        SELECT 
+            m.match_id, 
+            m.event_id, 
+            m.match_time, 
+            m.status,
+            s.season_number,
+            s.division_name,
+            s.stage_name,
+            tm.team_id, 
+            tm.team_name, 
+            tb.team_name AS team_name_benelux
+        FROM matches m
+        INNER JOIN seasons s
+            ON m.event_id = s.event_id
+        LEFT JOIN teams_matches tm
+            ON m.match_id = tm.match_id
+        LEFT JOIN teams_benelux tb
+            ON tm.team_id = tb.team_id
+            AND m.event_id = tb.event_id
+        WHERE m.status = 'SCHEDULED'
+        ORDER BY m.event_id, m.match_time ASC
     """
     
-    cursor.execute(query)
-    res = cursor.fetchall()
-    
-    columns = ['player_id','player_name', 'country', 'matches_played', 'wins', 'kills', "assists", 'deaths', 'adr','kdr', 'hltv', 'knife_kills', 'zeus_kills']
-    df = pd.DataFrame(res, columns=columns)
-    
-    return df
+    try:
+        # Start the database and cursor
+        db, cursor = start_database()
+
+        # Get player data into dataframe
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_results = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        
+        ## Processing of data into new dataframe
+        df_upcoming = (
+            df_results
+            .sort_values(by=['team_name_benelux'], ascending=True)
+            .groupby('match_id', group_keys=False)
+            .apply(
+                lambda match: pd.Series({
+                    'match_id': match.name,
+                    'event_id': match['event_id'].iloc[0],
+                    'match_time': safe_convert_to_datetime(match['match_time'].iloc[0]),
+                    'season_number': match['season_number'].iloc[0],
+                    'division_name': match['division_name'].iloc[0],
+                    'stage_name': match['stage_name'].iloc[0],
+                    'team_ids': match['team_id'].to_list(),
+                    'team_names': match['team_name'].to_list(),
+                    'is_benelux': match['team_name_benelux'].notna().to_list()
+                }),
+                include_groups=False 
+            )
+            .reset_index(drop=True)
+        )
+        return df_upcoming
+        
+    except psycopg2.Error as e:
+        print(f"Error gathering upcoming matches: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error gathering upcoming matches: {e}")
+        return pd.DataFrame()
+    finally:
+        # Close the database connection
+        close_database(db, cursor)
+
+def safe_convert_to_datetime(timestamp):
+    try:
+        return datetime.fromtimestamp(float(timestamp))
+    except (ValueError, TypeError, OverflowError):
+        return pd.NaT
+
+def gather_stats(**kwargs) -> pd.DataFrame:
+    return
 
 def gather_players_country() -> pd.DataFrame:
     """
@@ -187,17 +165,4 @@ if __name__ == "__main__":
     import sys
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    
-    # db,cursor = start_database()
-    
-    # Gather data for hub
-    df_hub = gather_hub_stats(days=30)
-    df_hub = df_hub.sort_values(by=['hltv'], ascending=False).reset_index(drop=True)
-    
-    # # Gather data for esea
-    # df_esea = gather_esea_stats(season=50)
-    # df_esea = df_esea.sort_values(by=['hltv'], ascending=False).reset_index(drop=True)
-    
-    
-    print(df_hub.to_string())
     

@@ -5,19 +5,8 @@ from datetime import datetime, timedelta
 import asyncio
 from itertools import batched
 
-# Module imports
-from faceit_api.faceit_v4 import FaceitData
-from faceit_api.faceit_v1 import FaceitData_v1
-
-from database.db_general import *
-from database.db_down import gather_hub_stats
+from database.db_down import *
 from database.db_up import *
-
-from data_processing import store_team_data, read_team_data, team_data_path
-from functions import find_team_name, load_api_keys
-
-# Initialize the API keys
-api_keys = load_api_keys()
 
 def create_leaderboard(embed, df):
     # Initializing values
@@ -87,7 +76,6 @@ class BeneluxHub(commands.Cog):
             embed = create_leaderboard(embed, df)
 
         await ctx.send(embed=embed)
-
 
 def setup(client : commands.Bot):
     client.add_cog(BeneluxHub(client))

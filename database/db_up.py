@@ -3,13 +3,8 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import psycopg2.extras
-
-import re
 import datetime
 import pandas as pd
-import numpy as np
-from typing import *
 import asyncio
 
 from database.db_manage import start_database, close_database
@@ -18,109 +13,107 @@ from database.db_config import *
 
 from data_processing.dp_events import process_esea_teams_data, process_hub_data, process_championship_data
 
-# Constants
-db_name = "BeneluxCS"
+# Mapping dictionary base
+event_type_mapping = {
+    "esea": process_esea_teams_data,
+    "hub": process_hub_data,
+    "championship": process_championship_data,
+    "championship_hub": process_championship_data
+}
 
 ### -----------------------------------------------------------------
-### FACEIT Ranking
+### Updating the database
 ### -----------------------------------------------------------------
 
+def update_data(update_type: str, event_type: str, **kwargs) -> None:
+    validate_update_inputs(update_type, event_type, kwargs)
+    event_id = kwargs.get("event_id", None)
 
-### -----------------------------------------------------------------
-### ESEA League Data 
-### -----------------------------------------------------------------
-
-def update_esea_data(**kwargs) -> None:
-    """
-    Updates the ESEA league data by gathering the latest matches from an external API and appending them to the database.
+    last_match_time = None
+    if update_type == "new":
+        df_existing = gather_update_matches(event_type, event_id)
+        last_match_time = gather_last_match_time(df_existing)
     
-    Args:
-        **kwargs: Additional keyword arguments for the function.
-            - update_type (str): Type of update to perform. Options are 'ALL', 'NEW', "SINGLE" (default: 'ALL').
-    """
-    ## Gather the kwargs
-    update_type = kwargs.get("update_type", "ALL")
-    if update_type not in ["ALL", "NEW", "SINGLE"]:
-        print("Invalid update_type. Use 'ALL' or 'NEW'.")
+    try:
+        results = asyncio.run(
+            gather_mapping_args(update_type, event_type, event_id, last_match_time)
+        )
+    except Exception as e:
+        print(f"Error while gathering results: {e}")
+        return
+
+    if not results:
+        print("No results found. Skipping...")
         return
     
-    ## Gather the data from the data processing function
-    if update_type == "ALL":
-        # Gather all of the data from ESEA
-        results = asyncio.run(process_esea_teams_data(season_number="ALL"))
-    elif update_type == "SINGLE":
-        results = asyncio.run(process_esea_teams_data(season_number=52, match_amount=1))
-    elif update_type == "NEW":
-        ## Gather the columns ['match_id', 'match_time', 'status', 'event_id'] from matches from the matches table in the database where the event_id is in the seasons table
-        try:
-            db, cursor = start_database()
-            query = """
-                SELECT m.match_id, m.match_time, m.status, m.event_id
-                FROM matches m
-                INNER JOIN seasons s ON m.event_id = s.event_id;
-            """
-            cursor.execute(query)
-            results = cursor.fetchall()
-            # Make results into a dataframe
-            df = pd.DataFrame(results, columns=['match_id', 'match_time', 'status', 'event_id'])
-            df = df.sort_values(by='match_time', ascending=False)
-        except Exception as e:
-            print(f"Error while fetching data from the matches table: {e}")
-            return
-        finally:
-            close_database(db, cursor)
-        
-
-        # if df is empty, set the last_match_time to 0
-        if df.empty:
-            print("No matches found in the database.")
-            last_match_time = 0
-        # Try to set the last_match_time to the match_time of the furthest away scheduled match in the database
-        elif df[df['status'] == 'SCHEDULED'].empty:
-            last_match_time = df['match_time'].min()
-        # Else set the last_match_time to the last finished match in the database
-        else:
-            last_match_time = df[df['status'] == 'FINISHED']['match_time'].max()
-        
-        # Cap the last_match_time to the current time
-        current_time = datetime.datetime.now().timestamp()
-        if last_match_time > current_time:
-            last_match_time = current_time
-        
-        # Round the last_match_time down to the start of the day
-        last_match_time = safe_convert_to_datetime(last_match_time)
-        
-        results = asyncio.run(process_esea_teams_data(season_number="ALL", from_timestamp=last_match_time))
-        
-    df_seasons, df_events, df_teams_benelux, df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = results
-
-    for table_name in table_names.keys():
-        df = eval(f"df_{table_name}")
-        if df is None:
-            print(f"Dataframe {table_name} is None. Skipping...")
+    for df in results:
+        if not isinstance(df, pd.DataFrame):
+            print(f"Error: {df} is not a DataFrame. Skipping...")
             continue
-        else:
-            upload_data(table_name, df)
+        if df is None:
+            print("Dataframe is None. Skipping...")
+            continue
+        if not hasattr(df, 'name') or df.name is None:
+            print("DataFrame does not have a name. Skipping...")
+            continue
+        
+        upload_data(df.name, df)
 
-def safe_convert_to_datetime(last_match_time):
-    # Ensure last_match_time is a number (either int or float)
-    if not isinstance(last_match_time, (int, float)):
-        raise ValueError("Invalid timestamp provided")
+def validate_update_inputs(update_type: str, event_type: str, kwargs: dict) -> None:
+    valid_update_types = ["all", "new", "single"]
+    valid_event_types = ["esea", "hub", "championship", "championship_hub"]
 
-    # Special case for 0 timestamp (Unix epoch)
-    if last_match_time == 0:
-        return 0  # Directly return 0 as timestamp
+    if update_type not in valid_update_types:
+        raise ValueError(f"Invalid update_type. Use one of {valid_update_types}.")
+    
+    if event_type not in valid_event_types:
+        raise ValueError(f"Invalid event_type. Use one of {valid_event_types}.")
+    
+    if event_type in ["hub", "championship", "championship_hub"] and "event_id" not in kwargs:
+        raise ValueError("event_id is required for event_type 'hub', 'championship' or 'championship_hub'.")
 
-    # Check if last_match_time is a valid timestamp (should be non-negative and not too large)
-    if last_match_time < 0 or last_match_time > 253402300800:  # Maximum valid timestamp (year 9999)
-        raise ValueError("Timestamp out of valid range")
+def gather_mapping_args(update_type: str, event_type: str, event_id: str, last_match_time: int) -> list[pd.DataFrame]:
+    args = {}
+    if event_type == "esea":
+        if update_type == "all":
+            args['season_number'] = "ALL"
+        elif update_type == "single":
+            args.update({"season_number": 52, "match_amount": 1})
+        elif update_type == "new":
+            args.update({"season_number": "ALL", "from_timestamp": last_match_time})
+    elif event_type in ["hub", "championship", "championship_hub"]:
+        args.update({
+                "hub_id" if event_type == "hub" else "championship_id": event_id,
+                "items_to_return": "ALL" if update_type == "all" else 1,
+            })
+        if update_type == "new":
+            args["from_timestamp"] = last_match_time
+        if event_type in ["championship", "championship_hub"]:
+            args["event_type"] = event_type
+    
+    return event_type_mapping[event_type](**args)
 
-    # If in milliseconds, convert to seconds
-    if last_match_time > 9999999999:  # If it's a timestamp in milliseconds
-        last_match_time /= 1000
+def gather_last_match_time(df: pd.DataFrame) -> int:
+    """ Gathers the last match time from the matches table in the database """
+    # Check if the DataFrame is empty
+    if df.empty:
+        print("No matches found in the database.")
+        return 0
 
-    # Convert to datetime
-    return datetime.datetime.fromtimestamp(last_match_time).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    # Try to set the last_match_time to the match_time of the furthest away scheduled match in the database
+    if df[df['status'] == 'SCHEDULED'].empty:
+        last_match_time = df['match_time'].min()
+    # Else set the last_match_time to the last finished match in the database
+    else:
+        last_match_time = df[df['status'] == 'FINISHED']['match_time'].max()
+
+    # Cap the last_match_time to the current time
+    current_time = datetime.datetime.now().timestamp()
+    if last_match_time > current_time:
+        last_match_time = current_time
+    
+    # Round the last_match_time down to the start of the day
+    return int(safe_convert_to_datetime(last_match_time))
 
 ### -----------------------------------------------------------------
 ### General Functions
@@ -176,7 +169,7 @@ def upload_data(table_name, df: pd.DataFrame) -> None:
         db.commit()
         close_database(db, cursor)
 
-def gather_keys(table_name: str) -> Tuple[List[str], List[str]]:
+def gather_keys(table_name: str) -> tuple[list[str], list[str]]:
     """
     Gather all keys and primary keys from the specified table in the database
     """
@@ -272,6 +265,26 @@ def upload_data_query(table_name: str, keys: list, primary_keys: list) -> str:
                 {", ".join([f"{key} = EXCLUDED.{key}" for key in keys if key not in primary_keys])};
         """
         return upload_query   
+
+def safe_convert_to_datetime(last_match_time):
+    # Ensure last_match_time is a number (either int or float)
+    if not isinstance(last_match_time, (int, float)):
+        raise ValueError("Invalid timestamp provided")
+
+    # Special case for 0 timestamp (Unix epoch)
+    if last_match_time == 0:
+        return 0  # Directly return 0 as timestamp
+
+    # Check if last_match_time is a valid timestamp (should be non-negative and not too large)
+    if last_match_time < 0 or last_match_time > 253402300800:  # Maximum valid timestamp (year 9999)
+        raise ValueError("Timestamp out of valid range")
+
+    # If in milliseconds, convert to seconds
+    if last_match_time > 9999999999:  # If it's a timestamp in milliseconds
+        last_match_time /= 1000
+
+    # Convert to datetime
+    return datetime.datetime.fromtimestamp(last_match_time).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
 
 if __name__ == "__main__":
     # Allow standalone execution

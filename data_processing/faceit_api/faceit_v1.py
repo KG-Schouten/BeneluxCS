@@ -5,8 +5,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import aiohttp
 
-from faceit_api.response_handler import check_response
-from faceit_api.sliding_window import RateLimitException
+from data_processing.faceit_api.response_handler import check_response
+from data_processing.faceit_api.sliding_window import RateLimitException
 
 class FaceitData_v1:
     """The Data API for Faceit"""

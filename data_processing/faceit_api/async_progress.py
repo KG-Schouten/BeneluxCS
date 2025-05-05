@@ -1,5 +1,4 @@
 import asyncio
-import sys
 
 def get_tqdm():
     try:
