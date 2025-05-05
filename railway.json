@@ -1,0 +1,15 @@
+{
+    "services": [
+      {
+        "name": "discord_bot",
+        "source": "discord_bot",
+        "env": "production"
+      },
+      {
+        "name": "data_dump",
+        "source": "dumps",
+        "env": "production",
+        "schedule": "0 0 * * 0"
+      }
+    ]
+  }
