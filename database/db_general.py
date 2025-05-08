@@ -270,8 +270,6 @@ if __name__ == "__main__":
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     
-    delete_table("ALL", confirm=True) # Delete all tables in the database
-    create_tables()
-    # update_esea_data(update_type="ALL")
+    update_data('new', 'esea')
 
 

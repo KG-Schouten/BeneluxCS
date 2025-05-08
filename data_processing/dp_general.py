@@ -692,7 +692,7 @@ def load_event_data_json() -> dict:
     """
     
     BASE_DIR = os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
-    URL = os.path.join(BASE_DIR, 'data', 'events.json')
+    URL = os.path.join(BASE_DIR, 'data_processing/data', 'events.json')
 
     try:
         with open(URL, 'r', encoding='utf-8') as f:
