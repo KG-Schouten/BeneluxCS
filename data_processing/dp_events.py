@@ -302,7 +302,7 @@ def gather_team_ids_json(**kwargs) -> pd.DataFrame:
     # Data path
     # Path to the API keys file
     BASE_DIR = os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
-    URL = os.path.join(BASE_DIR, 'data', 'league_teams.json')
+    URL = os.path.join(BASE_DIR, 'data_processing/data', 'league_teams.json')
 
     try:
         with open(URL, 'r', encoding='utf-8') as f:  # Open the file in read mode with UTF-8 encoding
