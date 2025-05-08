@@ -4,56 +4,11 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import psycopg2
-import datetime
+from datetime import datetime
 import pandas as pd
 
 from database.db_up import *
 from database.db_manage import start_database, close_database
-
-def gather_update_matches(event_type, event_id) -> pd.DataFrame:
-    ## Create the query to get the matches
-    if event_type == 'esea':
-        query = """
-            SELECT 
-                m.match_id, 
-                m.match_time, 
-                m.status, 
-                m.event_id
-            FROM matches m
-            INNER JOIN seasons s ON m.event_id = s.event_id;
-        """
-    elif event_type in ['hub', 'championship', 'championship_hub'] and event_id is not None:
-        query = f"""
-            SELECT 
-                m.match_id, 
-                m.match_time, 
-                m.status, 
-                m.internal_event_id
-            FROM matches m
-            LEFT JOIN events e ON m.internal_event_id = e.internal_event_id
-            WHERE e.event_id = {event_id};
-        """
-    else:
-        print(f"Invalid event_type: {event_type} or event_id: {event_id}")
-        return pd.DataFrame()
-    
-    try:
-        db, cursor = start_database()
-        cursor.execute(query)
-        res = cursor.fetchall()
-        df = pd.DataFrame(res, columns=['match_id', 'match_time', 'status', 'event_id'])
-        df = df.sort_values(by='match_time', ascending=False)
-    except psycopg2.Error as e:
-        print(f"Error gathering matches: {e}")
-        return pd.DataFrame()
-    except Exception as e:
-        print(f"Error gathering matches: {e}")
-        return pd.DataFrame()
-    finally:
-        # Close the database connection
-        close_database(db, cursor)
-    
-    return df
         
 def gather_upcoming_matches_esea() -> pd.DataFrame:
     """
@@ -127,7 +82,7 @@ def gather_upcoming_matches_esea() -> pd.DataFrame:
 
 def safe_convert_to_datetime(timestamp):
     try:
-        return datetime.fromtimestamp(float(timestamp))
+        return datetime.datetime.fromtimestamp(float(timestamp))
     except (ValueError, TypeError, OverflowError):
         return pd.NaT
 
@@ -157,7 +112,6 @@ def gather_players_country() -> pd.DataFrame:
     df = pd.DataFrame(res, columns=columns)
 
     return df
-
 
 
 if __name__ == "__main__":
