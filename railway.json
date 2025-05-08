@@ -1,15 +1,16 @@
 {
     "services": [
       {
-        "name": "discord_bot",
-        "source": "discord_bot",
-        "env": "production"
+        "name": "discord-bot",
+        "sourceDir": "discord_bot",
+        "buildCommand": "pip install -r ../requirements.txt",
+        "startCommand": "python main.py"
       },
       {
-        "name": "data_dump",
-        "source": "dumps",
-        "env": "production",
-        "schedule": "0 0 * * 0"
+        "name": "data-dump",
+        "sourceDir": "dumps",
+        "buildCommand": "pip install -r ../requirements.txt",
+        "startCommand": "python dump_script.py"
       }
     ]
   }

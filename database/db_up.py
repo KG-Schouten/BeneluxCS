@@ -3,12 +3,13 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import psycopg2.extras
+
 import datetime
 import pandas as pd
 import asyncio
 
 from database.db_manage import start_database, close_database
-from database.db_down import *
 from database.db_config import *
 
 from data_processing.dp_events import process_esea_teams_data, process_hub_data, process_championship_data
@@ -26,6 +27,16 @@ event_type_mapping = {
 ### -----------------------------------------------------------------
 
 def update_data(update_type: str, event_type: str, **kwargs) -> None:
+    """
+    Function to update the database with new data based on the provided update type and event type.
+    
+    Args:
+        update_type (str)  : Type of update to perform. Options: "all", "new", "single"
+        event_type (str)   : Type of event to update. Options: "esea", "hub", "championship", "championship_hub"
+        **kwargs (dict)     : Additional arguments for the update. For "hub", "championship", and "championship_hub", provide "event_id".
+            - event_id (str) : ID of the event to update. Required for "hub", "championship", and "championship_hub" event types.
+
+    """
     validate_update_inputs(update_type, event_type, kwargs)
     event_id = kwargs.get("event_id", None)
 
@@ -46,6 +57,7 @@ def update_data(update_type: str, event_type: str, **kwargs) -> None:
         print("No results found. Skipping...")
         return
     
+    name_to_df = {}
     for df in results:
         if not isinstance(df, pd.DataFrame):
             print(f"Error: {df} is not a DataFrame. Skipping...")
@@ -57,7 +69,61 @@ def update_data(update_type: str, event_type: str, **kwargs) -> None:
             print("DataFrame does not have a name. Skipping...")
             continue
         
+        name_to_df[df.name] = df
+    
+    for table_name in table_names.keys():
+        df = name_to_df.get(table_name)
+        if df is None:
+            print(f"DataFrame for table {table_name} not found. Skipping...")
+            continue
         upload_data(df.name, df)
+
+def gather_update_matches(event_type, event_id) -> pd.DataFrame:
+    ## Create the query to get the matches
+    if event_type == 'esea':
+        query = """
+            SELECT 
+                m.match_id, 
+                m.match_time, 
+                m.status, 
+                m.event_id
+            FROM matches m
+            INNER JOIN seasons s ON m.event_id = s.event_id;
+        """
+    elif event_type in ['hub', 'championship', 'championship_hub'] and event_id is not None:
+        query = f"""
+            SELECT 
+                m.match_id, 
+                m.match_time, 
+                m.status, 
+                m.internal_event_id
+            FROM matches m
+            LEFT JOIN events e ON m.internal_event_id = e.internal_event_id
+            WHERE e.event_id = {event_id};
+        """
+    else:
+        print(f"Invalid event_type: {event_type} or event_id: {event_id}")
+        return pd.DataFrame()
+    
+    try:
+        db, cursor = start_database()
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df = pd.DataFrame(res, columns=['match_id', 'match_time', 'status', 'event_id'])
+        df['match_time'] = pd.to_numeric(df['match_time'], errors='coerce')
+        df = df.dropna(subset=['match_time'])
+        df = df.sort_values(by='match_time', ascending=False)
+    except psycopg2.Error as e:
+        print(f"Error gathering matches: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error gathering matches: {e}")
+        return pd.DataFrame()
+    finally:
+        # Close the database connection
+        close_database(db, cursor)
+    
+    return df
 
 def validate_update_inputs(update_type: str, event_type: str, kwargs: dict) -> None:
     valid_update_types = ["all", "new", "single"]
@@ -109,7 +175,7 @@ def gather_last_match_time(df: pd.DataFrame) -> int:
 
     # Cap the last_match_time to the current time
     current_time = datetime.datetime.now().timestamp()
-    if last_match_time > current_time:
+    if int(last_match_time) > int(current_time):
         last_match_time = current_time
     
     # Round the last_match_time down to the start of the day

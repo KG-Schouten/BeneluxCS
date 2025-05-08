@@ -22,8 +22,7 @@ FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 async def process_player_country_details(player_ids: list) -> pd.DataFrame:
     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
         # Initialize the FaceitData object with the API token and dispatcher
-        api_keys = load_api_keys()
-        faceit_data = FaceitData(api_keys.get("FACEIT_TOKEN"), dispatcher)
+        faceit_data = FaceitData(FACEIT_TOKEN, dispatcher)
         faceit_data_v1 = FaceitData_v1(dispatcher)
         
         tasks = [check_benelux(player_id, faceit_data_v1) for player_id in player_ids]
