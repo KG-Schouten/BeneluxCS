@@ -1,7 +1,7 @@
 # Allow standalone execution
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '...')))
 
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # Allow standalone execution
     import sys
     import os
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '...')))
     
     # Train the model on the players_country database
     from database.db_down import gather_players_country

@@ -12,10 +12,9 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 
 def start_database():
     """Starting up the mySQL database so it can be used by the rest of the program"""
-
     db = psycopg2.connect(
-        host = "nozomi.proxy.rlwy.net",
-        port = 20571,
+        host = "ballast.proxy.rlwy.net",
+        port = 56208,
         user = "postgres",
         password = POSTGRES_PASSWORD,
         database = "railway"

@@ -7,7 +7,6 @@ import psycopg2
 from datetime import datetime
 import pandas as pd
 
-from database.db_up import *
 from database.db_manage import start_database, close_database
         
 def gather_upcoming_matches_esea() -> pd.DataFrame:
