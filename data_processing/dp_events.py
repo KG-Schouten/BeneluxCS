@@ -14,7 +14,7 @@ from data_processing.faceit_api.sliding_window import RequestDispatcher, request
 from data_processing.faceit_api.async_progress import gather_with_progress
 
 # dp imports
-from data_processing.dp_general import *
+from data_processing.dp_general import process_matches, gather_event_details, modify_keys, load_event_data_json
 
 # Load api keys from .env file
 from dotenv import load_dotenv
@@ -772,3 +772,4 @@ if __name__ == "__main__":
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     
+    pass
