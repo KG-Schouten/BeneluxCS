@@ -1,6 +1,0 @@
--e ../data_processing
--e ../database
-
-nextcord==3.1.0
-python-dotenv==1.1.0
-rapidfuzz==3.13.0

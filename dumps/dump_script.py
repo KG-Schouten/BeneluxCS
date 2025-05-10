@@ -1,1 +1,0 @@
-## Script to dump the contents of the database to file(s) for sharing and backups

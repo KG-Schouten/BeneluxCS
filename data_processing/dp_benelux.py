@@ -17,7 +17,6 @@ from data_processing.faceit_api.async_progress import gather_with_progress
 # Load api keys from .env file
 from dotenv import load_dotenv
 load_dotenv()
-
 FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 
 async def process_player_country_details(player_ids: list) -> pd.DataFrame:
