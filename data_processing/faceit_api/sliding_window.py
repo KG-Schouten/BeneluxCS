@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections import deque
-from data_processing.faceit_api.logging_config import logger
+from data_processing.faceit_api.logging_config import api_logger
 
 request_limit = 350  # Maximum number of calls allowed in the time window
 interval = 10  # Time window in seconds
@@ -29,7 +29,7 @@ class SlidingWindowRateLimiter:
                     self.call_times.popleft()
 
                 # Log current count
-                logger.info(f"Current request count in window: {len(self.call_times)}/{self.max_calls}")
+                api_logger.info(f"Current request count in window: {len(self.call_times)}/{self.max_calls}")
                 
                 if len(self.call_times) < self.max_calls:
                     self.call_times.append(now)

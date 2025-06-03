@@ -6,30 +6,49 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import aiohttp
 
 from data_processing.faceit_api.response_handler import check_response
-from data_processing.faceit_api.sliding_window import RateLimitException
+from data_processing.faceit_api.sliding_window import RequestDispatcher
 
 class FaceitData_v1:
     """The Data API for Faceit"""
 
-    def __init__(self, dispatcher: RateLimitException):
+    def __init__(self, dispatcher: RequestDispatcher):
         """ Initialize the FaceitData_v1 class"""
 
         self.base_url = 'https://faceit.com/api'
-        self.session = aiohttp.ClientSession()
+        self.session = None
         self.dispatcher = dispatcher
+    
+    async def __aenter__(self):
+        """ Enter the asynchronous context manager """
+        self.session = aiohttp.ClientSession()
+        return self
+    
+    async def __aexit__(self, exc_type, exc, tb):
+        """ Exit the asynchronous context manager """
+        if self.session is not None:
+            # Close the session if it was initialized
+            await self.session.close()
+        else:
+            raise RuntimeError("Session was not initialized. Please use the context manager to initialize it.")
     
     async def _get(self, url:str) -> dict | int:
         """ Helper function to fetch data from a GET request """
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Please use the context manager to initialize it.")
         async with self.session.get(url) as response:
             return await check_response(response)
     
     async def _post(self, url:str, body:dict) -> dict | int:
         """ Helper function to fetch data from a POST request """
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Please use the context manager to initialize it.")
         async with self.session.post(url, json=body) as response:
             return await check_response(response)
     
     async def _get_with_params(self, url:str, params:dict) -> dict | int:
         """ Helper function to fetch data from a GET request with parameters """
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Please use the context manager to initialize it.")
         async with self.session.get(url, params=params) as response:
             return await check_response(response)
     

@@ -11,8 +11,9 @@ import re
 from data_processing.faceit_api.faceit_v4 import FaceitData
 from data_processing.faceit_api.faceit_v1 import FaceitData_v1
 from data_processing.faceit_api.async_progress import gather_with_progress
+from data_processing.faceit_api.logging_config import function_logger
 
-def modify_keys(d):
+def modify_keys(d) -> dict | pd.DataFrame | pd.Series | list:
     """
     Modifies the keys of a dataframe or a dictionary by replacing non-alphanumeric characters with underscores.
     """
@@ -46,7 +47,7 @@ def modify_keys(d):
         # Create a new list with modified dicts
         return [modify_keys(item) if isinstance(item, dict) else item for item in d]
     
-    else: 
+    else:
         print("Input was not of a valid type so returned it")
         return d
 
@@ -54,7 +55,7 @@ def modify_keys(d):
 ### Match processing functions
 ### -----------------------------------------------------------------
 
-async def process_matches(match_ids,  event_ids, faceit_data: FaceitData, faceit_data_v1: FaceitData_v1) -> None:
+async def process_matches(match_ids, event_ids, faceit_data: FaceitData, faceit_data_v1: FaceitData_v1) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Main function to process matches and gather all relevant data.
     
@@ -84,7 +85,7 @@ async def process_matches(match_ids,  event_ids, faceit_data: FaceitData, faceit
     if team_ids:
         df_teams = await process_team_details_batch(team_ids, faceit_data=faceit_data)
     else:
-        print("No teams found.")
+        function_logger.warning("No teams found in match details.")
         df_teams = pd.DataFrame()
     
     ## Map details, team/map details, player stats, player details
@@ -99,10 +100,10 @@ async def process_matches(match_ids,  event_ids, faceit_data: FaceitData, faceit
         if player_ids:
             df_players = await process_player_details_batch(player_ids, faceit_data_v1=faceit_data_v1)
         else:
-            print("No players found.")
+            function_logger.warning("No players found in match stats.")
             df_players = pd.DataFrame()
     else:
-        print("No finished matches found.")
+        function_logger.warning("No finished matches found.")
         df_maps, df_teams_maps, df_players_stats, df_players = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     
     # Remove any empty rows from the DataFrames
@@ -116,7 +117,7 @@ async def process_matches(match_ids,  event_ids, faceit_data: FaceitData, faceit
     
     return df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players
 
-async def process_match_details_batch(match_ids: list[str], faceit_data: FaceitData, **kwargs) -> pd.DataFrame:
+async def process_match_details_batch(match_ids: list[str], faceit_data: FaceitData, **kwargs) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Processes match details for a batch of match IDs.
 
@@ -148,10 +149,16 @@ async def process_match_details_batch(match_ids: list[str], faceit_data: FaceitD
     # Modify the keys to work with the database
     df_matches = modify_keys(df_matches)
     df_teams_matches = modify_keys(df_teams_matches)
+
+    # Ensure both are DataFrames
+    if not isinstance(df_matches, pd.DataFrame):
+        df_matches = pd.DataFrame(df_matches)
+    if not isinstance(df_teams_matches, pd.DataFrame):
+        df_teams_matches = pd.DataFrame(df_teams_matches)
     
     return df_matches, df_teams_matches
 
-async def process_match_details(match_id: str, event_id, faceit_data: FaceitData) -> dict:
+async def process_match_details(match_id: str, event_id, faceit_data: FaceitData) -> tuple[dict,list]:
     try:
             match_details = await faceit_data.match_details(match_id)
             
@@ -194,8 +201,8 @@ async def process_match_details(match_id: str, event_id, faceit_data: FaceitData
 
             return match_dict, match_team_list
     except Exception as e:
-        print(f"Error processing match ID {match_id}: {e}")
-        return None
+        function_logger.error(f"Error processing match ID {match_id}: {e}")
+        return {}, []
 
 async def process_match_stats_batch(match_ids, faceit_data: FaceitData) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: 
     """
@@ -223,6 +230,13 @@ async def process_match_stats_batch(match_ids, faceit_data: FaceitData) -> tuple
     df_teams_maps = modify_keys(df_teams_maps)
     df_players_stats = modify_keys(df_players_stats)
 
+    if not isinstance(df_maps, pd.DataFrame):
+        df_maps = pd.DataFrame(df_maps)
+    if not isinstance(df_teams_maps, pd.DataFrame):
+        df_teams_maps = pd.DataFrame(df_teams_maps)
+    if not isinstance(df_players_stats, pd.DataFrame):
+        df_players_stats = pd.DataFrame(df_players_stats)
+    
     # Add HLTV rating to player stats
     if not df_players_stats.empty and not df_maps.empty:
         df_players_stats = calculate_hltv(df_players_stats, df_maps)
@@ -234,7 +248,7 @@ async def process_match_stats(match_id, faceit_data: FaceitData) -> tuple[list[d
         match_stats = await faceit_data.match_stats(match_id)
         
         if match_stats == 404:
-            return None
+            return [], [], []
         else:
             ## Check for replayed matches
             seen = {}
@@ -247,10 +261,10 @@ async def process_match_stats(match_id, faceit_data: FaceitData) -> tuple[list[d
             return map_dict, team_map_dict, player_stats_dict
     
     except Exception as e:
-        print(f"Error processing match ID {match_id}: {e}")
-        return None
+        function_logger.error(f"Error processing match stats for match ID {match_id}: {e}")
+        return [], [], []
 
-async def process_match_stats_dict(match_id, match_stats):
+async def process_match_stats_dict(match_id, match_stats) -> tuple[list[dict], list[dict], list[dict]]:
     """ 
     Processing of the match stat dictionary gathered from the v4 faceit_data.match_stats() function
     
@@ -399,13 +413,19 @@ async def process_player_details_batch(player_ids: list[str], faceit_data_v1: Fa
     ## Modify the keys to work with the database
     df_players = modify_keys(df_players)
     
+    if not isinstance(df_players, pd.DataFrame):
+        df_players = pd.DataFrame(df_players)
+    
     return df_players
 
-async def process_player_details(player_ids: list[str], faceit_data_v1: FaceitData_v1) -> dict:
+async def process_player_details(player_ids: list[str], faceit_data_v1: FaceitData_v1) -> list[dict]:
     try:
         player_details = await faceit_data_v1.player_details_batch(list(player_ids))
+        if not isinstance(player_details, dict):
+            function_logger.error(f"Error fetching player details for {player_ids}: {player_details}")
+            return []
         if player_details == 404:
-            return None
+            return []
         else:
             player_list = []
             for player_id, player in player_details['payload'].items():
@@ -423,8 +443,8 @@ async def process_player_details(player_ids: list[str], faceit_data_v1: FaceitDa
             return player_list
         
     except Exception as e:
-        print(f"Error processing player IDs {player_ids}: {e}")
-        return None
+        function_logger.error(f"Error processing player IDs {player_ids}: {e}")
+        return []
 
 ### -----------------------------------------------------------------
 ### Team details functions
@@ -451,6 +471,9 @@ async def process_team_details_batch(team_ids: list[str], faceit_data: FaceitDat
     ## Modify the dataframe to have the correct column names and df name
     df_teams = modify_keys(df_teams)
     
+    if not isinstance(df_teams, pd.DataFrame):
+        df_teams = pd.DataFrame(df_teams)
+    
     return df_teams
 
 async def process_team_details(team_id, faceit_data: FaceitData) -> dict:
@@ -473,8 +496,8 @@ async def process_team_details(team_id, faceit_data: FaceitData) -> dict:
         return team_dict
     
     except Exception as e:
-        print(f"Error processing team ID {team_id}: {e}")
-        return None
+        function_logger.error(f"Error processing team ID {team_id}: {e}")
+        return {}
 
 ### -----------------------------------------------------------------
 ### Event data functions
@@ -521,9 +544,12 @@ async def gather_event_details(event_id: str, event_type: str, faceit_data_v1: F
     """
     if event_type == 'championship':
         try:
-            details = await faceit_data_v1.championship_details(championship_id=event_id)  
+            details = await faceit_data_v1.championship_details(championship_id=event_id)
+            if not isinstance(details, dict):
+                print(f"Error code while fetching championship details: {details}")
+                return pd.DataFrame()
             if isinstance(details, dict):
-                details = details.get('payload', None)
+                details = details.get('payload', {})
                 event_dict = {
                     "event_id": event_id,
                     "stage_id": 1,
@@ -553,8 +579,11 @@ async def gather_event_details(event_id: str, event_type: str, faceit_data_v1: F
     elif event_type == 'hub':
         try:
             details = await faceit_data_v1.hub_details(hub_id=event_id)
+            if not isinstance(details, dict):
+                print(f"Error code while fetching hub details: {details}")
+                return pd.DataFrame()
             if isinstance(details, dict):
-                details = details.get('payload', None)
+                details = details.get('payload', {})
                 event_dict = {
                     "event_id": event_id,
                     "stage_id": 1,
@@ -580,6 +609,8 @@ async def gather_event_details(event_id: str, event_type: str, faceit_data_v1: F
         
         ## Modify the keys to work with the database
         df_events = modify_keys(df_events)
+        if not isinstance(df_events, pd.DataFrame):
+            df_events = pd.DataFrame(df_events)
         
         ## Give the dataframe a unique name
         df_events.name = "events"
@@ -587,7 +618,7 @@ async def gather_event_details(event_id: str, event_type: str, faceit_data_v1: F
         return df_events
     else:
         print(f"Unknown event type: {event_type}")
-        return None
+        return pd.DataFrame()
 
 def gather_event_details_json(event_id: str) -> pd.DataFrame:
     """
@@ -675,6 +706,8 @@ def gather_event_details_json(event_id: str) -> pd.DataFrame:
         ## Modify the keys to work with the database
         df_events = modify_keys(df_events)
         
+        if not isinstance(df_events, pd.DataFrame):
+            df_events = pd.DataFrame(df_events)
         ## Give the dataframe a unique name
         df_events.name = "events"
         

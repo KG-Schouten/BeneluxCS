@@ -21,7 +21,7 @@ class FaceitData:
 
         self.api_token = api_token
         self.base_url = 'https://open.faceit.com/data/v4'
-        self.session = aiohttp.ClientSession()
+        self.session = None
         self.dispatcher = dispatcher
 
         self.headers = {
@@ -29,18 +29,36 @@ class FaceitData:
             'Authorization': 'Bearer {}'.format(self.api_token)
         }
 
+    async def __aenter__(self):
+        """ Enter the asynchronous context manager """
+        self.session = aiohttp.ClientSession()
+        return self
+    
+    async def __aexit__(self, exc_type, exc, tb):
+        """ Exit the asynchronous context manager """
+        if self.session is not None:
+            await self.session.close()
+        else:
+            raise RuntimeError("Session was not initialized before closing.")
+    
     async def _get(self, url:str) -> dict | int:
         """ Helper function to fetch data from a GET request """
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Please use the context manager to initialize it.")
         async with self.session.get(url, headers=self.headers) as response:
             return await check_response(response)
     
     async def _post(self, url:str, body:dict) -> dict | int:
         """ Helper function to fetch data from a POST request """
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Please use the context manager to initialize it.")
         async with self.session.post(url, json=body, headers=self.headers) as response:
             return await check_response(response)
     
     async def _get_with_params(self, url:str, params:dict) -> dict | int:
         """ Helper function to fetch data from a GET request with parameters """
+        if self.session is None:
+            raise RuntimeError("Session is not initialized. Please use the context manager to initialize it.")
         async with self.session.get(url, params=params, headers=self.headers) as response:
             return await check_response(response)
     

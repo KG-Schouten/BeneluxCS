@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data_processing.faceit_api.logging_config import logger
+from data_processing.faceit_api.logging_config import api_logger
 from data_processing.faceit_api.sliding_window import RateLimitException
 
 async def check_response(response) -> dict | int:
@@ -12,11 +12,11 @@ async def check_response(response) -> dict | int:
     url = str(response.url)
     
     if response.status == 200:
-        logger.info(f"[200] Success: {url}")
+        api_logger.info(f"[200] Success: {url}")
         return await response.json()
     
     elif response.status == 429:
-        logger.info(f"[429] Rate limit reached: {url}")
+        api_logger.info(f"[429] Rate limit reached: {url}")
         raise RateLimitException("Rate limit reached")
     
     else:
@@ -30,5 +30,5 @@ async def check_response(response) -> dict | int:
             503: "Service Unavailable",
         }
         message = error_map.get(response.status, f"HTTP Unknown Error: {response.status}")
-        logger.error(f"[{status}] {message}: {url}")
+        api_logger.error(f"[{status}] {message}: {url}")
         return status

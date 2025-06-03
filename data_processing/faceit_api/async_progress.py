@@ -2,7 +2,7 @@ import asyncio
 
 def get_tqdm():
     try:
-        from IPython import get_ipython
+        from IPython.core.getipython import get_ipython
         shell = get_ipython()
         if shell and shell.__class__.__name__ in ['ZMQInteractiveShell', 'Shell']: # Jupyter or IPython
             from tqdm.notebook import tqdm
