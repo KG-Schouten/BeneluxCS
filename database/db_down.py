@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import psycopg2
+import sqlite3
 from datetime import datetime
 import pandas as pd
 
@@ -36,11 +36,8 @@ def gather_upcoming_matches_esea() -> pd.DataFrame:
         WHERE m.status = 'SCHEDULED'
         ORDER BY m.event_id, m.match_time ASC
     """
-    
+    db, cursor = start_database()
     try:
-        # Start the database and cursor
-        db, cursor = start_database()
-
         # Get player data into dataframe
         cursor.execute(query)
         res = cursor.fetchall()
@@ -69,7 +66,7 @@ def gather_upcoming_matches_esea() -> pd.DataFrame:
         )
         return df_upcoming
         
-    except psycopg2.Error as e:
+    except sqlite3.Error as e:
         print(f"Error gathering upcoming matches: {e}")
         return pd.DataFrame()
     except Exception as e:
@@ -81,11 +78,11 @@ def gather_upcoming_matches_esea() -> pd.DataFrame:
 
 def safe_convert_to_datetime(timestamp):
     try:
-        return datetime.datetime.fromtimestamp(float(timestamp))
+        return datetime.fromtimestamp(float(timestamp))
     except (ValueError, TypeError, OverflowError):
         return pd.NaT
 
-def gather_stats(**kwargs) -> pd.DataFrame:
+def gather_stats(**kwargs) -> pd.DataFrame | None:
     return
 
 def gather_players_country() -> pd.DataFrame:
@@ -111,7 +108,6 @@ def gather_players_country() -> pd.DataFrame:
     df = pd.DataFrame(res, columns=columns)
 
     return df
-
 
 if __name__ == "__main__":
     # Allow standalone execution

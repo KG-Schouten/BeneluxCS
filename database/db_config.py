@@ -1,4 +1,4 @@
-db_name = "railway"
+db_name = "BeneluxCS"
 
 table_names = {
     "seasons": [
@@ -39,13 +39,6 @@ table_names = {
     ]
 }
 
-VALID_PG_TYPES = {
-    "SMALLINT", "INTEGER", "BIGINT",
-    "REAL", "DOUBLE PRECISION", "NUMERIC",
-    "SERIAL", "BIGSERIAL",
-    "BOOLEAN",
-    "CHAR", "VARCHAR", "TEXT", "TEXT[]",
-    "DATE", "TIMESTAMP", "TIME",
-    "UUID",
-    "BYTEA"
+VALID_SQLITE_TYPES = {
+    "INTEGER", "REAL", "TEXT", "NUMERIC", "BLOB"
 }

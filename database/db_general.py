@@ -4,15 +4,17 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pandas as pd
+import numpy as np
 import asyncio
-import psycopg2
+import sqlite3
 
 from database.db_down import *
 from database.db_up import *
 from database.db_manage import start_database, close_database
-from database.db_config import *
+from database.db_config import table_names, VALID_SQLITE_TYPES
 
 from data_processing.dp_events import process_esea_teams_data
+from data_processing.faceit_api.logging_config import function_logger
 
 def delete_table(table_names: str | list, confirm: bool = True):
     """
@@ -35,20 +37,21 @@ def delete_table(table_names: str | list, confirm: bool = True):
     )
     if isinstance(table_names, str) or isinstance(table_names, list):
         if confirm:
-            confirm = input("Are you sure you want to delete the tables in the database? y/n")
-            if confirm.lower() == 'y': # Reset database
+            isSure = input('Are you sure you want to delete all tables? (y/n): ').lower().strip() == 'y'
+            if isSure:
                 pass
             else:
                 print("Database table deletion aborted")
                 return
-            
+        
+        db, cursor = start_database()
+        
         try:
-            db, cursor = start_database()
-            # Disable foreign key checks temporarily
-            cursor.execute("SET session_replication_role = 'replica';")
+            # Disable foreign key checks temporarily (SQLite)
+            cursor.execute("PRAGMA foreign_keys = OFF;")
             
             # Retrieve all table names
-            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';")
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
             tables = [table[0] for table in cursor.fetchall()]
 
             if not tables:
@@ -68,19 +71,18 @@ def delete_table(table_names: str | list, confirm: bool = True):
             for table in tables_to_drop:
                 print(f"Dropping table: {table}")
                 try:
-                    cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE;")
-                except psycopg2.Error as e:
+                    cursor.execute(f"DROP TABLE IF EXISTS {table}")
+                except sqlite3.Error as e:
                     print(f"Error dropping table {table}: {e}")
                     db.rollback() # Rollback the failed command, continue
 
         finally:
             # Enable the foreign key checks again
-            cursor.execute("SET session_replication_role = 'origin'")
+            cursor.execute("PRAGMA foreign_keys = ON;")
             db.commit()
             close_database(db, cursor)
 
 def create_tables():
-    
     ## Gather esea data for one team in one season
     season_number = 52
     results = asyncio.run(process_esea_teams_data(season_number=season_number, team_id="6bb0008b-e18f-4723-a265-cc6f8538efe4")) # takes the data from myth in intermediate season 52
@@ -154,6 +156,7 @@ def create_table(table_name: str, table_columns: dict = {}, primary_keys: list =
         Creating table: {table_name}:
     -------------------------------------------------
     """)
+    db, cursor = start_database()
     try:
         # Check for correct type of table_name
         if not isinstance(table_name, str):
@@ -167,8 +170,11 @@ def create_table(table_name: str, table_columns: dict = {}, primary_keys: list =
         
         # Create query for the table creation
         query = create_table_query(table_name, table_columns, primary_keys, foreign_keys)
-
-        db, cursor = start_database()
+        
+        if query is None:
+            print(f"Failed to create query for table {table_name}. Check the input parameters.")
+            return
+        
         cursor.execute(query)
     except Exception as e:
         print(f"Error while creating table {table_name}: {e}")
@@ -177,7 +183,7 @@ def create_table(table_name: str, table_columns: dict = {}, primary_keys: list =
         db.commit()
         close_database(db, cursor)
 
-def create_table_query(table_name: str, table_columns: dict = {}, primary_keys: list = [], foreign_keys: list = []) -> str:
+def create_table_query(table_name: str, table_columns: dict = {}, primary_keys: list = [], foreign_keys: list = []) -> str | None:
     """
     Creating the queries used for creating the tables based on the keys in the dictionary
 
@@ -198,10 +204,10 @@ def create_table_query(table_name: str, table_columns: dict = {}, primary_keys: 
     if not all(isinstance(col, str) for col in table_columns.keys()):
         print("Invalid type for table_columns. All keys must be str.")
         return
-    if not isinstance(primary_keys, list or tuple):
+    if not isinstance(primary_keys, (list, tuple)):
         print("Invalid type for primary_keys. Must be list or tuple.")
         return
-    if not isinstance(foreign_keys, list or tuple):
+    if not isinstance(foreign_keys,(list or tuple)):
         print("Invalid type for foreign_keys. Must be list or tuple.")
         return
 
@@ -209,7 +215,7 @@ def create_table_query(table_name: str, table_columns: dict = {}, primary_keys: 
     column_definitions = []
     for col_name, col in table_columns.items():
         base_type = col.split("(")[0].upper()
-        if base_type not in VALID_PG_TYPES:
+        if base_type not in VALID_SQLITE_TYPES:
             column_type = determine_column_type(col)
             table_columns[col_name] = column_type
         else:
@@ -223,19 +229,28 @@ def create_table_query(table_name: str, table_columns: dict = {}, primary_keys: 
             primary_string = f"PRIMARY KEY ({",".join(primary_keys)})"
             table_keys.append(primary_string)
         else:
-            print("Invalid type for primary_keys. All keys must be str.")
+            function_logger.warning("Invalid type for primary_keys. All keys must be str.")
             return
     if foreign_keys:
         for foreign_key in foreign_keys:
-            if all(isinstance(key, str) for key in foreign_key): # Check if all keys are strings
-                col_name = foreign_key[1]
-                if (isinstance(foreign_key[0], tuple) or isinstance(foreign_key[0], list)): # composite foreign key
-                    foreign_key_columns = ', '.join(foreign_key[0])
-                    foreign_string = f"FOREIGN KEY ({foreign_key_columns}) REFERENCES {col_name}({foreign_key_columns})"
-                else:
-                    foreign_string = f"FOREIGN KEY ({foreign_key[0]}) REFERENCES {col_name}({foreign_key[0]})"
-                table_keys.append(foreign_string)
-
+            if not isinstance(foreign_key, (list, tuple)):
+                function_logger.error(f"Invalid type for foreign_key: {foreign_key}. Must be list or tuple.")
+                return
+            if not isinstance(foreign_key[0], (str, tuple, list)):
+                function_logger.error(f"Invalid type for foreign_key[0]: {foreign_key[0]}. Must be str, tuple or list.")
+                return
+            if not isinstance(foreign_key[1], str):
+                function_logger.error(f"Invalid type for foreign key table: {foreign_key[1]}. Must be str.")
+                return
+            
+            col_name = foreign_key[1]
+            if isinstance(foreign_key[0], (tuple, list)): # composite foreign key
+                foreign_key_columns = ', '.join(foreign_key[0])
+                foreign_string = f"FOREIGN KEY ({foreign_key_columns}) REFERENCES {col_name}({foreign_key_columns})"
+            else:
+                foreign_string = f"FOREIGN KEY ({foreign_key[0]}) REFERENCES {col_name}({foreign_key[0]})"
+                
+            table_keys.append(foreign_string)
     # Create the table query
     table_query = f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
@@ -248,22 +263,20 @@ def create_table_query(table_name: str, table_columns: dict = {}, primary_keys: 
 def determine_column_type(column_value) -> str:
     """ Determines the column type based on the input example value"""
     if isinstance(column_value, float):
-        return "FLOAT"
-    elif isinstance(column_value, int):
-        if column_value > 2147483647:
-            return "BIGINT"
-        else:
-            return "INT"
+        return "REAL"
+    # Check for integer types, including numpy integers
+    elif isinstance(column_value, int) or isinstance(column_value, (np.integer, pd.Int64Dtype, pd.Int32Dtype, pd.Int16Dtype, pd.Int8Dtype)):
+        return "INTEGER"
     elif isinstance(column_value, str) and len(column_value) == 36 and '-' in column_value:
-        return "VARCHAR(100)"
+        return "TEXT"  # UUID-like, store as TEXT
     elif isinstance(column_value, str) and column_value.isdigit():
-        return "BIGINT"
+        return "INTEGER"
     elif isinstance(column_value, str) and len(column_value) > 255:
         return "TEXT"
     elif isinstance(column_value, list or tuple):
-        return "TEXT[]"
+        return "TEXT"
     else:
-        return "VARCHAR(255)" # Default to VARCHAR
+        return "TEXT" # Default to VARCHAR
 
 if __name__ == "__main__":
     # Allow standalone execution
@@ -271,6 +284,9 @@ if __name__ == "__main__":
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     
-    create_tables()
+    # delete_table("ALL", confirm=True)  # Delete all tables in the database
+    # create_tables()
+    
+    update_data("new", "hub", event_id='801f7e0c-1064-4dd1-a960-b2f54f8b5193')
 
 
