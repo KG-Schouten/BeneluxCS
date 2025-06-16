@@ -260,7 +260,7 @@ async def gather_esea_matches(df_teams_benelux: pd.DataFrame, faceit_data_v1: Fa
         tasks = [(team_id, faceit_data_v1.league_team_matches(team_id, event_id_list)) 
                  for team_id, event_id_list in zip(df_teams_benelux['team_id'], df_teams_benelux['event_id'])]
         team_ids, coroutines = zip(*tasks) # Unzip the tasks into team_ids and coroutines
-        results = await gather_with_progress(coroutines, desc='Gathering league team match ids', unit='teams') # Run all tasks concurrently
+        results = await gather_with_progress(list(coroutines), desc='Gathering league team match ids', unit='teams') # Run all tasks concurrently
         
         match_list = []
         
