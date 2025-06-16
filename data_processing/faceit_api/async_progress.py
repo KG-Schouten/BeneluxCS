@@ -13,7 +13,7 @@ def get_tqdm():
         from tqdm import tqdm  # fallback for scripts
     return tqdm
 
-async def gather_with_progress(coros, desc="Processing", unit="tasks"):
+async def gather_with_progress(coros: list, desc="Processing", unit="tasks") -> list:
     """ 
     Function to gather multiple coroutines with a progress bar.
         Way to use: "results = await gather_with_progress(tasks, desc='...', unit='...')"
@@ -35,3 +35,16 @@ async def gather_with_progress(coros, desc="Processing", unit="tasks"):
     results = await asyncio.gather(*(run(coro) for coro in coros))
     pbar.close()
     return results
+
+def run_async(coro):
+    try:
+        # Try to run using asyncio.run (works in scripts)
+        return asyncio.run(coro)
+    except RuntimeError as e:
+        if "asyncio.run() cannot be called from a running event loop" in str(e):
+            # We're likely in a notebook; use nest_asyncio
+            import nest_asyncio
+            nest_asyncio.apply()
+            return asyncio.get_event_loop().run_until_complete(coro)
+        else:
+            raise
