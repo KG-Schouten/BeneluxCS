@@ -36,6 +36,9 @@ table_names = {
     "teams_maps": [
         ['team_id', 'match_id', 'match_round'],
         [(('match_id', 'match_round'), 'maps'), ('team_id', 'teams')]
+    ],
+    "players_country": [
+        ['player_id']
     ]
 }
 

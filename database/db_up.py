@@ -12,9 +12,17 @@ import json
 
 from database.db_manage import start_database, close_database
 from database.db_config import db_name, table_names
+from database.db_down import gather_players, gather_players_country
 
 from data_processing.dp_events import process_esea_teams_data, process_hub_data, process_championship_data
+from data_processing.dp_benelux import get_benelux_leaderboard_players, process_player_country_details
+from data_processing.dp_general import process_player_details_batch
 from data_processing.faceit_api.logging_config import function_logger
+from data_processing.faceit_api.async_progress import run_async
+from data_processing.faceit_api.sliding_window import RequestDispatcher
+from data_processing.faceit_api.faceit_v1 import FaceitData_v1
+from data_processing.model.model_utils import predict
+### -----------------------------------------------------------------
 
 # Mapping dictionary base
 event_type_mapping = {
@@ -191,6 +199,90 @@ async def gather_mapping_args(update_type: str, event_type: str, event_id: str |
     return await event_type_mapping[event_type](**args)
 
 ### -----------------------------------------------------------------
+### Leaderboard Functions
+### -----------------------------------------------------------------
+
+async def update_leaderboard():
+    try:
+        # Gather the leaderboard data from the API
+        df_leaderboard = run_async(get_benelux_leaderboard_players(elo_cutoff=2000))
+
+        # Check if the dataframes are valid and not empty
+        if not isinstance(df_leaderboard, pd.DataFrame) or df_leaderboard.empty:
+            function_logger.warning("No leaderboard data found. Skipping update.")
+            raise ValueError("Leaderboard data is empty or not a DataFrame.")
+        
+        ## ----- For the players table -----
+        # Gather the df_players and df_players_country dataframes from the database
+        df_players = gather_players(benelux=False)
+        
+        if not isinstance(df_players, pd.DataFrame) or df_players.empty:
+            function_logger.warning("No players data found. Skipping update.")
+            raise ValueError("Players data is empty or not a DataFrame.")
+        
+        # Check if there are new players in the leaderboard
+        df_new_players = df_leaderboard[~df_leaderboard['player_id'].isin(df_players['player_id'])]
+
+        # Gather player data from these new players and the players in df_players
+        if df_new_players.empty:
+            function_logger.info("No new players found in the leaderboard for players table.")
+            player_ids = df_players['player_id'].tolist()
+        else:
+            player_ids = df_players['player_id'].tolist() + df_new_players['player_id'].tolist()
+            
+        async with RequestDispatcher(request_limit=350, interval=10, concurrency=5) as dispatcher:
+            async with FaceitData_v1(dispatcher) as faceit_data_v1: 
+                df_players_new = run_async(process_player_details_batch(player_ids, faceit_data_v1))
+            
+        # Update the players table with the new players
+        upload_data('players', df_players_new)
+            
+        ## ----- For the players_country table -----
+        df_players_country = gather_players_country()
+        
+        if not isinstance(df_players_country, pd.DataFrame) or df_players_country.empty:
+            function_logger.warning("No players_country data found. Skipping update.")
+            raise ValueError("Players_country data is empty or not a DataFrame.")
+        
+        df_new_players_country = df_leaderboard[~df_leaderboard['player_id'].isin(df_players_country['player_id'])]
+        
+        if df_new_players_country.empty:
+            function_logger.info("No new players found in the leaderboard for players_country table.")
+            print("No new players found in the leaderboard for players_country table. Skipping update.")
+        else:
+            # Check benelux for the players in new_players_country
+            player_ids = df_new_players_country['player_id'].tolist()
+            df_players_country_details = run_async(process_player_country_details(player_ids))
+
+            if df_players_country_details.empty:
+                function_logger.warning("No player details found for the new players in the leaderboard.")
+                raise ValueError("Player details for new players are empty or not a DataFrame.")
+            
+            df_predict = predict(df_players_country_details)
+
+            if df_predict.empty:
+                function_logger.warning("No predictions made for the new players in the leaderboard.")
+                raise ValueError("Predictions for new players are empty or not a DataFrame.")
+            
+            # For the new players with a '1' prediction, update the players_country tabl        
+            df_predict['player_name'] = df_predict['player_id'].map(df_players.set_index('player_id')['nickname'])
+            
+            df_predict_benelux = df_predict.loc[df_predict['prediction'] == 1].rename(columns={'bnlx_country': 'country'})[['player_id', 'player_name', 'country']]
+            df_predict_non_benelux = df_predict.loc[df_predict['prediction'] == 0].rename(columns={'all_country': 'country'})[['player_id', 'player_name', 'country']]
+            
+            df_predict_to_upload = pd.concat([df_predict_benelux, df_predict_non_benelux], ignore_index=True)
+            
+            if isinstance(df_predict_to_upload, pd.DataFrame) and df_predict_to_upload.empty:
+                function_logger.warning("No players to upload to players_country table.")
+                raise ValueError("No players to upload to players_country table.")
+            # Update the players_country table with the new players
+            upload_data('players_country', df_predict_to_upload)
+
+    except Exception as e:
+        function_logger.error(f"Error updating leaderboard: {e}")
+        raise
+    
+### -----------------------------------------------------------------
 ### General Functions
 ### -----------------------------------------------------------------
 
@@ -236,6 +328,7 @@ def upload_data(table_name, df: pd.DataFrame) -> None:
         else:
             # Start the database connection and cursor
             cursor.executemany(sql, data)
+            function_logger.info(f"Successfully uploaded {len(data)} rows to {table_name} table.")
       
     except Exception as e:
         function_logger.error(f"Error while uploading data to {table_name}: {e}")

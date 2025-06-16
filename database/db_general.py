@@ -51,7 +51,7 @@ def delete_table(table_names: str | list, confirm: bool = True):
             cursor.execute("PRAGMA foreign_keys = OFF;")
             
             # Retrieve all table names
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '%players_country%';")
             tables = [table[0] for table in cursor.fetchall()]
 
             if not tables:

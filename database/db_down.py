@@ -8,6 +8,7 @@ from datetime import datetime
 import pandas as pd
 
 from database.db_manage import start_database, close_database
+from data_processing.faceit_api.logging_config import function_logger
         
 def gather_upcoming_matches_esea() -> pd.DataFrame:
     """
@@ -96,7 +97,7 @@ def gather_players_country() -> pd.DataFrame:
     ## Start the database and cursor
     db, cursor = start_database()
 
-    query = f"""
+    query = """
         SELECT *      
         FROM players_country p
     """
@@ -108,6 +109,35 @@ def gather_players_country() -> pd.DataFrame:
     df = pd.DataFrame(res, columns=columns)
 
     return df
+
+def gather_players(benelux=True):
+    db, cursor = start_database()
+    try:
+        query_base = """
+            SELECT 
+                p.player_id, 
+                p.nickname,
+                COALESCE(pc.country, p.country) AS country,
+                p.avatar, 
+                p.faceit_elo, 
+                p.faceit_level
+            FROM players p
+            LEFT JOIN players_country pc ON p.player_id = pc.player_id
+        """
+        
+        if benelux:
+            query_base += " WHERE pc.country IN ('nl', 'be', 'lu')"
+        
+        df_players = pd.read_sql_query(query_base, db)
+        
+        return df_players
+    
+    except Exception as e:
+        function_logger.error(f"Error gathering players: {e}")
+        raise
+    
+    finally:   
+        close_database(db, cursor)
 
 if __name__ == "__main__":
     # Allow standalone execution
