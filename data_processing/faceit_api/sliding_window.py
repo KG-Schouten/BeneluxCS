@@ -82,9 +82,13 @@ class RequestDispatcher:
         self.workers = []
         self._running = False # <--- Reset this so start() can recreate workers
     
-    async def __aenter__(self):
+    async def __aenter__(self) -> 'RequestDispatcher':
+        if self._running:
+            raise RuntimeError("Dispatcher is already running")
         await self.start()
         return self
     
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if exc_type is not None:
+            api_logger.error(f"Exception in RequestDispatcher: {exc_val}")
         await self.stop()
