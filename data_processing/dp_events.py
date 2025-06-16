@@ -60,13 +60,9 @@ async def process_esea_teams_data(**kwargs) -> tuple[pd.DataFrame, pd.DataFrame,
     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
         # Initialize the FaceitData object with the API token and dispatcher
         async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1: # Use the FaceitData context manager to ensure the session is closed properly
-            # faceit_data = FaceitData(FACEIT_TOKEN, dispatcher)
-            # faceit_data_v1 = FaceitData_v1(dispatcher)
-            
             ## Dataframe with the season data (df_seasons)
             df_seasons, df_events = await process_esea_season_data(faceit_data_v1=faceit_data_v1)
             df_seasons = df_seasons.loc[df_seasons['region_name'].isin(['Europe', 'North America'])] # Filter out to keep only EU and NA regions
-            
             ## Dataframe with the benelux teams for each season and division (df_teams_benelux)
             df_teams_benelux = gather_team_ids_json(**kwargs) # Get the team ids from the json file
             if df_teams_benelux.empty or df_teams_benelux is None:
@@ -171,7 +167,7 @@ async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.Da
         # Gather the data from the API
         league_seasons_data = await faceit_data_v1.league_seasons()
         league_data = await faceit_data_v1.league_details()
-
+        
         if isinstance(league_seasons_data, dict) and isinstance(league_data, dict):
             season_ids = [season['id'] for season in league_seasons_data['payload']]
             season_numbers = [season['season_number'] for season in league_seasons_data['payload']]
@@ -247,7 +243,7 @@ async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.Da
     
     except Exception as e:
         function_logger.critical(f"Error processing ESEA seasons data: {e}")
-        raise RuntimeError(f"Error processing ESEA seasons data: {e}")
+        raise
 
 async def gather_esea_matches(df_teams_benelux: pd.DataFrame, faceit_data_v1: FaceitData_v1) -> pd.DataFrame:
     """ 
@@ -377,37 +373,31 @@ def gather_team_ids_json(**kwargs) -> pd.DataFrame:
                     pass
                 
                 elif isinstance(season_number, str | int):
-                    try:
-                        season_number = int(season_number) # try to convert the season number to an integer
+                    season_number = int(season_number) # try to convert the season number to an integer
 
-                        if season_number in df_teams['season_number'].values:
-                            df_teams = df_teams[df_teams['season_number'] == season_number]
-                        else:
-                            print(f"Invalid season number: {season_number}. Not in the dataframe.")
-                            return pd.DataFrame()  # Return an empty DataFrame if the season number is not valid
-                    except ValueError:
-                        print(f"Invalid season number: {season_number}. Must be an integer (or able to be converted to).")
-                        return pd.DataFrame()  # Return an empty DataFrame if the conversion fails
+                    if season_number in df_teams['season_number'].values:
+                        df_teams = df_teams[df_teams['season_number'] == season_number]
+                    else:
+                        function_logger.critical(f"Invalid season number: {season_number}. Not in the dataframe.")
+                        raise ValueError(f"Invalid season number: {season_number}. Not in the dataframe.")
                 
                 elif isinstance(season_number, list): # Check if the season number is a list of integers
-                    try:
-                        if all(isinstance(int(season), int) for season in season_number):
-                            season_numbers = [int(season) for season in season_number]
-                            if all(season in df_teams['season_number'].values for season in season_numbers):
-                                df_teams = df_teams[df_teams['season_number'].isin(season_numbers)]
-                            else:
-                                print(f"Invalid season number in list: {season_number}. Not in the dataframe.")
-                                return pd.DataFrame()  # Return an empty DataFrame if any season number is not valid
+
+                    if all(isinstance(int(season), int) for season in season_number):
+                        season_numbers = [int(season) for season in season_number]
+                        if all(season in df_teams['season_number'].values for season in season_numbers):
+                            df_teams = df_teams[df_teams['season_number'].isin(season_numbers)]
                         else:
-                            print(f"Invalid season number in list: {season_number}. Must be an integer (or able to be converted to).")
-                            return pd.DataFrame()  # Return an empty DataFrame if the conversion fails
-                    except Exception as e:
-                        print(f"Error while filtering season numbers from season_number list: {e}")
-                        return pd.DataFrame()  # Return an empty DataFrame if any error occurs
+                            function_logger.critical(f"Invalid season number in list: {season_number}. Not in the dataframe.")
+                            raise ValueError(f"Invalid season number in list: {season_number}. Not in the dataframe.")
+                    else:
+                        function_logger.critical(f"Invalid season number in list: {season_number}. Must be an integer (or able to be converted to).")
+                        raise ValueError(f"Invalid season number in list: {season_number}. Must be an integer (or able to be converted to).")
                 
                 else:
-                    print(f"Invalid season number type: {season_number}.")
-                    return pd.DataFrame()  # Return an empty DataFrame if the type is not valid
+                    function_logger.critical(f"Invalid season number type: {type(season_number)}. Must be a string, integer or list of integers.")
+                    raise TypeError(f"Invalid season number type: {type(season_number)}. Must be a string, integer or list of integers.")
+
             elif season_id is not None:
                 
                 if season_id == "ALL":
@@ -417,57 +407,43 @@ def gather_team_ids_json(**kwargs) -> pd.DataFrame:
                     if season_id in df_teams['season_id'].values:
                         df_teams = df_teams[df_teams['season_id'] == season_id]
                     else:
-                        print(f"Invalid season id: {season_id}. Not in the dataframe.")
-                        return pd.DataFrame()  # Return an empty DataFrame if the season id is not valid
-                
+                        function_logger.critical(f"Invalid season id: {season_id}. Not in the dataframe.")
+                        raise ValueError(f"Invalid season id: {season_id}. Not in the dataframe.")
+
                 elif isinstance(season_id, list):
-                    try:
                         if all(isinstance(szn_id, str) for szn_id in season_id):
                             if all(szn_id in df_teams['season_id'].values for szn_id in season_id):
                                 df_teams = df_teams[df_teams['season_id'].isin(season_id)]
                             else:
-                                print(f"Invalid season id in list: {season_id}. Not in the dataframe.")
-                                return pd.DataFrame()  # Return an empty DataFrame if any season id is not valid
+                                function_logger.critical(f"Invalid season id in list: {season_id}. Not in the dataframe.")
+                                raise ValueError(f"Invalid season id in list: {season_id}. Not in the dataframe.")
                         else:
-                            print(f"Invalid season id in list: {season_id}. Must be a string.")
-                            return pd.DataFrame()  # Return an empty DataFrame if the type is not valid
-                    except Exception as e:
-                        print(f"Error while filtering season ids from season_id list: {e}")
-                        return pd.DataFrame()  # Return an empty DataFrame if any error occurs
+                            function_logger.critical(f"Invalid season id in list: {season_id}. Must be a string.")
+                            raise TypeError(f"Invalid season id in list: {season_id}. Must be a string.")
             
             if team_id is not None:
                 if isinstance(team_id, str):
                     if team_id in df_teams['team_id'].values:
                         df_teams = df_teams[df_teams['team_id'] == team_id]
                     else:
-                        print(f"Invalid team id: {team_id}. Not in the dataframe.")
-                        return pd.DataFrame()  # Return an empty DataFrame if the team id is not valid
+                        function_logger.critical(f"Invalid team id: {team_id}. Not in the dataframe.")
+                        raise ValueError(f"Invalid team id: {team_id}. Not in the dataframe.")
                 
                 elif isinstance(team_id, list):
-                    try:
                         if all(isinstance(tid, str) for tid in team_id):
                             if all(tid in df_teams['team_id'].values for tid in team_id):
                                 df_teams = df_teams[df_teams['team_id'].isin(team_id)]
                             else:
-                                print(f"Invalid team id in list: {team_id}. Not in the dataframe.")
-                                return pd.DataFrame()  # Return an empty DataFrame if any team id is not valid
+                                function_logger.critical(f"Invalid team id in list: {team_id}. Not in the dataframe.")
+                                raise ValueError(f"Invalid team id in list: {team_id}. Not in the dataframe.")
                         else:
-                            print(f"Invalid team id in list: {team_id}. Must be a string.")
-                            return pd.DataFrame()  # Return an empty DataFrame if the type is not valid
-                    except Exception as e:
-                        print(f"Error while filtering team ids from team_id list: {e}")
-                        return pd.DataFrame()  # Return an empty DataFrame if any error occurs
-
+                            function_logger.critical(f"Invalid team id in list: {team_id}. Must be a string.")
+                            raise TypeError(f"Invalid team id in list: {team_id}. Must be a string.")
+            
             return df_teams
-    except FileNotFoundError:
-        print(f"Error: The file '{URL}' was not found.")
-        return pd.DataFrame()  # Return an empty DataFrame if the file is not found
-    except json.JSONDecodeError:
-        print(f"Error: Failed to decode JSON from '{URL}'. Ensure the file contains valid JSON data.")
-        return pd.DataFrame()  # Return an empty DataFrame if JSON decoding fails
     except Exception as e:
-        print(f"An unexpected error occurred while loading team ids from json: {e}")
-        return pd.DataFrame()  # Return an empty DataFrame for any other exceptions
+        function_logger.critical(f"Error gathering team IDs from JSON: {e}")
+        raise
 
 ### -----------------------------------------------------------------
 ### Hub Data Processing
