@@ -7,12 +7,14 @@ from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import joblib
-import asyncio
+from typing import cast
 
 from database.db_down import gather_players_country
 from data_processing.model.model_utils import preprocess_data
+from data_processing.dp_benelux import process_player_country_details
+from data_processing.faceit_api.async_progress import run_async
 
-def train_and_save_model(model_path: str = 'model/model.pkl') -> None:
+def train_and_save_model(model_path: str = 'data_processing/model/model.pkl') -> None:
     """
     Trains a RandomForestClassifier model on the data from the players_country table and saves it to the specified path.
     """
@@ -21,17 +23,16 @@ def train_and_save_model(model_path: str = 'model/model.pkl') -> None:
 
     # Gather the player data from esea
     player_ids = df_players_country['player_id'].to_list()
-    player_names = df_players_country['player_name'].to_list()
 
     # Do the benelux check for all players
-    df = asyncio.run(check_all_players(player_ids, player_names))
+    df = run_async(process_player_country_details(player_ids))
     
     # Prepare the training data
-    df_filtered = df.merge(df_players_country[['player_id', 'country']], on='player_id', how='left')
-    df_filtered = preprocess_data(df_filtered.drop(columns=['bnlx_country']))
-    
+    df_filtered = df.merge(df_players_country[['player_id', 'country']], on='player_id', how='left')    # Add the country column from the players_country table to the dataframe
+    df_filtered = preprocess_data(df_filtered)                                                          # Preprocess the data 
+
     # Prepare the data for training
-    data = df_filtered.drop(columns=['player_id', 'player_name'])
+    data = df_filtered.drop(columns=['player_id'])
     data = data.rename(columns={'country': 'target'})
     
     # Separate features and target variable
@@ -56,8 +57,8 @@ def train_and_save_model(model_path: str = 'model/model.pkl') -> None:
     grid_search = RandomizedSearchCV(
         estimator=rfr,
         param_distributions=param_grid,
-        n_iter=100,
-        cv=2,
+        n_iter=20,
+        cv=4,
         verbose=2,
         random_state=42,
         n_jobs=-1
@@ -68,8 +69,7 @@ def train_and_save_model(model_path: str = 'model/model.pkl') -> None:
     # Get the best parameters from the grid search
     print("Best parameters found: ", grid_search.best_params_, '\n')
 
-    model = grid_search.best_estimator_
-
+    model = cast(RandomForestClassifier, grid_search.best_estimator_)
     # Do a test prediction to check the model's performance
     y_pred = model.predict(X_test)
 
