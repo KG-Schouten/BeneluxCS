@@ -94,19 +94,20 @@ def create_tables():
     
     # Create the table_columns dictionary for each dataframe
     for table_name in table_names.keys():
-        df = eval(f"df_{table_name}")
-        if df is None:
-            print(f"Dataframe {table_name} is None. Skipping...")
-            continue
-        table_columns = create_table_columns(df)
-        primary_keys = table_names[table_name][0]
-        if len(table_names[table_name]) > 1:
-            foreign_keys = table_names[table_name][1]
-        else:
-            foreign_keys = []
-        
-        # Create the table in the database
-        create_table(table_name=table_name, table_columns=table_columns, primary_keys=primary_keys, foreign_keys=foreign_keys)
+        if not table_name.endswith("players_country"):
+            df = eval(f"df_{table_name}")
+            if df is None:
+                print(f"Dataframe {table_name} is None. Skipping...")
+                continue
+            table_columns = create_table_columns(df)
+            primary_keys = table_names[table_name][0]
+            if len(table_names[table_name]) > 1:
+                foreign_keys = table_names[table_name][1]
+            else:
+                foreign_keys = []
+            
+            # Create the table in the database
+            create_table(table_name=table_name, table_columns=table_columns, primary_keys=primary_keys, foreign_keys=foreign_keys)
     
 def create_table_columns(df: pd.DataFrame) -> dict:
     """
@@ -284,9 +285,8 @@ if __name__ == "__main__":
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     
-    # delete_table("ALL", confirm=True)  # Delete all tables in the database
-    # create_tables()
-    
-    update_data("new", "hub", event_id='801f7e0c-1064-4dd1-a960-b2f54f8b5193')
+    delete_table("ALL", confirm=True)  # Delete all tables in the database
+    create_tables()
+
 
 

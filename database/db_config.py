@@ -5,8 +5,7 @@ table_names = {
         ['event_id'],
     ],
     "teams_benelux": [
-        ['team_id', 'event_id'],
-        [('event_id', 'seasons')]
+        ['team_id', 'event_id']
     ],
     "events": [
         ['internal_event_id']
