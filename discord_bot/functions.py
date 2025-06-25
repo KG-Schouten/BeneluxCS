@@ -3,9 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import json
 from rapidfuzz import fuzz, process
-from datetime import *
 import sys  # Allows safe exit
 
 ## Find a team based on the fuzzy search of the user input
