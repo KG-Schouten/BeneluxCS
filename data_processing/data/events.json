@@ -7,6 +7,7 @@
     "event_avatar": "https://distribution.faceit-cdn.net/images/ac1a3514-63a0-4396-8f41-a36729e72e5d.jpeg",
     "event_banner": "",
     "event_start": "1742054400",
+    "event_end": "1743631200",
     "organizer_id": "84192f8b-ac6d-410e-9051-cca291fdb328",
     "organizer_name": "Senshi eSports",
     "maps": ["de_dust2", "de_mirage", "de_inferno", "de_nuke", "de_anubis", "de_ancient", "de_train"],
