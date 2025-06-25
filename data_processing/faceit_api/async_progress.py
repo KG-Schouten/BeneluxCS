@@ -36,15 +36,24 @@ async def gather_with_progress(coros: list, desc="Processing", unit="tasks") -> 
     pbar.close()
     return results
 
-def run_async(coro):
+def run_async(coro_or_func, *args, **kwargs):
+    import asyncio
+    coro = None  # Ensure coro is always defined
     try:
-        # Try to run using asyncio.run (works in scripts)
+        # If it's a function, call it with arguments to get the coroutine
+        if callable(coro_or_func):
+            coro = coro_or_func(*args, **kwargs)
+        else:
+            coro = coro_or_func
+        if not asyncio.iscoroutine(coro):
+            raise TypeError("Argument must be a coroutine")
         return asyncio.run(coro)
     except RuntimeError as e:
         if "asyncio.run() cannot be called from a running event loop" in str(e):
-            # We're likely in a notebook; use nest_asyncio
             import nest_asyncio
             nest_asyncio.apply()
+            if not asyncio.iscoroutine(coro):
+                raise TypeError("Argument must be a coroutine")
             return asyncio.get_event_loop().run_until_complete(coro)
         else:
             raise

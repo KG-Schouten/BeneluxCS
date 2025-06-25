@@ -9,7 +9,9 @@ concurrency = 7 # Number of concurrent requests
 
 class RateLimitException(Exception):
     """Custom exception for rate limit errors."""
-    pass
+    def __init__(self, message="Rate limit exceeded. Please try again later."):
+        super().__init__(message)
+        self.message = message
 
 class SlidingWindowRateLimiter:
     def __init__(self, max_calls: int, period: float):

@@ -17,7 +17,7 @@ async def check_response(response) -> dict | int:
     
     elif response.status == 429:
         api_logger.info(f"[429] Rate limit reached: {url}")
-        raise RateLimitException("Rate limit reached")
+        raise RateLimitException()
     
     else:
         error_map = {

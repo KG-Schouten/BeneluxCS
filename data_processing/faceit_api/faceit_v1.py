@@ -130,20 +130,6 @@ class FaceitData_v1:
         }
         
         return await self.dispatcher.run(self._get_with_params, URL, params)
-            
-    async def league_team_details_batch(self, team_ids: list[str]) -> dict | int:
-        """
-        Retrieve league details for a batch of teams
-
-        :param team_ids: The IDs of the teams
-        :return:
-        """
-        
-        URL = "https://www.faceit.com/api/team-leagues/v2/teams:batchGet"
-
-        body = {"team_ids":team_ids}
-
-        return await self.dispatcher.run(self._post, URL, body)
     
     async def league_team_players(self, team_id: str) -> dict | int:
         """
