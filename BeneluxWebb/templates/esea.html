@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}ESEA{% endblock %}
+
+{% block content%}
+
+<!-- center-aligned tabs -->
+<ul class="nav nav-tabs justify-content-center mt-5" id="eseaTabs" role="tablist">
+  {% for season in season_numbers %}
+    <li class="nav-item" role="presentation">
+      <button 
+        class="nav-link {% if loop.first %}active{% endif %}" 
+        id="season-tab-{{ season }}"
+        data-season="{{ season }}"
+        type="button"
+        role="tab">
+        Season {{ season }}
+      </button>
+    </li>
+  {% endfor %}
+</ul>
+
+<!-- Content container -->
+<div class="tab-content mt-4" id="season-content">
+  <div class="text-muted">Loading...</div>
+</div>
+
+{% endblock %}

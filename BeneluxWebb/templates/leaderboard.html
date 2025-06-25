@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard{% endblock %}
+
+{% block content %}
+    <h1 class="mt-4">Leaderboard</h1>
+    
+    <form method="get" class="form-inline mt-4 mb-3">
+    <label for="country" class="me-2">Filter by country:</label>
+    <select class="form-control me-2 mt-2" style="width:auto;" id="country" name="country" onchange="this.form.submit()">
+        <option value="all" {% if selected_country == 'all' %}selected{% endif %}>All</option>
+        <option value="nl" {% if selected_country == 'nl' %}selected{% endif %}>Netherlands</option>
+        <option value="be" {% if selected_country == 'be' %}selected{% endif %}>Belgium</option>
+        <option value="lu" {% if selected_country == 'lu' %}selected{% endif %}>Luxembourg</option>
+    </select>
+    </form>
+
+    <table class="table table-dark table-striped table-hover mt-4">
+        <thead>
+            <tr>
+                <th style="width: 5%">#</th>
+                <th style="width: 60%">Player</th>
+                <th style="width: 15%">ELO</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in players %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('static', filename='img/flags/' ~ player.country ~ '.png') }}"
+                                alt="{{ player.country }}" width="20" class="me-2">
+                            <span>{{ player.nickname }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        {{ player.faceit_elo }}
+                        <a href="https://www.faceit.com/en/players/{{ player.nickname }}" target="_blank">
+                            <img src="{{ url_for('static', filename='img/faceit/faceit_icon.png') }}" 
+                                alt="Faceit" width="20" class="ms-2">
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+{% endblock %}
