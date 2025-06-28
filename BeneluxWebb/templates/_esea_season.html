@@ -25,7 +25,11 @@
         <div class="d-flex flex-column flex-grow-1 ">
             
             <!-- Team name top left -->
-            <h4 class="mb-3">{{ team.team_name }}</h4>
+            <h4 class="mb-3">
+                <a class="team-link" href="https://www.faceit.com/en/teams/{{ team.team_id }}/leagues">
+                    {{ team.team_name }}
+                </a>
+            </h4>
 
             <!-- Players -->
             <div class="d-flex flex-row">
