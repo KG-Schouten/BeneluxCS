@@ -145,10 +145,10 @@ def gather_players(**kwargs) -> pd.DataFrame:
     Args:
         **kwargs:
             benelux (bool): If True, filters players from the Benelux region.
-            name (str): Optional name filter to search for players by nickname.
+            name (str): Optional name filter to search for players by player_name.
             
     Returns:
-        pd.DataFrame: DataFrame containing player information including player_id, nickname, country, avatar, faceit_elo, and faceit_level.
+        pd.DataFrame: DataFrame containing player information including player_id, player_name, country, avatar, faceit_elo, and faceit_level.
     """
     
     benelux = kwargs.get('benelux', False)
@@ -164,7 +164,7 @@ def gather_players(**kwargs) -> pd.DataFrame:
         query_base = """
             SELECT 
                 p.player_id, 
-                p.nickname,
+                p.player_name,
                 COALESCE(pc.country, p.country) AS country,
                 p.avatar, 
                 p.faceit_elo, 
@@ -209,7 +209,7 @@ def gather_event_players(event_ids: list, team_ids: list, PAST: bool = False) ->
                 ps.player_id,
                 ps.team_id,
                 ps.match_id,
-                p.nickname AS player_name,
+                p.player_name,
                 m.event_id,
                 e.event_end
             FROM players_stats ps
@@ -307,13 +307,16 @@ def gather_event_teams(event_ids: list = [], ONGOING: bool = False, ESEA: bool =
         res = cursor.fetchall()
         
         df_event_teams = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        # Remove rows with NaN values in 'team_id' or 'event_id'
+        df_event_teams = df_event_teams.dropna(subset=['team_id', 'event_id'])
+        
         return df_event_teams
         
     except Exception as e:
         function_logger.error(f"Error gathering event teams: {e}")
         return pd.DataFrame()
 
-def gather_last_match_time_database(event_ids: list = [], ONGOING: bool = False, ESEA: bool = False) -> int | None:
+def gather_last_match_time_database(event_ids: list = [], ONGOING: bool = False, ESEA: bool = False) -> int:
     db, cursor = start_database()
     try:
         query_base = """
@@ -345,16 +348,16 @@ def gather_last_match_time_database(event_ids: list = [], ONGOING: bool = False,
         cursor.execute(query_base, params)
         res = cursor.fetchone()
         
-        last_match_time = res[0] if res else None
+        last_match_time = res[0] if res else 0
         if last_match_time is not None:
             return int(last_match_time)
         else:
             function_logger.warning("No last match time found.")
-            return None
-    
+            return 0
+            
     except Exception as e:
         function_logger.error(f"Error gathering last match time: {e}")
-        return None
+        return 0
 
 def gather_internal_event_ids(event_ids: list) -> pd.DataFrame:
     db, cursor = start_database()
@@ -390,7 +393,7 @@ def gather_leaderboard(**kwargs) -> pd.DataFrame:
         query_base = """
             SELECT 
                 p.player_id, 
-                p.nickname,
+                p.player_name,
                 COALESCE(pc.country, p.country) AS country,
                 p.avatar, 
                 p.faceit_elo, 
@@ -513,12 +516,15 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     players_sub = max(players_sub_all, key=len, default=[])
                     players_coach = max(players_coach_all, key=len, default=[])
 
+                    # Make sure there are no players in both main and sub lists
+                    players_sub = [p for p in players_sub if p['player_id'] not in [pm['player_id'] for pm in players_main]]
+                    
                     player_ids = [p['player_id'] for p in players_main + players_sub + players_coach]
                     if player_ids:
                         cursor.execute(f"""
                             SELECT
                                 p.player_id,
-                                p.nickname AS player_name,
+                                p.player_name AS player_name,
                                 p.avatar AS player_avatar,
                                 COALESCE(pc.country, p.country) AS player_country,
                                 p.faceit_elo AS player_elo,
