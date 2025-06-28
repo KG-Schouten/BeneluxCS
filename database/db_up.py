@@ -18,7 +18,7 @@ from data_processing.faceit_api.logging_config import function_logger
 ### General Functions
 ### -----------------------------------------------------------------
 
-def upload_data(table_name, df: pd.DataFrame) -> None:
+def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
     """ 
     Upload data from the provided dictionaries to their corresponding database tables
 
@@ -31,6 +31,15 @@ def upload_data(table_name, df: pd.DataFrame) -> None:
     
     db, cursor = start_database()
     try:
+        if clear:
+            # Clear the table if clear is True
+            cursor.execute(f"DELETE FROM {table_name};")
+            function_logger.info(f"Cleared data from {table_name} table.")
+        
+        if df.empty:
+            function_logger.info(f"No data to upload for table {table_name}. DataFrame is empty.")
+            return
+           
         keys, primary_keys = gather_keys(table_name, db_name)
         if not keys or not primary_keys:
             function_logger.info(f"No keys found for table {table_name}. Skipping upload.")
