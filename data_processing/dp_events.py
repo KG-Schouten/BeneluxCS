@@ -334,11 +334,12 @@ def read_league_teams_json(
         rows = [
             {
                 'season_number': season.get('season_number'),
-                'team_name': team_name,
-                'team_id': team_id
+                'team_id': team_id,
+                'team_name': team_dict.get('team_name'),
+                'avatar': team_dict.get('avatar')
             }
             for season in data.get('seasons', []) if isinstance(season, dict)
-            for team_name, team_id in season.get('teams', {}).items()
+            for team_id, team_dict in season.get('teams', {}).items()
         ] 
         
         df = pd.DataFrame(rows)
@@ -474,12 +475,12 @@ async def gather_esea_matches(
     try:
         if not (isinstance(team_ids, list) and all(isinstance(tid, str) for tid in team_ids)):
             msg = f"team_ids must be a list of strings, got {type(team_ids)}: {team_ids}"
-            function_logger.critical(msg)
+            function_logger.error(msg)
             raise TypeError(msg)
 
         if not isinstance(event_ids, list):
             msg = f"event_ids must be a list, got {type(event_ids)}: {event_ids}"
-            function_logger.critical(msg)
+            function_logger.error(msg)
             raise TypeError(msg)
 
         for eid in event_ids:
@@ -488,16 +489,16 @@ async def gather_esea_matches(
             if isinstance(eid, list):
                 if not all(isinstance(eid_item, str) for eid_item in eid):
                     msg = f"All items in nested event_ids lists must be strings, got {event_ids}"
-                    function_logger.critical(msg)
+                    function_logger.error(msg)
                     raise TypeError(msg)
             else:
                 msg = f"event_ids must be a list of strings or lists of strings, got {type(eid)} in {event_ids}"
-                function_logger.critical(msg)
+                function_logger.error(msg)
                 raise TypeError(msg)
                 
         if len(team_ids) != len(event_ids):
             msg = f"team_ids and event_ids must be the same length. Got team_ids: {len(team_ids)} - event_ids: {len(event_ids)}."
-            function_logger.critical(msg)
+            function_logger.error(msg)
             raise ValueError(msg)
 
         tasks = [
@@ -512,22 +513,22 @@ async def gather_esea_matches(
         
         if df.empty:
             msg = f"No matches found for the provided team_ids: {team_ids} and event_ids: {event_ids}."
-            function_logger.warning(msg)
-            raise ValueError(msg)
-
-        df = filter_esea_matches(
-            df=df,
-            df_events=df_events,
-            match_amount=match_amount,
-            match_amount_type=match_amount_type,
-            from_timestamp=from_timestamp,
-            event_status=event_status
-        )
-        
-        return df
+            function_logger.info(msg)
+            return pd.DataFrame()
+        else:
+            df = filter_esea_matches(
+                df=df,
+                df_events=df_events,
+                match_amount=match_amount,
+                match_amount_type=match_amount_type,
+                from_timestamp=from_timestamp,
+                event_status=event_status
+            )
+            
+            return df
 
     except Exception as e:
-        function_logger.critical(f"Error gathering ESEA matches: {e}", exc_info=True)
+        function_logger.error(f"Error gathering ESEA matches: {e}", exc_info=True)
         return pd.DataFrame()  # Return an empty DataFrame on error
 
 async def gather_esea_matches_team(
@@ -566,34 +567,36 @@ async def gather_esea_matches_team(
             msg = f"No payload found for team {team_id}: {data}"
             function_logger.warning(msg)
             raise ValueError(msg)
+        
         if not data['payload'].get('items'):
             msg = f"No matches found for team {team_id} in event(s) {event_id}: {data}"
-            function_logger.warning(msg)
-            raise ValueError(msg)
+            function_logger.info(msg)
+            return []
+        else:
+            match_list = []
+            for match in data['payload']['items']:
+                    origin = match.get("origin", {})
+                    match_id = origin.get("id")
+                    
+                    if not match_id:
+                        function_logger.warning(f"Missing match ID for team {team_id}. Skipping.")
+                        continue
+                    if any(faction.get("id") == "bye" for faction in match.get("factions", [])):
+                        function_logger.info(f"Bye match {match_id} for team {team_id}. Skipping.")
+                        continue
+
+                    schedule = origin.get("schedule")
+                    match_time = int(schedule / 1000) if isinstance(schedule, (int, float)) else None
+
+                    match_list.append({
+                        "match_id": match_id,
+                        "team_id": team_id,
+                        "event_id": match.get("championshipId"),
+                        "match_time": match_time,
+                    })
+
+            return match_list
         
-        match_list = []
-        for match in data['payload']['items']:
-                origin = match.get("origin", {})
-                match_id = origin.get("id")
-                
-                if not match_id:
-                    function_logger.warning(f"Missing match ID for team {team_id}. Skipping.")
-                    continue
-                if any(faction.get("id") == "bye" for faction in match.get("factions", [])):
-                    function_logger.info(f"Bye match {match_id} for team {team_id}. Skipping.")
-                    continue
-
-                schedule = origin.get("schedule")
-                match_time = int(schedule / 1000) if isinstance(schedule, (int, float)) else None
-
-                match_list.append({
-                    "match_id": match_id,
-                    "team_id": team_id,
-                    "event_id": match.get("championshipId"),
-                    "match_time": match_time,
-                })
-
-        return match_list
     except Exception as e:
         function_logger.error(f"Fatal error processing team {team_id}: {e}", exc_info=True)
         return []
@@ -755,6 +758,13 @@ async def process_hub_data(hub_id: str, items_to_return: int|str=100, **kwargs) 
             df_hub_matches = df_hub_matches.loc[df_hub_matches['match_time'] >= int(kwargs.get("from_timestamp", 0)), :].reset_index(drop=True)
             
             match_ids = df_hub_matches['match_id'].unique().tolist()
+            
+            if not match_ids:
+                function_logger.warning(f"No matches found for hub_id {hub_id}. Returning empty dataframes.")
+                return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+            if not isinstance(match_ids, list):
+                function_logger.critical(f"match_ids is not a list: {match_ids}")
+                raise TypeError(f"match_ids is not a list: {match_ids}")
             
             # Processing matches in hub
             event_ids = [hub_id]*len(match_ids)
