@@ -7,7 +7,7 @@ from database.db_up import upload_data
 from database.db_down import gather_event_players, gather_event_teams, gather_last_match_time_database, gather_internal_event_ids, gather_players, gather_players_country
 
 from data_processing.dp_events import process_teams_benelux_esea, process_esea_season_data, gather_esea_matches, gather_hub_matches
-from data_processing.dp_general import modify_keys, process_matches, gather_event_details, process_player_details_batch
+from data_processing.dp_general import modify_keys, process_matches, gather_event_details, process_player_details_batch, process_team_details_batch
 from data_processing.dp_benelux import get_benelux_leaderboard_players, process_player_country_details
 
 from data_processing.faceit_api.faceit_v1 import FaceitData_v1
@@ -62,6 +62,9 @@ async def update_esea_seasons_events():
         
 async def update_esea_teams_benelux():
     try:
+        # Remove all data from the teams_benelux table
+        upload_data("teams_benelux", pd.DataFrame(), clear=True)
+        
         async with RequestDispatcher(request_limit=350, interval=10, concurrency=5) as dispatcher:
             async with FaceitData_v1(dispatcher) as faceit_data_v1: 
                 # Updates the teams_benelux data to the database
@@ -94,11 +97,38 @@ async def update_esea_teams_benelux():
          
         df_teams_benelux = modify_keys(df_teams_benelux)
         
+        if not isinstance(df_teams_benelux, pd.DataFrame) or df_teams_benelux.empty:
+            function_logger.warning("No teams found for the Benelux ESEA events.")
+            return
+        
+        # Gather team  and player data
+        async with RequestDispatcher(request_limit=350, interval=10, concurrency=5) as dispatcher:
+            async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1: 
+                
+                team_ids = df_teams_benelux['team_id'].unique().tolist()
+                player_ids = df_teams_benelux['players_main'].explode().apply(pd.Series).drop_duplicates(subset='player_id')['player_id'].unique().tolist()
+                if isinstance(team_ids, str):
+                    team_ids = [team_ids]
+                if isinstance(player_ids, str):
+                    player_ids = [player_ids]
+                
+                df_teams = await process_team_details_batch(team_ids=team_ids, faceit_data=faceit_data)
+                df_players = await process_player_details_batch(player_ids=player_ids, faceit_data_v1=faceit_data_v1)
+                
+                if not isinstance(df_teams, pd.DataFrame) or df_teams.empty:
+                    function_logger.warning("No team details found for the Benelux ESEA teams.")
+                else:
+                    upload_data("teams", df_teams)
+                if not isinstance(df_players, pd.DataFrame) or df_players.empty:
+                    function_logger.warning("No player details found for the Benelux ESEA teams.")
+                else:
+                    upload_data("players", df_players)
+    
         if isinstance(df_teams_benelux, pd.DataFrame) and not df_teams_benelux.empty:
             upload_data("teams_benelux", df_teams_benelux)
     
     except Exception as e:
-        function_logger.error(f"Error updating teams_benelux table: {e}")
+        function_logger.error(f"Error updating teams_benelux table: {e}", exc_info=True)
 
 async def update_esea_matches():
     try:
@@ -106,18 +136,23 @@ async def update_esea_matches():
         last_match_time = gather_last_match_time_database(ONGOING=True, ESEA=True)
         
         if df_event_teams.empty:
-            function_logger.info("No teams found for ongoing ESEA events.")
+            function_logger.warning("No teams found for ongoing ESEA events.")
             return
-        if last_match_time is None:
-            function_logger.info("No recent matches found for ongoing ESEA events in the database. Defaulting to 0.")
-            last_match_time = 0
+        if last_match_time == 0:
+            function_logger.warning("No recent matches found for ongoing ESEA events in the database.")
         
         event_ids = df_event_teams['event_id'].tolist()
         team_ids = df_event_teams['team_id'].tolist()
         
-        if not isinstance(event_ids, list) or not event_ids:
+        if not isinstance(event_ids, list):
+            if event_ids is None:
+                function_logger.warning("No event IDs found for ongoing ESEA events.")
+                return
             event_ids = [event_ids]
-        if not isinstance(team_ids, list) or not team_ids:
+        if not isinstance(team_ids, list):
+            if team_ids is None:
+                function_logger.warning("No team IDs found for ongoing ESEA events.")
+                return
             team_ids = [team_ids]
         
         async with RequestDispatcher(request_limit=350, interval=10, concurrency=5) as dispatcher:
@@ -220,6 +255,8 @@ async def update_hub_matches():
                 df_hub_matches = df_hub_matches.loc[df_hub_matches['match_time'] >= last_match_time, :].reset_index(drop=True)
                 
                 match_ids = df_hub_matches['match_id'].unique().tolist()
+                if isinstance(match_ids, str):
+                    match_ids = [match_ids]
                 
                 # Processing matches in hub
                 event_ids = [hub_id]*len(match_ids)
@@ -337,10 +374,10 @@ async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
             
             # For the new players with a '1' prediction, update the players_country tabl        
             df_predict = df_predict.merge(
-                df_leaderboard[['player_id', 'nickname']],
+                df_leaderboard[['player_id', 'player_name']],
                 on='player_id',
                 how='left'
-            ).rename(columns={'nickname': 'player_name'})
+            )
             
             df_predict_benelux = df_predict.loc[df_predict['prediction'] == 1].rename(columns={'bnlx_country': 'country'})[['player_id', 'player_name', 'country']]
             df_predict_non_benelux = df_predict.loc[df_predict['prediction'] == 0].rename(columns={'all_country': 'country'})[['player_id', 'player_name', 'country']]
@@ -402,8 +439,8 @@ async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
 if __name__ == "__main__":
     # Example usage
     update_esea_data()
-    update_hub_data()
-    update_leaderboard_data(elo_cutoff=2000)
+    # update_hub_data()
+    # update_leaderboard_data(elo_cutoff=2000)
     
     print("Data update completed successfully.")
     
