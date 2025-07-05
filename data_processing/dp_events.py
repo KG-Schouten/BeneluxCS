@@ -244,11 +244,9 @@ async def process_teams_benelux_esea(
     ) # Get the team ids from the json file
     
     if not isinstance(df_teams_benelux, pd.DataFrame) or df_teams_benelux is None:
-        function_logger.critical(f"df_teams_benelux is not a DataFrame: {df_teams_benelux}")
         raise TypeError(f"df_teams_benelux is not a DataFrame: {df_teams_benelux}")
     else:
         if df_teams_benelux.empty:
-            function_logger.critical(f"No teams found in the Benelux json for the specified season(s). {df_teams_benelux}")
             raise ValueError(f"No teams found in the Benelux json for the specified season(s). {df_teams_benelux}")
     
     # Create the season standings dataframe
@@ -257,20 +255,16 @@ async def process_teams_benelux_esea(
     league_team_season_standings = await gather_with_progress(tasks, desc="Processing league team details", unit="teams")
     
     if not isinstance(league_team_season_standings, list):
-        function_logger.critical(f"league_team_season_standings is not a list: {league_team_season_standings}")
         raise TypeError(f"league_team_season_standings is not a list: {league_team_season_standings}")
     else:
         if not league_team_season_standings:
-            function_logger.critical("No league team season standings found. Please check the input parameters.")
             raise ValueError("No league team season standings found. Please check the input parameters.")
         else:
             # Check if all items in the list are empty lists
             if all(isinstance(item, list) and not item for item in league_team_season_standings):
-                function_logger.critical("All league team season standings are empty lists. Please check the input parameters.")
                 raise ValueError("All league team season standings are empty lists. Please check the input parameters.")
             # Check if all items in the list are None
             if all(item is None for item in league_team_season_standings):
-                function_logger.critical("All league team season standings are None. Please check the input parameters.")
                 raise ValueError("All league team season standings are None. Please check the input parameters.")
         
     df_league_team_season_standings = pd.DataFrame(
@@ -284,11 +278,9 @@ async def process_teams_benelux_esea(
     )
     
     if not isinstance(df_league_team_season_standings, pd.DataFrame) or df_league_team_season_standings is None:
-        function_logger.critical(f"df_league_team_season_standings is not a dataframe: {df_league_team_season_standings}")
         raise TypeError(f"df_league_team_season_standings is not a dataframe: {df_league_team_season_standings}")
     else:
         if df_league_team_season_standings.empty:
-            function_logger.critical("No league team season standings found. Please check the input parameters.")
             raise ValueError("No league team season standings found. Please check the input parameters.")
     
     df_teams_benelux = df_teams_benelux.merge(
@@ -391,12 +383,10 @@ async def process_league_team_season_standings(
 
         if not isinstance(data, dict):
             msg = f"Expected a dictionary for team {team_id}, got: {type(data)} - {data}"
-            function_logger.critical(msg)
             raise TypeError(msg)
 
         if not data.get('payload'):
             msg = f"No payload found for team {team_id}: {data}"
-            function_logger.warning(msg)
             raise ValueError(msg)
 
         data_list = []
