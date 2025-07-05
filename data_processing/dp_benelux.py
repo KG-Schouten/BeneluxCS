@@ -10,7 +10,6 @@ import asyncio
 import re
 import math
 import pycountry
-from typing import Dict
 
 # API imports
 from data_processing.faceit_api.faceit_v4 import FaceitData
@@ -33,7 +32,11 @@ async def batch_process_players(players: list[dict]) -> pd.DataFrame:
         ...
     ]
     """
-    semaphore = asyncio.Semaphore(30)  # Limit concurrent requests
+    for player in players:
+        if 'claimed_country' in player and isinstance(player['claimed_country'], str):
+            player['claimed_country'] = player['claimed_country'].lower()
+    
+    semaphore = asyncio.Semaphore(50)  # Limit concurrent requests
 
     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher:
         async with FaceitData_v1(dispatcher) as faceit_data_v1, SteamData(STEAM_TOKEN) as steam_data:
@@ -42,8 +45,8 @@ async def batch_process_players(players: list[dict]) -> pd.DataFrame:
                 async with semaphore:
                     return await process_faceit_player_details(
                         player["player_id"],
-                        player.get("claimed_country", ""),
-                        player.get("steam_id", ""),
+                        player.get("claimed_country", None),
+                        player.get("steam_id", None),
                         faceit_data_v1,
                         steam_data
                     )
@@ -74,7 +77,7 @@ async def process_faceit_player_details(player_id: str, claimed_country: str, st
             f"steam_{k}": v for k, v in features_steam.get(steam_id, {}).items()
             }
         else:
-            function_logger.warning(f"No Steam ID provided for player {player_id}, skipping Steam features.")
+            function_logger.info(f"No Steam ID provided for player {player_id}, skipping Steam features.")
             prefixed_steam = {}
 
         merged = {
@@ -118,8 +121,8 @@ async def get_faceit_friendlist(player_id: str, faceit_data_v1: FaceitData_v1) -
         friends = [
             {
                 'player_id': f.get('guid'),
-                'country': f.get('country', '').lower(),
-                'steam_id_64': f.get('identifier', {}).get('value')
+                'country': f.get('country', None).lower() if f.get('country') else None,
+                'steam_id_64': f.get('identifier', {}).get('value', None)
                 if f.get('identifier', {}).get('platform') == 'steam' else None
             }
             for batch in results
@@ -140,15 +143,15 @@ async def process_steam_friendlist(steam_ids: list[str] | str, steam_data: Steam
         return {}
 
     # Fetch player country info in batches
-    claimed_data_batches = await asyncio.gather(*[
-        steam_data.get_player_summaries(steam_ids[i:i + 100]) for i in range(0, len(steam_ids), 100)
-    ])
-
+    df_profiles = await process_steam_profiles(steam_ids, steam_data)
+    if df_profiles.empty:
+        return {}
+    # Create a map of claimed countries for each Steam ID
     claimed_map = {}
-    for batch in claimed_data_batches:
-        if isinstance(batch, dict) and 'response' in batch and 'players' in batch['response']:
-            for player in batch['response']['players']:
-                claimed_map[player['steamid']] = player.get('loccountrycode', '').lower()
+    for _, row in df_profiles.iterrows():
+        steam_id = row['steam_id']
+        country_code = row.get('country', None)
+        claimed_map[steam_id] = country_code
 
     # Process friend lists
     features = {}
@@ -157,38 +160,38 @@ async def process_steam_friendlist(steam_ids: list[str] | str, steam_data: Steam
             df_friends = await get_steam_friendlist(steam_id, steam_data)
             claimed_country = claimed_map.get(steam_id)
             
-            if df_friends is None or df_friends.empty:
+            if df_friends.empty:
                 features[steam_id] = {
                     'claimed_country': claimed_country,
                     'friend_list_visible': False,
-                    'total_friends': 0,
+                    'total_friends': None,
                     'most_common_country': None,
-                    'friends_most_common_country': 0,
-                    'percentage_most_common_country': 0.0,
-                    'friends_claimed_country': 0,
-                    'percentage_claimed_country': 0.0,
-                    'is_claimed_country_same': False,
-                    'country_entropy': 0.0
+                    'friends_most_common_country': None,
+                    'percentage_most_common_country': None,
+                    'friends_claimed_country': None,
+                    'percentage_claimed_country': None,
+                    'is_claimed_country_same': None,
+                    'country_entropy': None
                 }
             else:
-                f = extract_friend_features(df_friends, claimed_country, country_col='loccountrycode')
+                f = extract_friend_features(df_friends, claimed_country, country_col='country')
                 f['friend_list_visible'] = True
                 features[steam_id] = f
 
         except Exception as e:
             function_logger.error(f"Failed to process Steam friend data for {steam_id}: {e}", exc_info=True)
             features[steam_id] = {
-                'claimed_country': claimed_map.get(steam_id),
-                'friend_list_visible': False,
-                'total_friends': 0,
-                'most_common_country': None,
-                'friends_most_common_country': 0,
-                'percentage_most_common_country': 0.0,
-                'friends_claimed_country': 0,
-                'percentage_claimed_country': 0.0,
-                'is_claimed_country_same': False,
-                'country_entropy': 0.0
-            }
+                    'claimed_country': claimed_map.get(steam_id, None),
+                    'friend_list_visible': False,
+                    'total_friends': None,
+                    'most_common_country': None,
+                    'friends_most_common_country': None,
+                    'percentage_most_common_country': None,
+                    'friends_claimed_country': None,
+                    'percentage_claimed_country': None,
+                    'is_claimed_country_same': None,
+                    'country_entropy': None
+                }
 
     return features
          
@@ -198,29 +201,48 @@ async def get_steam_friendlist(steam_id: str, steam_data: SteamData) -> pd.DataF
         friend_list = friends_data.get('friendslist', {}).get('friends', [])
 
         if not friend_list:
+            function_logger.info(f"No friends found for Steam ID {steam_id}.")
             return pd.DataFrame()
 
         friend_ids = [f['steamid'] for f in friend_list][:200]
 
-        batches = await asyncio.gather(*[
-            steam_data.get_player_summaries(friend_ids[i:i+100]) for i in range(0, len(friend_ids), 100)
-        ])
+        df_friends = await process_steam_profiles(friend_ids, steam_data)
 
-        friends = [
-            {
-                'steam_id': f['steamid'],
-                'loccountrycode': f.get('loccountrycode', '').lower()
-            }
-            for batch in batches
-            for f in batch.get('response', {}).get('players', [])
-        ]
-        df = pd.DataFrame(friends)
-        return df[df['loccountrycode'].notna()]
+        if df_friends.empty:
+            function_logger.info(f"No friends data found for Steam ID {steam_id}.")
+            return pd.DataFrame()
+        
+        return df_friends[df_friends['steam_id'].notna() & df_friends['country'].notna()].reset_index(drop=True)
 
     except Exception as e:
         function_logger.error(f"Steam friend list error for {steam_id}: {e}", exc_info=True)
         return pd.DataFrame()
 
+async def process_steam_profiles(steam_ids: list[str], steam_data: SteamData) -> pd.DataFrame:
+    if isinstance(steam_ids, str):
+        steam_ids = [steam_ids]
+    if not steam_ids:
+        return pd.DataFrame()
+    
+    results = await asyncio.gather(*[
+        steam_data.get_player_summaries(steam_ids[i:i + 100]) for i in range(0, len(steam_ids), 100)
+    ])
+    
+    profile_list = []
+    for batch in results:
+        if isinstance(batch, dict) and 'response' in batch and 'players' in batch['response']:
+            for player in batch['response']['players']:
+                if isinstance(player, dict) and 'steamid' in player:
+                    profile_list.append({
+                        'steam_id': player['steamid'],
+                        'country': player.get('loccountrycode').lower() if player.get('loccountrycode') else None,
+                        'player_name': player.get('personaname', None)
+                    })
+    
+    if not profile_list:
+        function_logger.warning("No valid Steam profiles found.")
+        return pd.DataFrame()
+    return pd.DataFrame(profile_list)
 
 def extract_friend_features(df_friends: pd.DataFrame, claimed_country: str, country_col: str = 'country') -> dict:
     total_friends = len(df_friends)
@@ -229,14 +251,17 @@ def extract_friend_features(df_friends: pd.DataFrame, claimed_country: str, coun
     friends_most_common_country = country_counts.max() if not country_counts.empty else 0
     percentage_most_common_country = friends_most_common_country / total_friends if total_friends > 0 else 0.0
 
+    if claimed_country and most_common_country:
+        is_claimed_country_same = claimed_country.lower() == most_common_country
+    else:
+        is_claimed_country_same = None
+        
     if claimed_country and isinstance(claimed_country, str) and re.fullmatch(r"[a-zA-Z]{2}", claimed_country):
         friends_claimed_country = (df_friends[country_col] == claimed_country.lower()).sum()
         percentage_claimed_country = friends_claimed_country / total_friends if total_friends > 0 else 0.0
-        is_claimed_country_same = claimed_country.lower() == most_common_country
     else:
-        friends_claimed_country = 0
-        percentage_claimed_country = 0.0
-        is_claimed_country_same = False
+        friends_claimed_country = None
+        percentage_claimed_country = None
 
     def entropy(counts):
         total = sum(counts)
@@ -307,6 +332,8 @@ async def extract_hub_features(player_id: str, claimed_country: str, faceit_data
         name_geo_hint_set = set()
         for hub in hubs:
             whitelist = hub.get('whitelistGeoCountries') or []
+            # Make all items in the whitelist lowercase
+            whitelist = [country.lower() for country in whitelist if isinstance(country, str)]
             geo_whitelist_set.update(whitelist)
 
             # Match names like "Netherlands", "Benelux", etc.
