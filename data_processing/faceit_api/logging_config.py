@@ -41,7 +41,7 @@ function_logger.setLevel(logging.INFO)
 if not function_logger.hasHandlers():
     # Create console handler
     function_console_handler = logging.StreamHandler()
-    function_console_handler.setLevel(logging.WARNING)
+    function_console_handler.setLevel(logging.ERROR)
     
     # Create the file handler
     function_file_handler = RotatingFileHandler("logs/functions.log", maxBytes=10*1024*1024, backupCount=2) # 10 MB per file, keep 2 backups
