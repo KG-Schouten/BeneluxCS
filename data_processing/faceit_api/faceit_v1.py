@@ -159,6 +159,17 @@ class FaceitData_v1:
 
         return await self.dispatcher.run(self._post, URL, body)
     
+    async def player_details_batch_v1(self, player_ids: list[str]) -> dict | int:
+        """ Retrieve player details for a batch of players (v1 endpoint) """
+        
+        URL = "https://www.faceit.com/api/user-summary/v1/list"
+        
+        body = {
+            "ids": player_ids
+        }
+        
+        return await self.dispatcher.run(self._post, URL, body)
+    
     async def player_friend_list(self, player_id: str, starting_item_position: int=0, return_items: int=20) -> dict | int:
         """
         Retrieve the friend list from a specific player
@@ -214,6 +225,20 @@ class FaceitData_v1:
         
         return await self.dispatcher.run(self._get, URL)
     
+    async def hub_members(
+        self, 
+        hub_id: str, 
+        offset: int=0, 
+        limit: int=20, 
+        userNickname: str = '',
+        roles: str = ''
+    ) -> dict | int:
+        """ Retrieve club members """
+        
+        URL = f"https://www.faceit.com/api/hubs/v1/hub/{hub_id}/membership?offset={offset}&limit={limit}&userNickname={userNickname}&roles={roles}"
+
+        return await self.dispatcher.run(self._get, URL)
+        
     async def league_teams(self, conference_id: str, offset: int=0, limit: int=20) -> dict | int:
         """
         Retrieve all teams from a specific league conference
