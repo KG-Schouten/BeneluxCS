@@ -8,7 +8,7 @@ from database.db_down import gather_event_players, gather_event_teams, gather_la
 
 from data_processing.dp_events import process_teams_benelux_esea, process_esea_season_data, gather_esea_matches, gather_hub_matches
 from data_processing.dp_general import modify_keys, process_matches, gather_event_details, process_player_details_batch, process_team_details_batch
-from data_processing.dp_benelux import get_benelux_leaderboard_players, process_player_country_details
+from data_processing.dp_benelux import get_benelux_leaderboard_players
 
 from data_processing.faceit_api.faceit_v1 import FaceitData_v1
 from data_processing.faceit_api.faceit_v4 import FaceitData
@@ -439,7 +439,7 @@ async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
 if __name__ == "__main__":
     # Example usage
     update_esea_data()
-    # update_hub_data()
+    update_hub_data()
     # update_leaderboard_data(elo_cutoff=2000)
     
     print("Data update completed successfully.")
