@@ -191,4 +191,6 @@ logs/*
 
 # Ignore the database file
 BeneluxCS.db
+ai_data.json
+ai_data_players.json
 
