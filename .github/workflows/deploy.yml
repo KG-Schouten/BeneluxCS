@@ -21,4 +21,5 @@ jobs:
           cd /srv/BeneluxCS
           git checkout main
           git pull origin main
-          systemctl restart beneluxcs.service
+          sudo systemctl restart beneluxcs.service
+
