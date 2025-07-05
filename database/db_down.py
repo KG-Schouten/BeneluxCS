@@ -507,9 +507,22 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                             return []
 
                     # Get all rows in the group as a list of dicts
-                    players_main_all = group_team['players_main'].dropna().apply(safe_load_json).tolist()
-                    players_sub_all = group_team['players_sub'].dropna().apply(safe_load_json).tolist()
-                    players_coach_all = group_team['players_coach'].dropna().apply(safe_load_json).tolist()
+                    players_main_all = group_team.loc[
+                        group_team['stage_name'].str.contains('regular', case=False, na=False),
+                        'players_main'
+                    ].apply(safe_load_json).tolist()
+                    players_sub_all = group_team.loc[
+                        group_team['stage_name'].str.contains('regular', case=False, na=False),
+                        'players_sub'
+                    ].apply(safe_load_json).tolist()
+                    players_coach_all = group_team.loc[
+                        group_team['stage_name'].str.contains('regular', case=False, na=False),
+                        'players_coach'
+                    ].apply(safe_load_json).tolist()
+                    
+                    # players_main_all = group_team['players_main'].dropna().apply(safe_load_json).tolist()
+                    # players_sub_all = group_team['players_sub'].dropna().apply(safe_load_json).tolist()
+                    # players_coach_all = group_team['players_coach'].dropna().apply(safe_load_json).tolist()
 
                     # Pick the longest list from each category
                     players_main = max(players_main_all, key=len, default=[])
