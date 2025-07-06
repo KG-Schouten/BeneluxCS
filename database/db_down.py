@@ -483,7 +483,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
             esea_data[season_number] = {}
             for division_name, group_division in group_season.sort_values(by=["division_sort_rank"]).groupby('division_name', sort=False):
                 esea_data[season_number][division_name] = []
-
+                
                 for team_id, group_team in group_division.groupby('team_id'):
                     team_name = group_team['team_name'].iloc[0]
                     nickname = group_team['nickname'].iloc[0]
@@ -649,6 +649,11 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
 
                     esea_data[season_number][division_name].append(team_dict)
 
+        # Sort teams by team_name within each division
+        for season in esea_data:
+            for division in esea_data[season]:
+                esea_data[season][division].sort(key=lambda x: x['team_name'])
+        
         return esea_data
 
     except Exception as e:
