@@ -1,18 +1,15 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, redirect, url_for
 
 views = Blueprint('views', __name__, template_folder='../templates')
 
+# Redirect root URL to the ESEA page
 @views.route('/')
-def home():
-	return render_template("home.html")
+def home_redirect():
+    return redirect(url_for('views.esea'))
 
 @views.route('/stats')
 def stats():
     return render_template("stats.html")
-
-@views.route('/teams')
-def teams():
-	return render_template("teams.html")	
 
 @views.route('/esea')
 def esea():
@@ -32,31 +29,16 @@ def esea_season_partial(season_number):
 
 @views.route('/leaderboard')
 def leaderboard():
-    selected_country = request.args.get('country', 'all')
-    
-    if selected_country == 'all':
-        countries = ['nl', 'be', 'lu']
-    else:
-        countries = selected_country.split(',')
-    
-    # Validate countries input
-    valid_countries = ['nl', 'be', 'lu']
- 
-    for country in countries:
-        if country not in valid_countries:
-            return render_template("error.html", message=f"Invalid country code: {country}")
-
-    # If no specific countries are selected, default to all
-    if not countries or countries == ['']:
-        countries = ['nl', 'be', 'lu']
+    selected = request.args.getlist('countries') or ['nl', 'be', 'lu']  # default to all
     
     from database.db_down import gather_leaderboard
 	
     # Gather leaderboard data
-    df_players = gather_leaderboard(countries=countries)
-    players = df_players.to_dict(orient='records')
+    df_players = gather_leaderboard(countries=selected)
+    data = df_players.to_dict(orient='records')
+    
     return render_template(
         "leaderboard.html", 
-        players=players,
-        selected_country=selected_country
+        data=data,
+        selected=selected
     )

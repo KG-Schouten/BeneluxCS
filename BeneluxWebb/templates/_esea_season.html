@@ -1,3 +1,7 @@
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea.css') }}">
+{% endblock %}
+
 {% for division_name, teams in divisions.items() %}
 
 <!-- Division title -->
@@ -172,8 +176,8 @@
                     <div class="maps-stats-grid row justify-content-center gap-1">
                         {% if team.map_stats %}
                             {% for map in team.map_stats %}
-                                <div class="map-stat-box col-auto border border-2 rounded text-center d-flex flex-column justify-content-between align-items-center p-2
-                                    style="width: 50px; min-height: 130px;">
+                                <div class="map-stat-box col-auto text-center d-flex flex-column justify-content-between align-items-center p-2
+                                    style="width: 50px; min-height: 150px;">
                                     
                                     <!-- Top content: Map icon -->
                                     <img src="{{ url_for('static', filename='img/maps/' ~ map.map_name ~ '.png') }}"
