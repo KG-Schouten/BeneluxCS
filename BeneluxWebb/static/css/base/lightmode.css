@@ -1,0 +1,88 @@
+/* base/lightmode.css */
+body.light-mode {
+  --primary: #005faf;
+  --secondary: #005f87;
+  --background: #eeeeee;
+  --foreground: #121212;
+  --card-bg: #e4e5f1;
+  --border: #d2d3db;
+  --accent: #9394a5; 
+  --muted: #6c757d;
+  --btn-bg: #ffffff;
+  --btn-text: #121212;
+  --btn-hover-bg: #e2e6ea;
+  --form-bg: #fff;
+  --form-text: #121212;
+  --form-border: #ccc;
+  --score-logo-filter: none;
+}
+
+body.light-mode {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+body.light-mode .card {
+  background-color: var(--card-bg);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+body.light-mode .btn-outline-secondary {
+  color: var(--secondary);
+  border-color: var(--border);
+}
+
+body.light-mode .btn-outline-secondary:hover {
+  background-color: var(--btn-hover-bg);
+  border-color: var(--border);
+  color: var(--btn-text);
+}
+
+body.light-mode .btn-secondary {
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--border);
+}
+
+body.light-mode .btn-secondary:hover {
+  background-color: var(--btn-hover-bg);
+  color: var(--btn-text);
+}
+
+body.light-mode .form-inline {
+  color: var(--secondary);
+}
+
+body.light-mode .form-control {
+  background-color: var(--form-bg);
+  color: var(--form-text);
+  border-color: var(--form-border);
+}
+
+body.light-mode .score-logo {
+  filter: var(--score-logo-filter);
+}
+
+body.light-mode .text-muted {
+  color: var(--muted) !important;
+}
+
+body.light-mode .navbar {
+  background-color: var(--background) !important;
+  border-bottom: 1px solid var(--border);
+}
+
+body.light-mode .nav-link {
+  color: var(--foreground);
+}
+
+body.light-mode .nav-link.active {
+  font-weight: bold;
+  border-bottom: 2px solid var(--primary);
+}
+
+/* Hover effects */
+body.light-mode .navbar-nav .nav-link:hover {
+  color: var(--accent) !important;
+}

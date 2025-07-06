@@ -1,0 +1,52 @@
+/* esea.css */
+
+/* Separator line with primary color */
+.division-separator {
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+/* Stage box */
+.stage-box {
+  border: 2px solid var(--secondary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 10;
+  cursor: pointer;
+  background-color: transparent;
+  color: var(--foreground);
+  transition: background-color 0.3s ease;
+}
+
+/* Recent match hover */
+.recent-match-box:hover {
+  background-color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--foreground);
+}
+
+/* Team link */
+.team-link {
+  text-decoration: none;
+  color: var(--primary);
+  transition: color 0.3s ease;
+}
+
+/* Team link hover */
+.team-link:hover {
+  text-decoration: underline;
+  color: var(--accent);
+}
+
+/* Map stats box */
+.map-stat-box {
+  border: 2px solid var(--secondary);
+  border-radius: 8px;
+}

@@ -1,0 +1,15 @@
+/* leaderboard.css */
+
+/* Future leaderboard-specific styles could go here */
+
+.filter-box {
+    display: flex;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+}
+
+h1 {
+  color: var(--foreground, #e0e0e0);
+}
