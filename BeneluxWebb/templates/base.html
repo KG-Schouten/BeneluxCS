@@ -14,6 +14,11 @@
       href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
       crossorigin="anonymous"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      crossorigin="anonymous"
+    />
     <link 
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" 
       rel="stylesheet"
@@ -23,7 +28,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base/darkmode.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base/lightmode.css') }}">
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/flag-filter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/flags_filter.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/navbar.css') }}">
 
     {% block extra_css %}{% endblock %}
@@ -86,7 +91,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   {% block javascript %}
-    <script src="{{ url_for('static', filename='js/esea.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
   {% endblock %}
   </body>
 </html>
