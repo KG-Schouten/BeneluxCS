@@ -1,0 +1,103 @@
+<table class="leaderboard-table table-hover">
+    <thead>
+        <tr>
+            <th style="width: 5%">#</th>
+            <th style="width: 30%">Player</th>
+            <th style="width: 15%; cursor: pointer;" class="sort-header" data-sort="{{ 'elo_asc' if sort == 'elo_desc' else 'elo_desc' }}">
+                ELO 
+                {% if sort == 'elo_desc' %}
+                    <i class="fas fa-sort-down"></i>
+                {% elif sort == 'elo_asc' %}
+                    <i class="fas fa-sort-up"></i>
+                {% else %}
+                    <i class="fas fa-sort"></i>
+                {% endif %}
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for player in data %}
+        <tr>
+            <td> {{player.index}}</td>
+            <td>
+                <div class="d-flex align-items-center">
+                    <!-- Avatar -->
+                    <img src="{{ player['avatar'] if player['avatar'] else url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
+                         alt="avatar" width="24" height="24" class="rounded-circle me-2">
+
+                    <!-- Country flag -->
+                    <img src="{{ url_for('static', filename='img/flags/' ~ player['country']|lower ~ '.png') }}"
+                         alt="{{ player['country'] }}" width="20" class="me-2">
+
+                    <span>{{ player['player_name'] }}</span>
+                </div>
+            </td>
+            <td>
+                {{ player['faceit_elo'] }}
+                <a href="https://www.faceit.com/en/players/{{ player['player_name'] }}" target="_blank"
+                   aria-label="Faceit profile for {{ player['player_name'] }}">
+                    <img src="{{ url_for('static', filename='img/faceit/faceit_icon.png') }}" 
+                         alt="Faceit" width="20" class="ms-2">
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination + Info Row -->
+{% if total > per_page %}
+<div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+
+    <!-- Results info (left) -->
+    <div class="text-muted small">
+        Showing {{ ((page - 1) * per_page) + 1 }} to {{ [page * per_page, total]|min }} of {{ total }} players
+    </div>
+
+    <!-- Pagination controls (right) -->
+    <nav aria-label="Leaderboard pagination">
+        <ul class="pagination pagination-sm mb-0">
+            {% set total_pages = ((total - 1) // per_page) + 1 %}
+            {% set start_page = [1, page - 2]|max %}
+            {% set end_page = [total_pages, page + 2]|min %}
+
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link pagination-link" href="#" data-page="{{ page - 1 }}">&laquo;</a>
+            </li>
+            {% endif %}
+
+            {% if start_page > 1 %}
+            <li class="page-item">
+                <a class="page-link pagination-link" href="#" data-page="1">1</a>
+            </li>
+            {% if start_page > 2 %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+            {% endif %}
+
+            {% for p in range(start_page, end_page + 1) %}
+            <li class="page-item {{ 'active' if p == page else '' }}">
+                <a class="page-link pagination-link" href="#" data-page="{{ p }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+
+            {% if end_page < total_pages %}
+            {% if end_page < total_pages - 1 %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+            <li class="page-item">
+                <a class="page-link pagination-link" href="#" data-page="{{ total_pages }}">{{ total_pages }}</a>
+            </li>
+            {% endif %}
+
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link pagination-link" href="#" data-page="{{ page + 1 }}">&raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+</div>
+{% endif %}
