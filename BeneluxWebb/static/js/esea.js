@@ -11,8 +11,13 @@ document.addEventListener('DOMContentLoaded', function () {
   initTooltips();
 
   // ESEA tabs logic
-  const tabs = document.querySelectorAll('#eseaTabs .nav-link');
+  const tabs = document.querySelectorAll('#eseaTabs .nav-link, #eseaTabs button.nav-link');
   const content = document.getElementById('season-content');
+
+  if (!tabs.length || !content) {
+    // If no tabs or content found, abort script to prevent errors on other pages
+    return;
+  }
 
   tabs.forEach(tab => {
     tab.addEventListener('click', function () {
@@ -38,37 +43,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Auto-click first tab
+  // Auto-click first tab to load initial content
   tabs[0]?.click();
-
-  // Dark mode toggle
-  const toggleBtn = document.getElementById('darkModeToggle');
-  const body = document.body;
-
-  // Read saved mode or default to dark mode (no class needed if you want)
-  const mode = localStorage.getItem('theme') || 'dark';
-
-   if (mode === 'light') {
-    body.classList.add('light-mode');
-    body.classList.remove('dark-mode');
-    toggleBtn.textContent = 'Dark Mode';
-  } else {
-    body.classList.add('dark-mode');
-    body.classList.remove('light-mode');
-    toggleBtn.textContent = 'Light Mode';
-  }
-
-  toggleBtn.addEventListener('click', function () {
-    if (body.classList.contains('dark-mode')) {
-      body.classList.remove('dark-mode');
-      body.classList.add('light-mode');
-      toggleBtn.textContent = 'Dark Mode';
-      localStorage.setItem('theme', 'light');
-    } else {
-      body.classList.remove('light-mode');
-      body.classList.add('dark-mode');
-      toggleBtn.textContent = 'Light Mode';
-      localStorage.setItem('theme', 'dark');
-    }
-  });
 });
