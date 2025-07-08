@@ -386,11 +386,13 @@ def gather_internal_event_ids(event_ids: list) -> pd.DataFrame:
 def gather_leaderboard(**kwargs) -> pd.DataFrame:
     """ Gathers the leaderboard from the database with optional filtering """
     countries = kwargs.get('countries', None)
-    
+    search = kwargs.get('search', '').strip()
+    min_elo = kwargs.get('min_elo', 0)
+    max_elo = kwargs.get('max_elo', None)
     
     db, cursor = start_database()
     try:
-        query_base = """
+        query = """
             SELECT 
                 p.player_id, 
                 p.player_name,
@@ -401,21 +403,44 @@ def gather_leaderboard(**kwargs) -> pd.DataFrame:
             FROM players p
             LEFT JOIN players_country pc ON p.player_id = pc.player_id
         """
+
+        conditions = []
+        params = []
+
+        if countries and len(countries) > 0:
+            placeholders = ', '.join(['?'] * len(countries))
+            conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
+            params.extend(countries)
+            params.extend(countries)  # Add countries twice for both conditions
+            # Keep the 2000 elo threshold only if countries are selected
+            conditions.append("p.faceit_elo > ?")
+            params.append(2000)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY p.faceit_elo DESC"
         
-        if countries:
-            country_list = ', '.join(f"'{country}'" for country in countries)
-            query_base += f" WHERE pc.country IN ({country_list}) and p.faceit_elo > 2000"
+        df_players = pd.read_sql_query(query, db, params=params)
+        # Add index column
+        df_players = df_players.reset_index(drop=True)
+        df_players.insert(0, 'index', range(1, len(df_players) + 1))  # insert new index column at position 0
         
-        # Add sorting by faceit_elo in descending order
-        query_base += " ORDER BY p.faceit_elo DESC"
-        
-        df_players = pd.read_sql_query(query_base, db)
+        # Apply search filter if provided
+        if search:
+            df_players = df_players[df_players['player_name'].str.contains(search, case=False, na=False)]
+
+        if min_elo is not None:
+            df_players = df_players[df_players['faceit_elo'] >= min_elo]
+
+        if max_elo is not None:
+            df_players = df_players[df_players['faceit_elo'] <= max_elo]
+
         return df_players
-    
+
     except Exception as e:
         function_logger.error(f"Error gathering players: {e}")
         raise
-    
+
     finally:   
         close_database(db, cursor)
 
