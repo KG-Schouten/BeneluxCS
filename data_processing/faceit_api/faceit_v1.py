@@ -202,6 +202,13 @@ class FaceitData_v1:
         
         return await self.dispatcher.run(self._get, URL)
 
+    async def player_league_details(self, player_id: str) -> dict | int:
+        """ Retrieve league details for a player """
+        
+        URL = f"https://www.faceit.com/api/team-leagues/v1/users/{player_id}/profile/leagues/info"
+        
+        return await self.dispatcher.run(self._get, URL)
+    
     async def championship_details(self, championship_id: str) -> dict | int:
         """
         Retrieve championship details from Faceit
@@ -238,13 +245,3 @@ class FaceitData_v1:
         URL = f"https://www.faceit.com/api/hubs/v1/hub/{hub_id}/membership?offset={offset}&limit={limit}&userNickname={userNickname}&roles={roles}"
 
         return await self.dispatcher.run(self._get, URL)
-        
-    async def league_teams(self, conference_id: str, offset: int=0, limit: int=20) -> dict | int:
-        """
-        Retrieve all teams from a specific league conference
-
-        :param conference_id: The ID of the conference
-        :param offset: The offset for pagination (default is 0)
-        :param limit: The number of items to return (default is 20)
-        :return:
-        """
