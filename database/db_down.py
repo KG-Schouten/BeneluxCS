@@ -799,6 +799,163 @@ def gather_esea_map_stats(team_id, szn_number) -> list:
     finally:
         close_database(db, cursor)
 
+def gather_player_stats_esea(
+    countries: list = [],
+    seasons: list = [],
+    divisions: list = [],
+    stages: list = [],
+    timestamp_start: int = 0,
+    timestamp_end: int = 0,
+    team_ids: list = [],
+    search_player_name: str = ""   
+    ):
+    """ Builds the SQL query to gather ESEA player stats from the database """
+    db, cursor = start_database()
+    try:
+        # Build whitelist of valid (player_id, team_id, event_id) combos from teams_benelux
+        cursor.execute("SELECT team_id, event_id, players_main, players_sub FROM teams_benelux")
+        valid_combos = set()
+        
+        for team_id, event_id, players_main_json, players_sub_json in cursor.fetchall():
+            try:
+                main_players = json.loads(players_main_json or "[]")
+                sub_players = json.loads(players_sub_json or "[]")
+            except json.JSONDecodeError:
+                main_players = []
+                sub_players = []
+            
+            all_players = main_players + sub_players
+            for player in all_players:
+                pid = player.get('player_id')
+                if pid:
+                    valid_combos.add((pid, team_id, event_id))
+            
+        # Get all column names from players_stats and build the AVG expressions dynamically
+        non_stat_cols = {
+            'player_id',
+            'player_name',
+            'team_id',
+            'match_id',
+            'match_round',
+        }
+        
+        cursor.execute("PRAGMA table_info(players_stats)")
+        
+        all_columns = [row[1] for row in cursor.fetchall()]
+        stat_columns = [col for col in all_columns if col not in non_stat_cols]
+        avg_expressions = [f"AVG(ps.{col}) AS {col}" for col in stat_columns]
+        
+        # Cunstruct the WHERE clause based on provided filters
+        conditions = []
+        params = []
+        if countries and len(countries) > 0:
+            placeholders = ', '.join(['?'] * len(countries))
+            conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
+            params.extend(countries)
+            params.extend(countries)  # Add countries twice for both conditions
+        if seasons:
+            placeholders = ', '.join(['?'] * len(seasons))
+            conditions.append(f"s.season_number IN ({placeholders})")
+            params.extend(seasons)
+        if divisions:
+            like_clauses = ' OR '.join(["s.division_name LIKE ?"] * len(divisions))
+            conditions.append(f"({like_clauses})")
+            params.extend([f"%{d}%" for d in divisions])
+        if stages:
+            like_clauses = ' OR '.join(["s.stage_name LIKE ?"] * len(stages))
+            conditions.append(f"({like_clauses})")
+            params.extend([f"%{s}%" for s in stages])
+        if stages:
+            placeholders = ', '.join(['?'] * len(stages))
+            conditions.append(f"s.stage_name LIKE (%{placeholders}%)")
+            params.extend(stages)
+        if timestamp_start > 0:
+            conditions.append("m.match_time >= ?")
+            params.append(timestamp_start)
+        if timestamp_end > 0:
+            conditions.append("m.match_time <= ?")
+            params.append(timestamp_end)
+        if team_ids:
+            placeholders = ', '.join(['?'] * len(team_ids))
+            conditions.append(f"ps.team_id IN ({placeholders})")
+            params.extend(team_ids)
+        if search_player_name:
+            conditions.append("ps.player_name LIKE ?")
+            params.append(f"%{search_player_name}%")
+        
+        
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        
+        # Gather the player stats
+        query = f"""
+            SELECT 
+                ps.player_id,
+                COALESCE(pc.country, p.country) AS country, 
+                ps.team_id, 
+                s.event_id, 
+                {', '.join(avg_expressions)}
+            FROM players_stats AS ps
+            LEFT JOIN maps mp ON ps.match_id = mp.match_id AND ps.match_round = mp.match_round
+            LEFT JOIN matches m ON ps.match_id = m.match_id
+            INNER JOIN seasons s ON m.event_id = s.event_id
+            LEFT JOIN players p ON ps.player_id = p.player_id
+            LEFT JOIN players_country pc ON p.player_id = pc.player_id
+            {where_clause}
+            GROUP BY ps.player_id
+        """
+        cursor.execute(query, params)
+        
+        rows = cursor.fetchall()
+        col_names = [desc[0] for desc in cursor.description]
+        stat_field_names = col_names[4:]  # Skip player_id, country, team_id, event_id
+        
+        # Filter rows using whitelist
+        filtered_stats = {}
+        player_countries = {}
+
+        for row in rows:
+            player_id, country, team_id, event_id = row[:4]
+            if (player_id, team_id, event_id) in valid_combos:
+                if player_id not in filtered_stats:
+                    filtered_stats[player_id] = []
+                    player_countries[player_id] = country  # Save country for later use
+                filtered_stats[player_id].append(row[4:])  # Stat values only
+
+        # Compute average manually for filtered rows
+        from statistics import mean
+
+        avg_results = {}
+        for player_id, stat_lists in filtered_stats.items():
+            transposed = list(zip(*stat_lists))  # Columns from rows
+            avg_results[player_id] = [mean([x for x in col if x is not None]) for col in transposed]
+
+        # Get aliases
+        cursor.execute("SELECT player_id, player_name FROM players_stats")
+        alias_map = {}
+        for player_id, player_name in cursor.fetchall():
+            alias_map.setdefault(player_id, set()).add(player_name)
+
+        # Final output
+        output = []
+        for player_id, stat_values in avg_results.items():
+            aliases = list(alias_map.get(player_id, []))
+            output.append({
+            "player_id": player_id,
+            "player_name": aliases[0] if aliases else None,
+            "aliases": aliases,
+            "country": player_countries.get(player_id),
+            "avg_stats": dict(zip(stat_field_names, stat_values))
+        })
+            
+        return output, stat_field_names
+        
+    except Exception as e:
+        function_logger.error(f"Error gathering valid combos: {e}")
+        return [], []
+    finally:
+        close_database(db, cursor)
+    
+
 if __name__ == "__main__":
     # Allow standalone execution
     import sys
