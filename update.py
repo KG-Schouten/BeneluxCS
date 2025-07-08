@@ -310,8 +310,8 @@ async def update_leaderboard(elo_cutoff=2000):
         ## ----- For the players table -----
         await update_leaderboard_players(df_leaderboard=df_leaderboard, df_players=df_players)
             
-        ## ----- For the players_country table -----
-        await update_leaderboard_players_country(df_leaderboard=df_leaderboard)
+        # ## ----- For the players_country table -----
+        # await update_leaderboard_players_country(df_leaderboard=df_leaderboard)
 
     except Exception as e:
         function_logger.error(f"Error updating leaderboard: {e}")
@@ -440,7 +440,7 @@ if __name__ == "__main__":
     # Example usage
     update_esea_data()
     update_hub_data()
-    # update_leaderboard_data(elo_cutoff=2000)
+    update_leaderboard_data(elo_cutoff=2000)
     
     print("Data update completed successfully.")
     
