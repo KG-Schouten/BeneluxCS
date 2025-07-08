@@ -24,6 +24,14 @@
   transition: background-color 0.3s ease;
 }
 
+/* Team card */
+.card {
+  background-color: var(--card-bg);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+
 /* Recent match hover */
 .recent-match-box:hover {
   background-color: var(--accent);

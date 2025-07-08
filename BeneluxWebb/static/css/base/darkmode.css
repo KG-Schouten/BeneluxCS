@@ -22,12 +22,6 @@ body.dark-mode {
   color: var(--foreground);
 }
 
-body.dark-mode .card {
-  background-color: var(--card-bg);
-  color: var(--foreground);
-  border-color: var(--border);
-}
-
 body.dark-mode .btn-outline-secondary {
   color: var(--secondary);
   border-color: var(--border);
@@ -66,25 +60,4 @@ body.dark-mode .score-logo {
 
 body.dark-mode .text-muted {
   color: var(--muted) !important;
-}
-
-body.dark-mode .navbar {
-  background-color: var(--background) !important;
-  border-bottom: 1px solid var(--border);
-}
-
-body.dark-mode .nav-link {
-  color: var(--secondary);
-}
-
-body.dark-mode .nav-link.active {
-  color: #000000;
-  background-color: var(--btn-hover-bg);
-  font-weight: bold;
-  border-bottom: none;
-}
-
-/* Hover effects */
-body.dark-mode .navbar-nav .nav-link:hover {
-  color: var(--accent) !important;
 }

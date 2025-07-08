@@ -22,12 +22,6 @@ body.light-mode {
   color: var(--foreground);
 }
 
-body.light-mode .card {
-  background-color: var(--card-bg);
-  color: var(--foreground);
-  border-color: var(--border);
-}
-
 body.light-mode .btn-outline-secondary {
   color: var(--secondary);
   border-color: var(--border);
@@ -66,23 +60,4 @@ body.light-mode .score-logo {
 
 body.light-mode .text-muted {
   color: var(--muted) !important;
-}
-
-body.light-mode .navbar {
-  background-color: var(--background) !important;
-  border-bottom: 1px solid var(--border);
-}
-
-body.light-mode .nav-link {
-  color: var(--foreground);
-}
-
-body.light-mode .nav-link.active {
-  font-weight: bold;
-  border-bottom: 2px solid var(--primary);
-}
-
-/* Hover effects */
-body.light-mode .navbar-nav .nav-link:hover {
-  color: var(--accent) !important;
 }
