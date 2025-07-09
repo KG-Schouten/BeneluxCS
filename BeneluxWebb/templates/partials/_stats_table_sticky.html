@@ -1,0 +1,28 @@
+<div class="sticky-column">
+    <table class="stats-table sticky-table">
+        <thead>
+            <tr>
+                <th>Player</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in data %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <img
+                            src="{{ player['avatar'] if player['avatar'] else url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
+                            alt="avatar" width="24" height="24"
+                            class="rounded-circle me-2">
+                        <img
+                            src="{{ url_for('static', filename='img/flags/' ~ player['country']|lower ~ '.png') }}"
+                            alt="{{ player['country'] }}" width="20"
+                            class="me-2">
+                        <span>{{ player['player_name'] }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
