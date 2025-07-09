@@ -7,6 +7,7 @@ import sqlite3
 from datetime import datetime
 import pandas as pd
 import json
+import re
 
 from database.db_manage import start_database, close_database
 from data_processing.faceit_api.logging_config import function_logger
@@ -843,7 +844,8 @@ def gather_player_stats_esea(
         
         all_columns = [row[1] for row in cursor.fetchall()]
         stat_columns = [col for col in all_columns if col not in non_stat_cols]
-        avg_expressions = [f"AVG(ps.{col}) AS {col}" for col in stat_columns]
+        cleaned_stat_columns = [re.sub(r'^_', '', col).replace('_', ' ') for col in stat_columns]
+        avg_expressions = [f'AVG(ps."{original}") AS "{cleaned}"' for original, cleaned in zip(stat_columns, cleaned_stat_columns)]
         
         # Cunstruct the WHERE clause based on provided filters
         conditions = []
@@ -890,7 +892,8 @@ def gather_player_stats_esea(
         query = f"""
             SELECT 
                 ps.player_id,
-                COALESCE(pc.country, p.country) AS country, 
+                COALESCE(pc.country, p.country) AS country,
+                p.avatar,
                 ps.team_id, 
                 s.event_id, 
                 {', '.join(avg_expressions)}
@@ -907,19 +910,21 @@ def gather_player_stats_esea(
         
         rows = cursor.fetchall()
         col_names = [desc[0] for desc in cursor.description]
-        stat_field_names = col_names[4:]  # Skip player_id, country, team_id, event_id
+        stat_field_names = col_names[5:]  # Skip player_id, country, team_id, event_id
         
         # Filter rows using whitelist
         filtered_stats = {}
         player_countries = {}
+        player_avatars = {}
 
         for row in rows:
-            player_id, country, team_id, event_id = row[:4]
+            player_id, country, avatar, team_id, event_id = row[:5]
             if (player_id, team_id, event_id) in valid_combos:
                 if player_id not in filtered_stats:
                     filtered_stats[player_id] = []
                     player_countries[player_id] = country  # Save country for later use
-                filtered_stats[player_id].append(row[4:])  # Stat values only
+                    player_avatars[player_id] = avatar  # Save avatar for later use
+                filtered_stats[player_id].append(row[5:])  # Stat values only
 
         # Compute average manually for filtered rows
         from statistics import mean
@@ -943,6 +948,7 @@ def gather_player_stats_esea(
             "player_id": player_id,
             "player_name": aliases[0] if aliases else None,
             "aliases": aliases,
+            "avatar": player_avatars.get(player_id),
             "country": player_countries.get(player_id),
             "avg_stats": dict(zip(stat_field_names, stat_values))
         })
