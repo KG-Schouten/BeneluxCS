@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 
 views = Blueprint('views', __name__, template_folder='../templates')
 
@@ -9,7 +9,105 @@ def home_redirect():
 
 @views.route('/stats')
 def stats():
-    return render_template("stats.html")
+    from database.db_down import gather_player_stats_esea
+
+    try:
+        search = request.args.get('search', '').strip()
+        page = max(1, request.args.get('page', type=int, default=1))
+        per_page = max(10, min(request.args.get('per_page', 25, type=int), 100))
+        sort = request.args.get('sort')
+        sort_key = None
+        sort_desc = False
+        if sort:
+            if sort.startswith('-'):
+                sort_desc = True
+                sort_key = sort[1:]
+            else:
+                sort_key = sort
+
+        columns = request.args.getlist('columns')
+
+        data, stat_field_names = gather_player_stats_esea(
+            countries=[],
+            seasons=[],
+            divisions=[],
+            stages=[],
+            timestamp_start=0,
+            timestamp_end=0,
+            team_ids=[],
+            search_player_name=search
+        )
+
+        if columns:
+            valid_columns = set(stat_field_names)
+            columns = [c for c in columns if c in valid_columns]
+            if not columns:
+                columns = stat_field_names
+        else:
+            columns = stat_field_names
+
+        if sort_key and sort_key in stat_field_names:
+            try:
+                data.sort(key=lambda x: x.get('avg_stats', {}).get(sort_key, 0), reverse=sort_desc)
+            except (KeyError, TypeError):
+                pass  # If sorting fails, continue with unsorted data
+
+        total = len(data)
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_data = data[start:end]
+        total_pages = ((total - 1) // per_page) + 1 if total > 0 else 1
+
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+        if is_ajax:
+            html = render_template("partials/_stats_table.html",
+                data=paginated_data,
+                stat_field_names=columns,
+                page=page,
+                per_page=per_page,
+                total=total,
+                total_pages=total_pages
+            )
+            return html
+
+        # Regular full page render
+        return render_template(
+            "stats.html",
+            data=paginated_data,
+            stat_field_names=columns,
+            search=search,
+            page=page,
+            total=total,
+            per_page=per_page,
+            total_pages=total_pages
+        )
+
+    except Exception as e:
+        # Handle error similarly for both
+        error_html = f"""
+        <div class="alert alert-danger">
+            <h4 class="alert-heading">Error</h4>
+            <p>There was an error processing your request: {e}</p>
+            <hr>
+            <p class="mb-0">Please try refreshing the page.</p>
+        </div>
+        """
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return error_html
+
+        return render_template(
+            "stats.html",
+            data=[],
+            stat_field_names=[],
+            search='',
+            page=1,
+            total=0,
+            per_page=20,
+            total_pages=1,
+            error=str(e)
+        )
 
 @views.route('/esea')
 def esea():
@@ -25,7 +123,7 @@ def esea_season_partial(season_number):
     # Extract teams for the specified season
     divisions = esea_data.get(season_number, {})
     
-    return render_template('_esea_season.html', divisions=divisions, season=season_number)
+    return render_template('partials/_esea_season.html', divisions=divisions, season=season_number)
 
 @views.route('/leaderboard')
 def leaderboard():
@@ -48,9 +146,6 @@ def leaderboard():
         
         # Ensure per_page is within reasonable bounds
         per_page = max(10, min(per_page, 100))
-        
-        # Check if this is an AJAX request
-        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             
         # Get data from the database
         from database.db_down import gather_leaderboard
@@ -76,6 +171,9 @@ def leaderboard():
         # Calculate total pages for pagination
         total_pages = ((total - 1) // per_page) + 1 if total > 0 else 1
 
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
         if is_ajax:
             return render_template(
                 "partials/_leaderboard_table.html",
