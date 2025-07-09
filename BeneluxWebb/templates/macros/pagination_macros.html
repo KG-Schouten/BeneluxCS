@@ -1,0 +1,57 @@
+{% macro render_pagination(page, per_page, total, label='items') %}
+    {% if total > per_page %}
+    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+
+        <!-- Results info (left) -->
+        <div class="text-muted small">
+            Showing {{ ((page - 1) * per_page) + 1 }} to {{ [page * per_page, total]|min }} of {{ total }} {{ label }}
+        </div>
+
+        <!-- Pagination controls (right) -->
+        <nav aria-label="{{ label|capitalize }} pagination">
+            <ul class="pagination pagination-sm mb-0">
+                {% set total_pages = ((total - 1) // per_page) + 1 %}
+                {% set start_page = [1, page - 2]|max %}
+                {% set end_page = [total_pages, page + 2]|min %}
+
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link pagination-link" href="#" data-page="{{ page - 1 }}">&laquo;</a>
+                </li>
+                {% endif %}
+
+                {% if start_page > 1 %}
+                <li class="page-item">
+                    <a class="page-link pagination-link" href="#" data-page="1">1</a>
+                </li>
+                {% if start_page > 2 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                {% endif %}
+
+                {% for p in range(start_page, end_page + 1) %}
+                <li class="page-item {{ 'active' if p == page else '' }}">
+                    <a class="page-link pagination-link" href="#" data-page="{{ p }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+
+                {% if end_page < total_pages %}
+                {% if end_page < total_pages - 1 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item">
+                    <a class="page-link pagination-link" href="#" data-page="{{ total_pages }}">{{ total_pages }}</a>
+                </li>
+                {% endif %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link pagination-link" href="#" data-page="{{ page + 1 }}">&raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+
+    </div>
+    {% endif %}
+{% endmacro %}
