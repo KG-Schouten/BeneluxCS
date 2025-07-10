@@ -3,6 +3,16 @@
         <thead>
             <tr>
                 <th>Player</th>
+                <th class="text-center sortable" data-field="matches_played" data-column="matches_played">
+                    Matches Played
+                    {% if sort == 'matches_played' %}
+                        <i class="fas fa-sort-up sort-indicator"></i>
+                    {% elif sort == '-matches_played' %}
+                        <i class="fas fa-sort-down sort-indicator"></i>
+                    {% else %}
+                        <i class="fas fa-sort sort-indicator"></i>
+                    {% endif %}
+                </th>
             </tr>
         </thead>
         <tbody>
@@ -20,6 +30,9 @@
                             class="me-2">
                         <span>{{ player['player_name'] }}</span>
                     </div>
+                </td>
+                <td class="text-center">
+                    {{ player['matches_played'] if player['matches_played'] else '-' }}
                 </td>
             </tr>
             {% endfor %}

@@ -1,22 +1,26 @@
 <div class="scrollable-columns-wrapper">
-    <!-- <div class="scrollbar-top-wrapper">
-        <div class="scrollbar-top" id="scrollbar-top"></div>
-    </div> -->
     <div class="scrollable-columns table-scrollable" id="scrollable-table">
         <table class="stats-table scrollable-table smart-table">
             <thead>
                 <tr>
-                    {% for field in stat_field_names %}
-                    <th class="text-center sortable" data-field="{{ field }}">
-                        {{ field }} <span class="sort-indicator"></span>
-                    </th>
+                    {% for field in display_columns %}
+                        <th class="text-center sortable" data-field="{{ field }}" data-column="{{ field }}">
+                            {{ field }}
+                            {% if sort == field %}
+                                <i class="fas fa-sort-up sort-indicator"></i>
+                            {% elif sort == '-' ~ field %}
+                                <i class="fas fa-sort-down sort-indicator"></i>
+                            {% else %}
+                                <i class="fas fa-sort sort-indicator"></i>
+                            {% endif %}
+                        </th>
                     {% endfor %}
                 </tr>
             </thead>
             <tbody id="table-body">
                 {% for player in data %}
                 <tr>
-                    {% for field in stat_field_names %}
+                    {% for field in display_columns %}
                     <td class="text-center">
                         {{ player['avg_stats'][field]|round(2) if field in player['avg_stats'] else '-' }}
                     </td>
