@@ -1,55 +1,92 @@
-import { SmartTable } from "./smart-table.js";
+import { SmartTable } from './smart-table.js';
+import { CountryFilter, TomSelectFilter, MultiCheckboxFilter } from './filter-widgets.js';
+import { FilterState } from './filter-state.js';
+import { enhanceTableSorting } from './sort-indicators.js';
 
 let smartTableInstance = null;
 
-export function syncScrollbars() {
-  const scrollableTable = document.getElementById("scrollable-table");
-  const scrollbarTop = document.getElementById("scrollbar-top");
-
-  if (!scrollableTable || !scrollbarTop) return;
-
-  // Remove previous .scrollbar-inner if exists to avoid duplicates on reload
-  const existingInner = scrollbarTop.querySelector(".scrollbar-inner");
-  if (existingInner) {
-    existingInner.remove();
-  }
-
-  // Create inner div to match table width for scrollbar
-  const table = scrollableTable.querySelector("table");
-  if (table) {
-    const inner = document.createElement("div");
-    inner.classList.add("scrollbar-inner");
-    inner.style.width = table.offsetWidth + "px";
-    scrollbarTop.appendChild(inner);
-  }
-
-  // Remove old event listeners before adding new ones
-  scrollbarTop.onscroll = () => {
-    scrollableTable.scrollLeft = scrollbarTop.scrollLeft;
-    // Update scroll position in SmartTable instance only if not restoring
-    if (smartTableInstance && !smartTableInstance.isRestoringScroll) {
-      smartTableInstance.filters.scrollPosition = scrollbarTop.scrollLeft;
-    }
-  };
-
-  scrollableTable.onscroll = () => {
-    scrollbarTop.scrollLeft = scrollableTable.scrollLeft;
-    // Update scroll position in SmartTable instance only if not restoring
-    if (smartTableInstance && !smartTableInstance.isRestoringScroll) {
-      smartTableInstance.filters.scrollPosition = scrollableTable.scrollLeft;
-    }
-  };
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  smartTableInstance = new SmartTable("#stats-table-wrapper", {
-    stateKey: "statsTableState",
-    dataUrl: "/stats",
+document.addEventListener('DOMContentLoaded', () => {
+  const filterState = new FilterState('statsFilters', {
+    form: '#stats-table-form',
+    search: '[name="search"]',
+    perPage: '[name="per_page"]',
+    countries: 'input[name="countries"]',
+    eloSlider: document.querySelector('#elo-slider'),
+    columns: '[name="columns"]',
   });
 
-  // Run once on load and after fetch (you can hook in fetchData to call this)
-  syncScrollbars();
-  
-  // Make sure the table is initialized
-  console.log("SmartTable initialized", table);
+  filterState.load();
+
+  smartTableInstance = new SmartTable('#stats-table-wrapper', {
+    stateKey: 'statsTableState',
+    dataUrl: '/stats',
+    formSelector: '#stats-table-form',
+    tableBoxSelector: '#stats-table-box',
+    tableBodySelector: '#table-body',
+    paginationSelector: '#pagination',
+    scrollableTableSelector: '#scrollable-table',
+    scrollbarTopSelector: '#scrollbar-top',
+    perPageSelector: '[name="per_page"]',
+    searchSelector: '[name="search"]',
+    initialFilters: {
+      per_page: 20,
+      search: '',
+      page: 1,
+      scrollPosition: 0,
+      columns: [],
+    },
+  });
+
+  const countryFilter = new CountryFilter({
+    table: smartTableInstance,
+    checkboxSelector: 'input[name="countries"]',
+    name: 'countries',
+  });
+  smartTableInstance.registerFilterWidget('countryFilter', countryFilter);
+
+  const seasonFilter = new TomSelectFilter({
+    selector: '#season-select',
+    table: smartTableInstance,
+    filterName: 'seasons',
+    filterState,
+  });
+  seasonFilter.init();
+  smartTableInstance.registerFilterWidget('seasonFilter', seasonFilter);
+
+  const divisionFilter = new TomSelectFilter({
+    selector: '#division-select',
+    table: smartTableInstance,
+    filterName: 'divisions',
+    filterState,
+  });
+  divisionFilter.init();
+  smartTableInstance.registerFilterWidget('divisionFilter', divisionFilter);
+
+  const stageFilter = new TomSelectFilter({
+    selector: '#stage-select',
+    table: smartTableInstance,
+    filterName: 'stages',
+    filterState,
+  });
+  stageFilter.init();
+  smartTableInstance.registerFilterWidget('stageFilter', stageFilter);
+
+  const columnFilter = new MultiCheckboxFilter({
+    table: smartTableInstance,
+    checkboxSelector: '.column-checkbox',
+    filterName: 'columns',
+    filterState,
+    resetButtonSelector: '#reset-columns',
+  });
+  columnFilter.init();
+  smartTableInstance.registerFilterWidget('columnFilter', columnFilter);
+
+  enhanceTableSorting(smartTableInstance, {
+    indicatorSelector: '.sort-indicator',
+    ascClass: 'fa-sort-up',
+    descClass: 'fa-sort-down',
+    neutralClass: 'fa-sort',
+  });
+
+  console.log('SmartTable initialized', smartTableInstance);
 });
