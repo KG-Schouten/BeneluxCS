@@ -1,23 +1,24 @@
 {% from "macros/pagination_macros.html" import render_pagination %}
 
+<div class="scrollable-table">
 <table class="leaderboard-table table-hover">
     <thead>
         <tr>
             <th style="width: 5%">#</th>
             <th style="width: 30%">Player</th>
-            <th style="width: 15%; cursor: pointer;" class="sort-header" data-sort="{{ 'elo_asc' if sort == 'elo_desc' else 'elo_desc' }}">
-                ELO 
-                {% if sort == 'elo_desc' %}
-                    <i class="fas fa-sort-down"></i>
-                {% elif sort == 'elo_asc' %}
-                    <i class="fas fa-sort-up"></i>
+            <th style="width: 15%" class="sortable" data-field="elo">
+                ELO
+                {% if sort == 'elo' %}
+                    <i class="fas fa-sort-up sort-indicator"></i>
+                {% elif sort == '-elo' %}
+                    <i class="fas fa-sort-down sort-indicator"></i>
                 {% else %}
-                    <i class="fas fa-sort"></i>
+                    <i class="fas fa-sort sort-indicator"></i>
                 {% endif %}
             </th>
         </tr>
     </thead>
-    <tbody>
+    <tbody class="leaderboard-body">
         {% for player in data %}
         <tr>
             <td> {{player.index}}</td>
@@ -46,6 +47,9 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 
 <!-- Pagination + Info Row -->
+<div id="pagination">
 {{ render_pagination(page, per_page, total, 'players') }}
+</div>
