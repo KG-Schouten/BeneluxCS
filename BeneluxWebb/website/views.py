@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for
 
 views = Blueprint('views', __name__, template_folder='../templates')
 
@@ -9,12 +9,43 @@ def home_redirect():
 
 @views.route('/stats')
 def stats():
-    from database.db_down import gather_player_stats_esea
+    from database.db_down import gather_player_stats_esea, gather_esea_seasons_divisions
 
     try:
+        # Gather seasons and divisions for ESEA
+        seasons, divisions = gather_esea_seasons_divisions()
+        
+        # Country parameter handling
+        countries_str = request.args.get('countries')
+        countries = countries_str.split(',') if countries_str else []
+        if not countries:
+            countries = []
+            print("No countries provided, defaulting to all:", countries)
+        else:
+            print("Countries from request:", countries)
+        
+        # Season number handling
+        season_numbers_str = request.args.get('seasons')
+        season_numbers = season_numbers_str.split(',') if season_numbers_str else []
+        
+        # Division handling
+        divisions_str = request.args.get('divisions')
+        division_names = divisions_str.split(',') if divisions_str else []
+        
+        # Stage handling
+        stages_str = request.args.get('stages')
+        stage_names = stages_str.split(',') if stages_str else []
+        
         search = request.args.get('search', '').strip()
         page = max(1, request.args.get('page', type=int, default=1))
-        per_page = max(10, min(request.args.get('per_page', 25, type=int), 100))
+        per_page = request.args.get('per_page', type=int, default=25)
+        
+        # column handling
+        columns_perm = ['adr', 'k d ratio', 'hltv']
+        columns_str = request.args.get('columns')
+        columns = columns_str.split(',') if columns_str else []
+        
+        # Sort parameter handling
         sort = request.args.get('sort')
         sort_key = None
         sort_desc = False
@@ -24,34 +55,39 @@ def stats():
                 sort_key = sort[1:]
             else:
                 sort_key = sort
-
-        columns = request.args.getlist('columns')
-
+                
         data, stat_field_names = gather_player_stats_esea(
-            countries=[],
-            seasons=[],
-            divisions=[],
-            stages=[],
+            countries=countries,
+            seasons=season_numbers,
+            divisions=division_names,
+            stages=stage_names,
             timestamp_start=0,
             timestamp_end=0,
             team_ids=[],
             search_player_name=search
         )
 
-        if columns:
-            valid_columns = set(stat_field_names)
-            columns = [c for c in columns if c in valid_columns]
-            if not columns:
-                columns = stat_field_names
-        else:
-            columns = stat_field_names
-
-        if sort_key and sort_key in stat_field_names:
-            try:
-                data.sort(key=lambda x: x.get('avg_stats', {}).get(sort_key, 0), reverse=sort_desc)
-            except (KeyError, TypeError):
-                pass  # If sorting fails, continue with unsorted data
-
+        # Filter columns if specified
+        valid_columns = set(stat_field_names)
+        columns = [c for c in columns if c in valid_columns and c not in columns_perm]
+        if not columns:
+            columns = []
+        columns_final = columns_perm + columns
+        
+        # Sort data
+        if sort_key:
+            if sort_key in stat_field_names:
+                try:
+                    data.sort(key=lambda x: x.get('avg_stats', {}).get(sort_key, 0), reverse=sort_desc)
+                except (KeyError, TypeError):
+                    pass  # If sorting fails, continue with unsorted data
+            else:
+                try:
+                    data.sort(key=lambda x: x.get(sort_key, 0), reverse=sort_desc)
+                except (KeyError, TypeError):
+                    pass
+            
+        # Pagination
         total = len(data)
         start = (page - 1) * per_page
         end = start + per_page
@@ -64,10 +100,13 @@ def stats():
             html = render_template("partials/_stats_table.html",
                 data=paginated_data,
                 stat_field_names=columns,
+                columns_perm=columns_perm,
+                display_columns=columns_final,
                 page=page,
                 per_page=per_page,
                 total=total,
-                total_pages=total_pages
+                total_pages=total_pages,
+                sort=sort
             )
             return html
 
@@ -75,12 +114,18 @@ def stats():
         return render_template(
             "stats.html",
             data=paginated_data,
-            stat_field_names=columns,
+            stat_field_names=stat_field_names,
+            columns_perm=columns_perm,
+            display_columns=columns_final,
             search=search,
             page=page,
             total=total,
             per_page=per_page,
-            total_pages=total_pages
+            total_pages=total_pages,
+            sort=sort,
+            
+            seasons=seasons,
+            divisions=divisions
         )
 
     except Exception as e:
@@ -101,12 +146,17 @@ def stats():
             "stats.html",
             data=[],
             stat_field_names=[],
+            columns_perm=[],
+            display_columns=[],
             search='',
             page=1,
             total=0,
             per_page=20,
             total_pages=1,
-            error=str(e)
+            error=str(e),
+            
+            seasons=[],
+            divisions=[]
         )
 
 @views.route('/esea')
@@ -129,46 +179,59 @@ def esea_season_partial(season_number):
 def leaderboard():
     # Parse parameters with robust error handling
     try:
-        selected = request.args.getlist('countries')
-        # Check if countries is empty or not provided, default to all countries
-        if not selected:
-            selected = ['nl', 'be', 'lu']
-            print("No countries provided, defaulting to all:", selected)
+        # Country parameter handling
+        countries_str = request.args.get('countries')
+        countries = countries_str.split(',') if countries_str else []
+        if not countries:
+            countries = ['nl', 'be', 'lu']  # Default to Benelux countries
+            print("No countries provided, defaulting to all:", countries)
         else:
-            print("Countries from request:", selected)
+            print("Countries from request:", countries)
         
         search = request.args.get('search', '').strip()
         min_elo = request.args.get('min_elo', type=int, default=0)
         max_elo = request.args.get('max_elo', type=int, default=5000)
-        sort = request.args.get('sort', 'elo_desc')
         page = max(1, request.args.get('page', type=int, default=1))  # Ensure page is at least 1
         per_page = request.args.get('per_page', type=int, default=20)
         
+        # Sort parameter handling
+        sort = request.args.get('sort')
+        sort_key = None
+        sort_desc = False
+        if sort:
+            if sort.startswith('-'):
+                sort_desc = True
+                sort_key = sort[1:]
+            else:
+                sort_key = sort
+                
         # Ensure per_page is within reasonable bounds
         per_page = max(10, min(per_page, 100))
             
         # Get data from the database
         from database.db_down import gather_leaderboard
-        df_players = gather_leaderboard(
-            countries=selected,
+        data = gather_leaderboard(
+            countries=countries,
             search=search,
             min_elo=min_elo,
             max_elo=max_elo,
         )
         
-        # Apply sorting
-        reverse = sort == 'elo_desc'
-        df_players = df_players.sort_values(by='faceit_elo', ascending=not reverse)
+        # Sort data
+        sort_mapping = {
+            'elo': 'faceit_elo',
+        }
+        if sort_key:
+            try:
+                data.sort(key=lambda x: x.get(sort_mapping[sort_key], 0), reverse=sort_desc)
+            except (KeyError, TypeError):
+                pass  # If sorting fails, continue with unsorted data
         
         # Pagination
-        total = len(df_players)
+        total = len(data)
         start = (page - 1) * per_page
         end = start + per_page
-        paginated_df = df_players.iloc[start:end]
-        
-        data = paginated_df.to_dict(orient='records')
-        
-        # Calculate total pages for pagination
+        paginated_data = data[start:end]
         total_pages = ((total - 1) // per_page) + 1 if total > 0 else 1
 
         # Check if this is an AJAX request
@@ -177,7 +240,7 @@ def leaderboard():
         if is_ajax:
             return render_template(
                 "partials/_leaderboard_table.html",
-                data=data,
+                data=paginated_data,
                 sort=sort,
                 page=page,
                 per_page=per_page,
@@ -187,8 +250,7 @@ def leaderboard():
         
         return render_template(
             "leaderboard.html",
-            data=data,
-            selected=selected,
+            data=paginated_data,
             search=search,
             min_elo=min_elo,
             max_elo=max_elo,
@@ -215,7 +277,6 @@ def leaderboard():
         return render_template(
             "leaderboard.html", 
             data=[],
-            selected=['nl', 'be', 'lu'],
             search='',
             min_elo=0,
             max_elo=5000,
