@@ -1,28 +1,61 @@
-import { syncScrollbars } from "./stats.js";
+import { bindPaginationEvents } from './pagination.js';
 
 export class SmartTable {
     constructor(containerSelector, options = {}) {
+        this.options = {
+            formSelector: '#stats-table-form',           // Default form selector
+            tableBoxSelector: '#stats-table-box',        // Default table box selector
+            tableBodySelector: '#table-body',            // Default table body selector
+            paginationSelector: '#pagination',           // Default pagination selector
+            scrollableTableSelector: '#scrollable-table',// Default scrollable table selector
+            scrollbarTopSelector: '#scrollbar-top',      // Default scrollbar top selector
+            perPageSelector: '[name="per_page"]',        // Default per page selector
+            searchSelector: '[name="search"]',           // Default search selector
+            ...options                                   // Override with provided options
+        };
+        
         this.container = document.querySelector(containerSelector);
         if (!this.container) throw new Error(`Container ${containerSelector} not found`);
 
-        // Look for form in the document, not just within container
-        this.form = document.querySelector('#stats-table-form');
-        this.tbody = this.container.querySelector('#table-body');
-        this.paginationContainer = document.getElementById('pagination');
-        this.perPageSelect = this.form?.querySelector('[name="per_page"]');
-        this.searchInput = this.form?.querySelector('[name="search"]');
+        // Find the form either within the container or by selector
+        this.form = options.form || 
+                    (this.options.formSelector.startsWith('#') ? 
+                     document.querySelector(this.options.formSelector) : 
+                     this.container.querySelector(this.options.formSelector));
+        
+        // The table-specific container that will be updated with AJAX responses
+        this.tableContainer = this.container.querySelector(this.options.tableBoxSelector);
+        if (!this.tableContainer) throw new Error(`Table container ${this.options.tableBoxSelector} not found`);
+        
+        this.tbody = this.container.querySelector(this.options.tableBodySelector);
+        this.paginationContainer = document.querySelector(this.options.paginationSelector);
+        this.perPageSelect = this.form?.querySelector(this.options.perPageSelector);
+        this.searchInput = this.form?.querySelector(this.options.searchSelector);
+        
+        // Log what was found for debugging
+        console.log("SmartTable init - selectors found:", {
+            container: this.container,
+            form: this.form,
+            tableContainer: this.tableContainer,
+            tbody: this.tbody,
+            pagination: this.paginationContainer,
+            perPage: this.perPageSelect,
+            search: this.searchInput
+        });
 
         this.filters = {
-            search: '',
             page: 1,
             per_page: parseInt(this.perPageSelect?.value || 25),
-            sort: null,
-            columns: [], // dynamically managed
-            scrollPosition: 0, // Add scroll position tracking
+            scrollPosition: 0,
             ...options.initialFilters,
-        };        this.stateKey = options.stateKey || 'smartTableState';
+        };
+
+        this.stateKey = options.stateKey || 'smartTableState';
         this.dataUrl = options.dataUrl || window.location.pathname;
-        this.isRestoringScroll = false; // Flag to prevent scroll event feedback loops
+        this.isRestoringScroll = false;
+        
+        // Store custom filter widgets
+        this.filterWidgets = {};
 
         this.init();
     }
@@ -33,51 +66,100 @@ export class SmartTable {
         console.log("SmartTable init - perPageSelect:", this.perPageSelect);
         
         this.loadState();
-        this.bindEvents();
+        this.bindFilterInputs();
+        this.bindResetButton();
         this.bindSortEvents();
         this.fetchData();
     }
 
-    bindEvents() {
-        if (this.searchInput) {
-            console.log("Binding search input events");
-            let timer;
-            this.searchInput.addEventListener('input', () => {
-                console.log("Search input changed:", this.searchInput.value);
-                clearTimeout(timer);
-                timer = setTimeout(() => {
-                    this.filters.search = this.searchInput.value.trim();
-                    this.filters.page = 1;
-                    this.filters.scrollPosition = 0; // Reset scroll on search
-                    this.fetchData();
-                }, 300);
-            });
-        } else {
-            console.log("No search input found");
+    bindFilterInputs() {
+        if (!this.form) {
+            console.warn('No form found for filter inputs');
+            return;
         }
 
-        if (this.perPageSelect) {
-            console.log("Binding per page select events");
-            this.perPageSelect.addEventListener('change', () => {
-                console.log("Per page changed:", this.perPageSelect.value);
-                this.filters.per_page = parseInt(this.perPageSelect.value);
-                this.filters.page = 1;
-                this.filters.scrollPosition = 0; // Reset scroll on per page change
+        console.log('Binding filter inputs on form:', this.form);
+        const inputs = this.form.querySelectorAll('[name]');
+
+        inputs.forEach(input => {
+            const name = input.name;
+
+            const updateFilter = () => {
+                let value;
+                if (input.type === 'checkbox') {
+                    // Generalized handling for multi-checkbox filters
+                    const checkboxes = this.form.querySelectorAll(`input[name="${name}"]`);
+                    const checkedValues = Array.from(checkboxes)
+                        .filter(cb => cb.checked)
+                        .map(cb => cb.value);
+
+                    // If there are multiple checkboxes with the same name, treat it as a multi-checkbox filter
+                    value = checkboxes.length > 1 ? checkedValues : input.checked;
+                } else if (input.tagName === 'SELECT' && input.multiple) {
+                    value = Array.from(input.selectedOptions).map(opt => opt.value);
+                } else {
+                    value = input.value;
+                }
+
+                this.filters[name] = value;
+                this.filters.page = 1; // Reset page on filter change
+                this.filters.scrollPosition = 0; // Reset scroll position
+                console.log(`Filter updated: ${name}=${JSON.stringify(value)}`, JSON.stringify(this.filters));
+                this.saveState();
                 this.fetchData();
-            });
-        } else {
-            console.log("No per page select found");
-        }
+            };
+
+            if (input.type === 'text' || input.type === 'search') {
+                let timer;
+                input.addEventListener('input', () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(updateFilter, 300);
+                    console.log(`Input event on ${name}, timer set`);
+                });
+            } else {
+                input.addEventListener('change', () => {
+                    console.log(`Change event on ${name}`);
+                    updateFilter();
+                });
+            }
+        });
+    }
+
+    bindResetButton() {
+        const resetBtn = this.form?.querySelector('#reset-filters-btn');
+        if (!resetBtn) return;
+
+        resetBtn.addEventListener('click', () => {
+            // Reset form inputs
+            this.form.reset();
+
+            // Reinitialize filters from defaults
+            this.filters = {
+                page: 1,
+                per_page: parseInt(this.perPageSelect?.value || 25),
+                scrollPosition: 0
+            };
+
+            // Reapply initial filter values if needed
+            if (this.options?.initialFilters) {
+                Object.assign(this.filters, this.options.initialFilters);
+            }
+
+            this.saveState();
+            this.fetchData();
+        });
     }
 
     bindSortEvents() {
-        console.log("Binding sort events");
+        console.log("Binding sort events (default implementation)");
+
         this.container.querySelectorAll('.sortable').forEach(header => {
+            const field = header.dataset.field;
+
             header.addEventListener('click', () => {
-                const field = header.dataset.field;
-                console.log("Sort clicked on field:", field);
                 if (!field) return;
 
+                // Update sorting filter
                 if (this.filters.sort === field) {
                     this.filters.sort = `-${field}`;
                 } else if (this.filters.sort === `-${field}`) {
@@ -85,30 +167,72 @@ export class SmartTable {
                 } else {
                     this.filters.sort = field;
                 }
+
                 this.filters.page = 1;
-                // Don't reset scroll position on sort - keep current position
-                console.log("New sort:", this.filters.sort);
+
+                // Update header classes
+                this.container.querySelectorAll('.sortable').forEach(h => {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                });
+
+                if (this.filters.sort === field) {
+                    header.classList.add('sort-asc');
+                } else if (this.filters.sort === `-${field}`) {
+                    header.classList.add('sort-desc');
+                }
+
                 this.fetchData();
             });
         });
+
+        // On load, apply correct sort classes based on current sort filter
+        const sortField = this.filters.sort;
+        if (sortField) {
+            const field = sortField.replace('-', '');
+            const header = this.container.querySelector(`.sortable[data-field="${field}"]`);
+            if (header) {
+                if (sortField.startsWith('-')) {
+                    header.classList.add('sort-desc');
+                } else {
+                    header.classList.add('sort-asc');
+                }
+            }
+        }
+        
+        // Note: This default implementation can be overridden by sort-indicators.js
+        // using the enhanceTableSorting() function
     }
 
     buildQuery() {
         const params = new URLSearchParams();
 
-        if (this.filters.search) params.set('search', this.filters.search);
-        if (this.filters.sort) params.set('sort', this.filters.sort);
-        if (this.filters.per_page) params.set('per_page', this.filters.per_page);
-        if (this.filters.page) params.set('page', this.filters.page);
+        for (const key in this.filters) {
+            const value = this.filters[key];
 
-        // columns omitted for now or can add as needed
+            // Skip internal filter state properties that shouldn't be in the URL
+            if (key === 'scrollPosition' || key === 'isRestoringScroll') {
+                continue;
+            }
 
-        return params.toString();
+            if (Array.isArray(value)) {
+                // Convert array to comma-separated string
+                const joined = value.join(',');
+                params.set(key, joined);
+                console.log(`Added array param: ${key}=${joined}`);
+            } else if (value !== null && value !== undefined && value !== '') {
+                params.set(key, value);
+                console.log(`Added param: ${key}=${value}`);
+            }
+        }
+
+        const queryString = params.toString();
+        console.log(`Built query string: ${queryString}`);
+        return queryString;
     }
 
     saveScrollPosition() {
-        const scrollableTable = document.getElementById('scrollable-table');
-        const scrollbarTop = document.getElementById('scrollbar-top');
+        const scrollableTable = document.querySelector(this.options.scrollableTableSelector);
+        const scrollbarTop = document.querySelector(this.options.scrollbarTopSelector);
         
         if (scrollableTable) {
             this.filters.scrollPosition = scrollableTable.scrollLeft;
@@ -120,8 +244,8 @@ export class SmartTable {
     }
 
     restoreScrollPosition() {
-        const scrollableTable = document.getElementById('scrollable-table');
-        const scrollbarTop = document.getElementById('scrollbar-top');
+        const scrollableTable = document.querySelector(this.options.scrollableTableSelector);
+        const scrollbarTop = document.querySelector(this.options.scrollbarTopSelector);
         
         if (this.filters.scrollPosition && scrollableTable) {
             // Disable scroll event tracking temporarily to prevent feedback loops
@@ -152,12 +276,11 @@ export class SmartTable {
 
         const query = this.buildQuery();
         const url = `${this.dataUrl}?${query}`;
+        history.replaceState(null, '', url);
         console.log("Fetching URL:", url);
 
-        const container = this.container.querySelector('#stats-table-box');
-        console.log("Container found:", container);
-
         try {
+            console.log("Sending AJAX request to:", url);
             const res = await fetch(url, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
@@ -167,43 +290,34 @@ export class SmartTable {
             const html = await res.text();
             console.log("Response HTML length:", html.length);
 
-            if (container) {
-                container.innerHTML = html;
+            // Update ONLY the table container's content with the fetched HTML, not the entire wrapper
+            this.tableContainer.innerHTML = html;
+            console.log("Table container updated with new HTML");
 
-                // Rebind events after DOM replaced
-                this.bindSortEvents();
-                this.bindPaginationEvents();
+            // Rebind events after DOM replaced
+            this.bindSortEvents();
+            
+            // Rebind pagination events
+            bindPaginationEvents('.pagination-link', (page) => {
+                this.filters.page = page;
+                this.saveState();
+                console.log("Pagination link clicked, new page:", page);
+                this.fetchData(); // Call this instance's fetchData method
+            });
 
-                // Import and call syncScrollbars, then restore position
-                const { syncScrollbars } = await import('./stats.js');
-                syncScrollbars();
-                
-                // Restore scroll position after everything is set up
-                setTimeout(() => {
-                    this.restoreScrollPosition();
-                }, 10); // Minimal delay to ensure syncScrollbars is complete
-            }
+            // // Import and call syncScrollbars with the proper selectors, then restore position
+            // const { syncScrollbars } = await import('./stats.js');
+            // syncScrollbars(this.options.scrollableTableSelector, this.options.scrollbarTopSelector);
+            
+            // Restore scroll position after everything is set up
+            setTimeout(() => {
+                this.restoreScrollPosition();
+            }, 10); // Minimal delay to ensure syncScrollbars is complete
+            
         } catch (err) {
             console.error('Fetch error:', err);
-            if (container) {
-                container.innerHTML = `<div class="text-danger">Error: ${err.message}</div>`;
-            }
+            this.tableContainer.innerHTML = `<div class="text-danger">Error: ${err.message}</div>`;
         }
-    }
-
-    bindPaginationEvents() {
-        if (!this.paginationContainer) return;
-
-        this.paginationContainer.querySelectorAll('.pagination-link').forEach(link => {
-            link.addEventListener('click', e => {
-                e.preventDefault();
-                const page = parseInt(link.dataset.page);
-                if (!isNaN(page)) {
-                    this.filters.page = page;
-                    this.fetchData();
-                }
-            });
-        });
     }
 
     saveState() {
@@ -223,6 +337,9 @@ export class SmartTable {
                 if (this.searchInput) this.searchInput.value = this.filters.search || '';
                 if (this.perPageSelect) this.perPageSelect.value = this.filters.per_page || 25;
                 
+                // Update filter widgets values based on current filters
+                this.updateFilterWidgetsFromState();
+                
                 // Restore scroll position after a minimal delay to ensure DOM is ready
                 setTimeout(() => {
                     this.restoreScrollPosition();
@@ -231,5 +348,36 @@ export class SmartTable {
                 console.warn('Invalid saved state');
             }
         }
+    }
+    
+    /**
+     * Registers a filter widget with this SmartTable instance
+     * @param {string} name - Name to identify the widget
+     * @param {object} widget - Filter widget instance
+     */
+    registerFilterWidget(name, widget) {
+        if (!widget || typeof widget.init !== 'function') {
+            console.error(`Invalid widget provided for name "${name}"`);
+            return;
+        }
+        
+        this.filterWidgets[name] = widget;
+        console.log(`Registered filter widget "${name}"`, widget);
+    }
+    
+    /**
+     * Updates all filter widgets from the current state
+     */
+    updateFilterWidgetsFromState() {
+        Object.values(this.filterWidgets).forEach(widget => {
+            if (widget && typeof widget.setValue === 'function') {
+                // Each widget should know how to extract its value from filters
+                try {
+                    widget.setValue(widget.getValue());
+                } catch (e) {
+                    console.warn('Error updating widget from state:', e);
+                }
+            }
+        });
     }
 }
