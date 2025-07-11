@@ -5,6 +5,8 @@ body.light-mode {
   --background: #eeeeee;
   --foreground: #121212;
   --card-bg: #e4e5f1;
+  --card-bg-secondary: #f0f1f5;
+  --card-bg-highlight: #f8f9fa;
   --border: #d2d3db;
   --accent: #9394a5; 
   --muted: #6c757d;

@@ -5,6 +5,8 @@ body.dark-mode {
   --background: #121212;
   --foreground: #e0e0e0;
   --card-bg: #1e1e1e;
+  --card-bg-secondary: #2c2c2c;
+  --card-bg-highlight: #333;
   --border: #444;
   --accent: #888d91;
   --muted: #8a8a8a;
