@@ -23,17 +23,27 @@
         <tr>
             <td> {{player.index}}</td>
             <td>
-                <div class="d-flex align-items-center">
-                    <!-- Avatar -->
-                    <img src="{{ player['avatar'] if player['avatar'] else url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-                         alt="avatar" width="24" height="24" class="rounded-circle me-2">
+                <a class="player-link" href="https://www.faceit.com/en/players/{{ player['player_name'] }}">
+                    <div class="d-flex align-items-center">
+                        <!-- Avatar -->
+                        <img src="{{ player['avatar'] if player['avatar'] else url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
+                            alt="avatar" width="24" height="24" class="rounded-circle me-2">
 
-                    <!-- Country flag -->
-                    <img src="{{ url_for('static', filename='img/flags/' ~ player['country']|lower ~ '.png') }}"
-                         alt="{{ player['country'] }}" width="20" class="me-2">
+                        <!-- Country flag -->
+                        <img src="{{ url_for('static', filename='img/flags/' ~ player['country']|lower ~ '.png') }}"
+                            alt="{{ player['country'] }}" width="20" class="me-2">
 
-                    <span>{{ player['player_name'] }}</span>
-                </div>
+                        <!-- Player name -->
+                        <div class="col">
+                            <span>{{ player['player_name'] }}</span>
+                            {% if player['aliases'] %}
+                                <span class="text-muted small">
+                                    [{{ player['aliases'] }}]
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
             </td>
             <td>
                 {{ player['faceit_elo'] }}
