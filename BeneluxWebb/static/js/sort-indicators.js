@@ -112,11 +112,11 @@ export function enhanceTableSorting(table, config = {}) {
 
         // Update sorting filter
         if (this.filters.sort === field) {
-          this.filters.sort = `-${field}`;
-        } else if (this.filters.sort === `-${field}`) {
           this.filters.sort = null;
-        } else {
+        } else if (this.filters.sort === `-${field}`) {
           this.filters.sort = field;
+        } else {
+          this.filters.sort = `-${field}`;
         }
 
         this.filters.page = 1;
