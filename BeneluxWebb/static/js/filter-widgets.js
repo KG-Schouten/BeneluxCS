@@ -262,6 +262,11 @@ export class MultiCheckboxFilter extends FilterWidget {
     this.filterState = options.filterState || null;
     this.checkboxes = document.querySelectorAll(this.checkboxSelector);
     this.resetButtonSelector = options.resetButtonSelector || null;
+    this.onCheckboxChange = this.updateFilter.bind(this);
+    this.onResetClick = this.resetFilter.bind(this);
+    this.toggleInputId = options.toggleInputId || 'toggle-check';
+    this.dropdownWrapperSelector = options.dropdownWrapperSelector || '.dropdown-wrapper';
+    this._onDocumentClick = this._handleOutsideClick.bind(this);
     this.init();
   }
 
@@ -274,22 +279,30 @@ export class MultiCheckboxFilter extends FilterWidget {
 
     // Add event listeners to checkboxes
     this.checkboxes.forEach(cb => {
-      cb.addEventListener('change', () => {
-        this.updateFilter();
-      });
+      cb.addEventListener('change', this.onCheckboxChange);
     });
 
-    // Bind reset button if provided
     if (this.resetButtonSelector) {
       const resetButton = document.querySelector(this.resetButtonSelector);
       if (resetButton) {
-        resetButton.addEventListener('click', () => {
-          this.resetFilter();
-        });
+        resetButton.addEventListener('click', this.onResetClick);
       }
     }
+
+    // Handle outside clicks to close dropdown
+    document.addEventListener('click', this._onDocumentClick);
   }
 
+  _handleOutsideClick(event) {
+    const wrapper = document.querySelector(this.dropdownWrapperSelector);
+    const toggleInput = document.getElementById(this.toggleInputId);
+
+    if (!wrapper || !toggleInput) return;
+
+    if (!wrapper.contains(event.target) && toggleInput.checked) {
+      toggleInput.checked = false;
+    }
+  }
   updateFilter() {
     const checkedValues = Array.from(
       document.querySelectorAll(this.checkboxSelector + ':checked')
@@ -347,12 +360,15 @@ export class MultiCheckboxFilter extends FilterWidget {
 
   destroy() {
     this.checkboxes.forEach(cb => {
-      cb.removeEventListener('change', this.updateFilter);
+      cb.removeEventListener('change', this.onCheckboxChange);
     });
+
     const resetButton = document.querySelector(this.resetButtonSelector);
     if (resetButton) {
-      resetButton.removeEventListener('click', this.resetFilter);
+      resetButton.removeEventListener('click', this.onResetClick);
     }
+
+    document.removeEventListener('click', this._onDocumentClick);
   }
 }
 
