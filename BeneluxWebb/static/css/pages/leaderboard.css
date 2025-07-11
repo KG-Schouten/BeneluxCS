@@ -10,14 +10,6 @@
     gap: 1rem;
 }
 
-/* Make filter panel sticky */
-.filter-sticky {
-    position: sticky;
-    top: 1rem; /* distance from top of viewport */
-    z-index: 100; /* ensures it stays above background layers */
-}
-
-
 /* === ENTRIES DROPDOWN === */
 .entries-selector {
     display: flex;
@@ -88,32 +80,36 @@
     opacity: 1; /* Ensures placeholder is fully opaque */
 }
 
-
-/* === Accordion country filter === */
-.country-filter {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border);
-    color: var(--form-text);
-    border-radius: 0.375rem;
-    overflow: hidden;
+/* === Filter panel (Left) === */
+.filter-sticky {
+  position: sticky;
+  top: 2rem;
+  z-index: 100;
 }
 
-.country-filter .accordion-button {
-    background-color: var(--form-bg);
-    color: var(--form-text);
-    font-weight: 600;
-    border: none;
-    box-shadow: none;
+.filter-accordion .accordion-item {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--form-text);
+  overflow: visible;
 }
 
-.country-filter .accordion-button:not(.collapsed) {
-    background-color: var(--btn-hover-bg);
-    color: var(--form-text);
+.filter-accordion .accordion-button {
+  background-color: var(--form-bg);
+  color: var(--form-text);
+  font-weight: 600;
+  border: none;
+  box-shadow: none;
 }
 
-.country-filter .accordion-body {
-    background-color: var(--form-bg);
-    padding: 1rem;
+.filter-accordion .accordion-button:not(.collapsed) {
+  background-color: var(--btn-hover-bg);
+  color: var(--form-text);
+}
+
+.filter-accordion .accordion-body {
+  background-color: var(--form-bg);
+  padding: 1rem;
 }
 
 .flag-toggle {
@@ -141,34 +137,6 @@
     object-fit: cover;
     filter: var(--score-logo-filter); /* Use your existing theme filter */
     border-radius: 2px;
-}
-
-
-/* === Accordion ELO filter === */
-.elo-filter {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border);
-    color: var(--form-text);
-    border-radius: 0.375rem;
-    overflow: hidden;
-}
-
-.elo-filter .accordion-button {
-    background-color: var(--form-bg);
-    color: var(--form-text);
-    font-weight: 600;
-    border: none;
-    box-shadow: none;
-}
-
-.elo-filter .accordion-button:not(.collapsed) {
-    background-color: var(--btn-hover-bg);
-    color: var(--form-text);
-}
-
-.elo-filter .accordion-body {
-    background-color: var(--form-bg);
-    padding: 1rem;
 }
 
 .elo-value-pill {
@@ -225,7 +193,6 @@
     display: none;
 }
 
-
 /* === TEXT & HEADERS === */
 .text-muted {
     color: #383838 !important;
@@ -242,7 +209,7 @@
     margin-left: 6px;
     font-size: 0.75em;
     vertical-align: middle;
-    color: #888;
+    color: var(--primary);
 }
 
 
@@ -299,6 +266,20 @@
 .leaderboard-table img {
     max-height: 24px;
     object-fit: cover;
+}
+
+/* Sticky table player-link */
+.player-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--form-text);
+  text-decoration: none;
+}
+.player-link:hover {
+  text-decoration: underline;
+  text-shadow: var(--primary) 0 0 10px;
+  font-weight: bold;
 }
 
 /* Info Text */
