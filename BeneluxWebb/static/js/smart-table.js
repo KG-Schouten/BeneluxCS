@@ -57,6 +57,9 @@ export class SmartTable {
         // Store custom filter widgets
         this.filterWidgets = {};
 
+        // Add support for after-render callbacks
+        this.afterRenderCallbacks = [];
+
         this.init();
     }
 
@@ -314,6 +317,15 @@ export class SmartTable {
                 this.restoreScrollPosition();
             }, 10); // Minimal delay to ensure syncScrollbars is complete
             
+            // Trigger afterRender callbacks
+            this.afterRenderCallbacks.forEach(cb => {
+                try {
+                    cb();
+                } catch (e) {
+                    console.error('afterRender callback error:', e);
+                }
+            });
+
         } catch (err) {
             console.error('Fetch error:', err);
             this.tableContainer.innerHTML = `<div class="text-danger">Error: ${err.message}</div>`;
@@ -379,5 +391,15 @@ export class SmartTable {
                 }
             }
         });
+    }
+
+    /**
+    * Registers a callback to run after table render completes
+    * @param {Function} callback 
+    */
+    onAfterRender(callback) {
+        if (typeof callback === 'function') {
+            this.afterRenderCallbacks.push(callback);
+        }
     }
 }
