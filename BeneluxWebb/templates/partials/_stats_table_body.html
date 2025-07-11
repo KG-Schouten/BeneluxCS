@@ -3,27 +3,64 @@
         <table class="stats-table scrollable-table smart-table">
             <thead>
                 <tr>
-                    {% for field in display_columns %}
-                        <th class="text-center sortable" data-field="{{ field }}" data-column="{{ field }}">
-                            {{ field }}
-                            {% if sort == field %}
-                                <i class="fas fa-sort-up sort-indicator"></i>
-                            {% elif sort == '-' ~ field %}
-                                <i class="fas fa-sort-down sort-indicator"></i>
-                            {% else %}
-                                <i class="fas fa-sort sort-indicator"></i>
-                            {% endif %}
-                        </th>
+                    {% for field in columns_perm %}
+                    <th class="text-center sortable" data-field="{{ field }}" data-column="{{ field }}">
+                        {{ columns_mapping[field]['name'] }}
+                        {% if sort == field %}
+                            <i class="fas fa-sort-up sort-indicator"></i>
+                        {% elif sort == '-' ~ field %}
+                            <i class="fas fa-sort-down sort-indicator"></i>
+                        {% else %}
+                            <i class="fas fa-sort sort-indicator"></i>
+                        {% endif %}
+                    </th>
+                    {% endfor %}
+                    {% for field in columns_filter %}
+                    <th class="text-center sortable" data-field="{{ field }}" data-column="{{ field }}">
+                        {{ columns_mapping[field]['name'] }}
+                        {% if sort == field %}
+                            <i class="fas fa-sort-up sort-indicator"></i>
+                        {% elif sort == '-' ~ field %}
+                            <i class="fas fa-sort-down sort-indicator"></i>
+                        {% else %}
+                            <i class="fas fa-sort sort-indicator"></i>
+                        {% endif %}
+                    </th>
                     {% endfor %}
                 </tr>
             </thead>
             <tbody id="table-body">
                 {% for player in data %}
-                <tr>
-                    {% for field in display_columns %}
-                    <td class="text-center">
-                        {{ player['avg_stats'][field]|round(2) if field in player['avg_stats'] else '-' }}
-                    </td>
+                <tr class="player-row" data-row="{{ loop.index0 }}">
+                    {% for field in columns_perm %}
+                        {% set value = player['avg_stats'][field] if field in player['avg_stats'] else None %}
+                        {% set rounded = value|round(columns_mapping[field]['round']) if value is not none else '-' %}
+                        <td class="numeric-cell
+                            {% if value is not none %}
+                                {% if 'good' in columns_mapping[field] and value >= columns_mapping[field]['good'] %}
+                                    good-value
+                                {% elif 'bad' in columns_mapping[field] and value <= columns_mapping[field]['bad'] %}
+                                    bad-value
+                                {% endif %}
+                            {% endif %}
+                        ">
+                            {{ rounded }}
+                        </td>
+                    {% endfor %}
+                    {% for field in columns_filter %}
+                        {% set value = player['avg_stats'][field] if field in player['avg_stats'] else None %}
+                        {% set rounded = value|round(columns_mapping[field]['round']) if value is not none else '-' %}
+                        <td class="numeric-cell
+                            {% if value is not none %}
+                                {% if 'good' in columns_mapping[field] and value >= columns_mapping[field]['good'] %}
+                                    good-value
+                                {% elif 'bad' in columns_mapping[field] and value <= columns_mapping[field]['bad'] %}
+                                    bad-value
+                                {% endif %}
+                            {% endif %}
+                        ">
+                            {{ rounded }}
+                        </td>
                     {% endfor %}
                 </tr>
                 {% endfor %}
