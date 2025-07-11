@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     perPageSelector: '[name="per_page"]',
     searchSelector: '[name="search"]',
     initialFilters: {
-      per_page: 20,
+      per_page: 10,
       search: '',
       page: 1,
       scrollPosition: 0,
@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     filterName: 'columns',
     filterState,
     resetButtonSelector: '#reset-columns',
+    toggleInputId: 'toggleVendors',
+    dropdownWrapperSelector: '.filter-dropdown-wrapper',
   });
   columnFilter.init();
   smartTableInstance.registerFilterWidget('columnFilter', columnFilter);
@@ -86,6 +88,37 @@ document.addEventListener('DOMContentLoaded', () => {
     ascClass: 'fa-sort-up',
     descClass: 'fa-sort-down',
     neutralClass: 'fa-sort',
+  });
+
+  function enableRowHighlighting() {
+    document.querySelectorAll('.player-row').forEach(row => {
+      row.addEventListener('mouseenter', () => {
+        const index = row.dataset.row;
+        document.querySelectorAll(`.player-row[data-row="${index}"]`).forEach(r => {
+          r.classList.add('highlight-row');
+        });
+      });
+      row.addEventListener('mouseleave', () => {
+        const index = row.dataset.row;
+        document.querySelectorAll(`.player-row[data-row="${index}"]`).forEach(r => {
+          r.classList.remove('highlight-row');
+        });
+      });
+    });
+  }
+  
+  smartTableInstance.onAfterRender(() => {
+    document.querySelectorAll('.player-row').forEach(row => {
+      const index = row.dataset.row;
+      row.addEventListener('mouseenter', () => {
+        document.querySelectorAll(`.player-row[data-row="${index}"]`)
+          .forEach(r => r.classList.add('highlight-row'));
+      });
+      row.addEventListener('mouseleave', () => {
+        document.querySelectorAll(`.player-row[data-row="${index}"]`)
+          .forEach(r => r.classList.remove('highlight-row'));
+      });
+    });
   });
 
   console.log('SmartTable initialized', smartTableInstance);
