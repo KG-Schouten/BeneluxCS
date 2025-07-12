@@ -1,77 +1,339 @@
 /* esea.css */
 :root {
-  --match-info-box-height: 30px;
+  /* Match Info Box */
+  --match-info-box-height: clamp(1.5rem, 2vw, 2rem);
   --match-info-box-width: 80%;
+
+  /* Layout Ratios */
+  --main-players-box-width: 85%;
+  --sub-players-box-width: 15%;
+  --team-avatar-width: auto;
+  --team-avatar-height: 100%;
+  --main-player-avatar-height: 40%;
+  --score-box-width: 100px;
+  --stage-logo-width: 38px;
+
+  /* Match info team width */
+  --match-info-team-width: 40%;
+  --match-info-time-width: 20%;
+  --match-score-width: 60px;
+
+  /* Spacing & sizing */
+  --gap-small: 5px;
+  --border-radius-small: 3px;
 }
+
+/* === ESEA Content Wrapper === */
+.esea-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 1300px;
+  margin: auto;
+  background-color: var(--background);
+}
+
+/* === ESEA Season navbar === */
+.season-nav {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  margin-top: 20px;
+  padding-inline: 10px;}
 
 /* === Division Separator Line === */
 .division-separator {
+  display: flex;
+  flex-direction: row;
+  justify-content: between;
   border-bottom: 2px solid var(--secondary);
-  padding-bottom: 10px;
+  /* padding-bottom: 10px; */
   margin-bottom: 20px;
   width: 100%;
 }
 
-
 /* === Team Card Styles === */
 .team-card {
+  display: flex;
+  flex-direction: column;
+  
+  width: 100%;
   max-width: 1500px;
+
+  height: auto;
   position: relative;
   margin: 1rem auto;
+  padding: .5vw;
   background-color: var(--card-bg);
   color: var(--foreground);
   border: var(--border) 1px solid;
-  padding: 10px;
+}
+
+.team-card-visible {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 150px;
 }
 
 .team-card-body {
   display: flex;
+  height: 100%;
+  width: 100%;
   flex-direction: row;
   align-items: stretch;
-  gap: 1rem;
+  gap: .5rem;
 }
 
-.team-card .team-avatar {
+.team-card .team-card-body .team-avatar {
   display: flex;
   align-items: center;
+  height: 100%;
 }
 
-.team-avatar img {
-  width: 120px;
-  height: 120px;
+.team-card .team-card-body .team-avatar img {
+  width: var(--team-avatar-width);
+  height: var(--team-avatar-height);
+  aspect-ratio: 1 / 1;
   border-radius: 3px;
   object-fit: cover;
 }
 
-/* Team link */
+
+/* === Middle box team card === */
+.team-card-middle {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
+  text-align: center;
+  gap: 10px;
+}
+
+/* Team name styles */
+.team-card-name {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary);
+
+  /* border: green 3px solid; */
+}
+
+h3, h4, .team-link {
+  font-size: 1.5rem;
+}
+
 .team-link {
   text-decoration: none;
   color: var(--primary);
   transition: color 0.3s ease;
 }
-
-/* Team link hover */
 .team-link:hover {
   text-decoration: underline;
   color: var(--accent);
 }
 
-/* Score box */
-.stage-box {
-  border: 2px solid var(--secondary);
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin: 5px;
+
+/* === Team Players === */
+.team-card-players {
+  display: flex;
+  flex-direction: row;
+
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  /* border: 3px solid white; */
+}
+
+.main-players-box {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  width: var(--main-players-box-width);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+
+  /* border: yellow 2px solid; */
+}
+
+.main-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main-player-avatar {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--main-player-avatar-height);
+  min-height: 0;
+  overflow: hidden;
+
+  margin-top: 5px;
+
+  position: relative;  /* to enable absolute positioning if needed */
+
+  /* border: 1px solid red; */
+}
+.main-player-avatar img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 100%;
+  width: auto;  /* maintain aspect ratio */
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  object-fit: cover;
+  max-width: 100%;
+}
+
+.main-player-name {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  text-align: center;
+
+  /* border: 1px solid blue; */
+}
+.main-player-name strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-size: clamp(0.75rem, 1.5vw, 1rem);
+
+}
+.main-player-name img {
+  width: clamp(14px, 2vw, 18px);
+  height: clamp(10px, 1.5vw, 12px);
+  object-fit: contain;
+}
+
+
+/* === Sub player box === */
+.sub-players-box {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+  width: calc(100% - var(--main-players-box-width));
+  border-left: 1px solid var(--secondary);
+  margin-left: 20px;
+  padding-left: 10px;
+  box-sizing: border-box;
+
+  /* border: purple 2px solid; */
+}
+
+.sub-player {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  flex-grow: 0;
+  height: 20px;
+  margin-bottom: 2px;
+  gap: 5px;
+
+  /* border: orange 1px solid; */
+}
+.sub-player span {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: clamp(0.6rem, 1.2vw, 1rem);
+}
+.sub-player img {
+  width: clamp(14px, 2vw, 18px);
+  height: clamp(10px, 1.5vw, 12px);
+  object-fit: contain;
+}
+
+
+/* Score box */
+.score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+
+  /* width: var(--score-box-width); */
+}
+
+.stage-box {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  
+  width: var(--score-box-width);
+
+  border: 2px solid var(--secondary);
+  border-radius: 8px;
   gap: 10px;
-  position: relative;
+
   z-index: 10;
   cursor: pointer;
   background-color: transparent;
   color: var(--foreground);
   transition: background-color 0.3s ease;
 }
+.stage-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stage-logo img {
+  width: var(--stage-logo-width);
+  height: auto;
+  object-fit: contain;
+
+  filter: var(--score-logo-filter);
+}
+
+.stage-score {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--foreground);
+
+  width: calc(100% - var(--stage-logo-width));
+  height: 100%;
+
+  gap: 2px;
+}
+
 
 
 /* === Team Details Collapsible Area === */
@@ -157,7 +419,7 @@
   align-items: center;
   flex-direction: row;
 
-  width: 40%;
+  width: var(--match-info-team-width);
   height: 100%;
 
   gap: 5px;
@@ -193,7 +455,7 @@
   align-items: center;
 
   height: 100%;
-  width: 60px;
+  width: var(--match-score-width);
   font-size: 1rem;
   font-weight: bold;
 
@@ -208,7 +470,7 @@
   align-items: center;
 
   height: 100%;
-  width: 20%;
+  width: var(--match-info-time-width);
   font-size: .8rem;
   font-weight: bold;
 
