@@ -23,7 +23,7 @@
         <tr>
             <td> {{player.index}}</td>
             <td>
-                <a class="player-link" href="https://www.faceit.com/en/players/{{ player['player_name'] }}">
+                <a class="player-link" href="https://www.faceit.com/en/players/{{ player['player_name'] }}" target="_blank">
                     <div class="d-flex align-items-center">
                         <!-- Avatar -->
                         <img src="{{ player['avatar'] if player['avatar'] else url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
@@ -47,11 +47,6 @@
             </td>
             <td>
                 {{ player['faceit_elo'] }}
-                <a href="https://www.faceit.com/en/players/{{ player['player_name'] }}" target="_blank"
-                   aria-label="Faceit profile for {{ player['player_name'] }}">
-                    <img src="{{ url_for('static', filename='img/faceit/faceit_icon.png') }}" 
-                         alt="Faceit" width="20" class="ms-2">
-                </a>
             </td>
         </tr>
         {% endfor %}
