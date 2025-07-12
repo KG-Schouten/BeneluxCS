@@ -496,6 +496,9 @@ def gather_leaderboard(**kwargs) -> list:
         import pandas as pd
         df_players = pd.read_sql_query(query, db, params=params)
 
+        df_players = df_players.reset_index(drop=True)
+        df_players.insert(0, 'index', range(1, len(df_players) + 1))
+        
         # Apply search filter after initial query
         if search and not df_players.empty:
             choices = df_players['player_name'].tolist()
@@ -507,9 +510,6 @@ def gather_leaderboard(**kwargs) -> list:
 
         if max_elo is not None:
             df_players = df_players[df_players['faceit_elo'] <= max_elo]
-
-        df_players = df_players.reset_index(drop=True)
-        df_players.insert(0, 'index', range(1, len(df_players) + 1))
 
         # Fetch aliases only for the players in this leaderboard
         player_ids = df_players['player_id'].tolist()
