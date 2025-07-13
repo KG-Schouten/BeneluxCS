@@ -17,7 +17,7 @@ Want to be a part of the BeNeLux CS Community? [Join the Discord!](https://disco
 - Stats/Leaderboard: Add Team label when player participates in ESEA
 - An info hub for casters / observers / hosts in the BeNeLux.
 - An Events page containing info about past and upcoming BeNeLux CS events (lans, tourneys, comps)
-- An stylistic overhaul of the website (desperately needed lol)
+- A stylistic overhaul of the website (desperately needed lol)
 
 ## Project Overview
 BeneluxCS provides a centralized hub for Counter-Strike statistics focused on the Benelux region. The platform offers:
