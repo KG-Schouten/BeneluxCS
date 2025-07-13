@@ -54,7 +54,7 @@
                                     </div>
                                     <div class="main-player-name">
                                         <strong>{{ player.player_name }}</strong>
-                                        <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country ~ '.png') }}"
+                                        <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
                                             alt="{{ player.player_country }}">
                                     </div>
                                 </div>
@@ -68,7 +68,7 @@
                             {% for player in team.players_sub %}
                             <a href="https://www.faceit.com/en/players/{{ player.player_name }}" class="text-decoration-none text-reset" target="_blank">
                                 <div class="sub-player">
-                                    <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country ~ '.png') }}"
+                                    <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
                                         alt="{{ player.player_country }}">
                                     <span>{{ player.player_name }}</span>
                                 </div>
