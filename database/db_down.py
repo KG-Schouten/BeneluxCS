@@ -3,10 +3,11 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import sqlite3
-from datetime import datetime
+from psycopg2 import Error as PostgresError
+from datetime import datetime, timezone, timedelta
 import pandas as pd
 import json
+import re
 from rapidfuzz import process, fuzz
 from collections import defaultdict
 
@@ -24,7 +25,7 @@ def get_player_aliases(cursor, player_ids=None):
     Otherwise returns for all players.
     """
     if player_ids:
-        placeholders = ', '.join(['?'] * len(player_ids))
+        placeholders = ', '.join(['%s'] * len(player_ids))
         query = f"""
             SELECT 
                 ps.player_id,
@@ -75,7 +76,6 @@ def get_player_aliases(cursor, player_ids=None):
     return official_names, aliases
 
 def normalize_name(name):
-    import re
     if not name:
         return ""
     name = name.lower()
@@ -140,7 +140,6 @@ def gather_upcoming_matches_esea() -> pd.DataFrame:
     """
     db, cursor = start_database()
     try:
-        # Get player data into dataframe
         cursor.execute(query)
         res = cursor.fetchall()
         df_results = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
@@ -168,24 +167,20 @@ def gather_upcoming_matches_esea() -> pd.DataFrame:
         )
         return df_upcoming
         
-    except sqlite3.Error as e:
+    except PostgresError as e:
         print(f"Error gathering upcoming matches: {e}")
         return pd.DataFrame()
     except Exception as e:
         print(f"Error gathering upcoming matches: {e}")
         return pd.DataFrame()
     finally:
-        # Close the database connection
-        close_database(db, cursor)
+        close_database(db)
 
 def safe_convert_to_datetime(timestamp):
     try:
         return datetime.fromtimestamp(float(timestamp))
     except (ValueError, TypeError, OverflowError):
         return pd.NaT
-
-def gather_stats(**kwargs) -> pd.DataFrame | None:
-    return
 
 def gather_players_country() -> pd.DataFrame:
     """
@@ -194,8 +189,6 @@ def gather_players_country() -> pd.DataFrame:
     Returns:
         df
     """
-    
-    ## Start the database and cursor
     db, cursor = start_database()
 
     query = """
@@ -203,13 +196,22 @@ def gather_players_country() -> pd.DataFrame:
         FROM players_country p
     """
 
-    # Get player data into dataframe
-    cursor.execute(query)
-    res = cursor.fetchall()
-    columns = ['player_id','player_name', 'country']
-    df = pd.DataFrame(res, columns=columns)
+    try:
+        cursor.execute(query)
+        res = cursor.fetchall()
+        columns = ['player_id','player_name', 'country']
+        df = pd.DataFrame(res, columns=columns)
 
-    return df
+        return df
+
+    except PostgresError as e:
+        print(f"Error gathering players country: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error gathering players country: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
 
 def gather_players(**kwargs) -> pd.DataFrame:
     """ 
@@ -223,15 +225,14 @@ def gather_players(**kwargs) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame containing player information including player_id, player_name, country, avatar, faceit_elo, and faceit_level.
     """
-    
     benelux = kwargs.get('benelux', False)
     name = kwargs.get('name', None)
-    
+
     if name:
         function_logger.info(f"Gathering players with name filter: {name}")
     if benelux:
         function_logger.info("Gathering players from the Benelux region")
-    
+
     db, cursor = start_database()
     try:
         query_base = """
@@ -245,20 +246,25 @@ def gather_players(**kwargs) -> pd.DataFrame:
             FROM players p
             LEFT JOIN players_country pc ON p.player_id = pc.player_id
         """
-        
+
         if benelux:
             query_base += " WHERE pc.country IN ('nl', 'be', 'lu')"
-        
-        df_players = pd.read_sql_query(query_base, db)
-        
+
+        cursor.execute(query_base)
+        res = cursor.fetchall()
+        columns = ['player_id', 'player_name', 'country', 'avatar', 'faceit_elo', 'faceit_level']
+        df_players = pd.DataFrame(res, columns=columns)
+
         return df_players
-    
+
+    except PostgresError as e:
+        function_logger.error(f"Error gathering players: {e}")
+        return pd.DataFrame()
     except Exception as e:
         function_logger.error(f"Error gathering players: {e}")
-        raise
-    
+        return pd.DataFrame()
     finally:   
-        close_database(db, cursor)
+        close_database(db)
 
 ### ----------------------------
 ### Update functions
@@ -269,8 +275,6 @@ def gather_event_players(event_ids: list, team_ids: list, PAST: bool = False) ->
     Gathers players for each (event_id, team_id) pair.
     Assumes event_ids and team_ids are equal-length lists, where each index defines a pair.
     """
-    import pandas as pd
-
     if len(event_ids) != len(team_ids):
         raise ValueError("event_ids and team_ids must be the same length.")
 
@@ -297,19 +301,20 @@ def gather_event_players(event_ids: list, team_ids: list, PAST: bool = False) ->
         # Create OR conditions for (event_id, team_id) pairs
         pair_clauses = []
         for ev_id, tm_id in zip(event_ids, team_ids):
-            pair_clauses.append("(m.event_id = ? AND ps.team_id = ?)")
+            pair_clauses.append("(m.event_id = %s AND ps.team_id = %s)")
             params.extend([ev_id, tm_id])
         filters.append(" OR ".join(pair_clauses))
 
         if PAST:
-            filters.append("e.event_end < strftime('%s', 'now')")
+            filters.append("e.event_end < extract(epoch from now())")
 
         if filters:
             base_query += " WHERE " + " AND ".join(f"({f})" for f in filters)
 
         cursor.execute(base_query, params)
         res = cursor.fetchall()
-        data = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        columns = ['player_id', 'team_id', 'match_id', 'player_name', 'event_id', 'event_end']
+        data = pd.DataFrame(res, columns=columns)
 
         event_players = []
         for (event_id, team_id), group in data.groupby(['event_id', 'team_id']):
@@ -340,12 +345,14 @@ def gather_event_players(event_ids: list, team_ids: list, PAST: bool = False) ->
 
         return pd.DataFrame(event_players)
 
+    except PostgresError as e:
+        function_logger.error(f"Error gathering event players: {e}")
+        return pd.DataFrame()
     except Exception as e:
         function_logger.error(f"Error gathering event players: {e}")
         return pd.DataFrame()
-
     finally:
-        close_database(db, cursor)
+        close_database(db)
 
 def gather_event_teams(event_ids: list = [], ONGOING: bool = False, ESEA: bool = False) -> pd.DataFrame:
     db,cursor = start_database()
@@ -366,12 +373,12 @@ def gather_event_teams(event_ids: list = [], ONGOING: bool = False, ESEA: bool =
         params = []
         
         if event_ids:
-            placeholders = ', '.join(['?'] * len(event_ids))
+            placeholders = ', '.join(['%s'] * len(event_ids))
             filters.append(f"tb.event_id IN ({placeholders})")
             params.extend(event_ids)
         
         if ONGOING:
-            filters.append("e.event_end > strftime('%s', 'now')")
+            filters.append("e.event_end > EXTRACT(EPOCH FROM NOW())")
         
         if filters:
             query_base += " WHERE " + " AND ".join(filters)
@@ -408,11 +415,11 @@ def gather_last_match_time_database(event_ids: list = [], ONGOING: bool = False,
         params = []
         
         if event_ids:
-            placeholders = ', '.join(['?'] * len(event_ids))
+            placeholders = ', '.join(['%s'] * len(event_ids))
             filters.append(f"m.event_id IN ({placeholders})")
             params.extend(event_ids)
         if ONGOING:
-            filters.append("e.event_end > strftime('%s', 'now')")
+            filters.append("e.event_end > EXTRACT(EPOCH FROM NOW())")
         
         if filters:
             query_base += " AND " + " AND ".join(filters)
@@ -442,7 +449,7 @@ def gather_internal_event_ids(event_ids: list) -> pd.DataFrame:
             FROM events
             WHERE event_id IN ({})
         """
-        placeholders = ', '.join(['?'] * len(event_ids))
+        placeholders = ', '.join(['%s'] * len(event_ids))
         query_base = query_base.format(placeholders)
         cursor.execute(query_base, event_ids)
         res = cursor.fetchall()
@@ -465,6 +472,7 @@ def gather_leaderboard(**kwargs) -> list:
 
     db, cursor = start_database()
     try:
+        # Build base query with all filters applied at database level for better performance
         query = """
             SELECT 
                 p.player_id, 
@@ -472,7 +480,8 @@ def gather_leaderboard(**kwargs) -> list:
                 COALESCE(pc.country, p.country) AS country,
                 p.avatar, 
                 p.faceit_elo, 
-                p.faceit_level
+                p.faceit_level,
+                ROW_NUMBER() OVER (ORDER BY p.faceit_elo DESC) as rank
             FROM players p
             LEFT JOIN players_country pc ON p.player_id = pc.player_id
         """
@@ -481,50 +490,116 @@ def gather_leaderboard(**kwargs) -> list:
         params = []
 
         if countries:
-            placeholders = ', '.join(['?'] * len(countries))
+            placeholders = ', '.join(['%s'] * len(countries))
             conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
             params.extend(countries)
             params.extend(countries)
             # Apply 2000 elo threshold only when countries filter is active
-            conditions.append("p.faceit_elo > ?")
+            conditions.append("p.faceit_elo > %s")
             params.append(2000)
+
+        # Apply min/max elo filters at database level
+        if min_elo is not None and min_elo > 0:
+            conditions.append("p.faceit_elo >= %s")
+            params.append(min_elo)
+
+        if max_elo is not None:
+            conditions.append("p.faceit_elo <= %s")
+            params.append(max_elo)
+
+        # Apply search filter at database level using PostgreSQL's ILIKE for case-insensitive search
+        if search:
+            conditions.append("p.player_name ILIKE %s")
+            params.append(f"%{search}%")
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
+        
         query += " ORDER BY p.faceit_elo DESC"
 
-        import pandas as pd
-        df_players = pd.read_sql_query(query, db, params=params)
-
-        df_players = df_players.reset_index(drop=True)
-        df_players.insert(0, 'index', range(1, len(df_players) + 1))
+        # Execute query directly with cursor for better control
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
         
-        # Apply search filter after initial query
-        if search and not df_players.empty:
-            choices = df_players['player_name'].tolist()
-            matched_names = fuzzy_search(search, choices, limit=len(choices), threshold=60)
-            df_players = df_players[df_players['player_name'].isin(matched_names)]
+        # Convert to list of dictionaries
+        columns = ['player_id', 'player_name', 'country', 'avatar', 'faceit_elo', 'faceit_level', 'rank']
+        players_list = []
+        
+        for i, row in enumerate(rows, 1):
+            player_dict = dict(zip(columns, row))
+            # Override rank with sequential numbering for filtered results
+            player_dict['index'] = i
+            players_list.append(player_dict)
 
-        if min_elo is not None:
-            df_players = df_players[df_players['faceit_elo'] >= min_elo]
+        # If we have a search term and didn't find exact matches, try fuzzy search
+        if search and not players_list:
+            # Fallback: get all players and do fuzzy search in Python
+            fallback_query = """
+                SELECT 
+                    p.player_id, 
+                    p.player_name,
+                    COALESCE(pc.country, p.country) AS country,
+                    p.avatar, 
+                    p.faceit_elo, 
+                    p.faceit_level
+                FROM players p
+                LEFT JOIN players_country pc ON p.player_id = pc.player_id
+            """
+            
+            fallback_conditions = []
+            fallback_params = []
+            
+            if countries:
+                placeholders = ', '.join(['%s'] * len(countries))
+                fallback_conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
+                fallback_params.extend(countries)
+                fallback_params.extend(countries)
+                fallback_conditions.append("p.faceit_elo > %s")
+                fallback_params.append(2000)
 
-        if max_elo is not None:
-            df_players = df_players[df_players['faceit_elo'] <= max_elo]
+            if min_elo is not None and min_elo > 0:
+                fallback_conditions.append("p.faceit_elo >= %s")
+                fallback_params.append(min_elo)
+
+            if max_elo is not None:
+                fallback_conditions.append("p.faceit_elo <= %s")
+                fallback_params.append(max_elo)
+
+            if fallback_conditions:
+                fallback_query += " WHERE " + " AND ".join(fallback_conditions)
+            
+            fallback_query += " ORDER BY p.faceit_elo DESC"
+            
+            cursor.execute(fallback_query, fallback_params)
+            fallback_rows = cursor.fetchall()
+            
+            # Apply fuzzy search
+            all_names = [row[1] for row in fallback_rows]  # player_name is at index 1
+            matched_names = fuzzy_search(search, all_names, limit=len(all_names), threshold=60)
+            
+            # Filter results
+            for i, row in enumerate(fallback_rows, 1):
+                if row[1] in matched_names:  # player_name
+                    player_dict = dict(zip(columns[:-1], row))  # exclude rank column
+                    player_dict['index'] = i
+                    players_list.append(player_dict)
 
         # Fetch aliases only for the players in this leaderboard
-        player_ids = df_players['player_id'].tolist()
-        _, aliases = get_player_aliases(cursor, player_ids=player_ids)
-        # Map aliases to players in DataFrame
-        df_players['aliases'] = df_players['player_id'].map(aliases).fillna('')
+        if players_list:
+            player_ids = [p['player_id'] for p in players_list]
+            _, aliases = get_player_aliases(cursor, player_ids=player_ids)
+            # Add aliases to each player
+            for player in players_list:
+                player['aliases'] = aliases.get(player['player_id'], '')
 
-        return df_players.to_dict(orient='records')
+        return players_list
 
     except Exception as e:
         function_logger.error(f"Error gathering players: {e}", exc_info=True)
         raise
 
     finally:
-        close_database(db, cursor)
+        close_database(db)
 
 def gather_esea_season_info() -> list:
     """ Gathers ESEA season number and associated event start/end dates """
@@ -568,7 +643,7 @@ def gather_esea_season_info() -> list:
         raise
 
     finally:
-        close_database(db, cursor)
+        close_database(db)
 
 def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
     """ Gathers the ESEA teams from the Benelux region from the database """
@@ -587,7 +662,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
             if division_name in division_order:
                 return division_order[division_name]
             elif division_name and division_name.lower().startswith("open"):
-                import re
                 match = re.search(r'(\d+)', division_name)
                 return 4 + (100 - int(match.group(1))) if match else 999
             return 999
@@ -600,92 +674,78 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 function_logger.warning(f"No ESEA teams found for season {szn_number}.")
                 return {}
 
-        for season_number, group_season in df_teams_benelux.sort_values(by=["season_number"], ascending=False).groupby("season_number", sort=False):
-            esea_data[season_number] = {}
-            for division_name, group_division in group_season.sort_values(by=["division_sort_rank"]).groupby('division_name', sort=False):
-                esea_data[season_number][division_name] = []
-                
-                # Gather team names from the database
-                team_ids = group_division['team_id'].unique().tolist()
-                if not team_ids:
-                    function_logger.warning(f"No teams found for division {division_name} in season {season_number}.")
-                    continue
-                cursor.execute("""
-                    SELECT 
-                        team_id, 
-                        team_name 
-                    FROM teams
-                    WHERE team_id IN ({})
-                """.format(','.join('?' * len(team_ids))), team_ids)
-                rows = cursor.fetchall()
-                team_names = {row[0]: row[1] for row in rows}
-                 
-                for team_id, group_team in group_division.groupby('team_id'):
-                    team_name = group_team['team_name'].iloc[0]
-                    team_name_cur = team_names[team_id]
-                    nickname = group_team['nickname'].iloc[0]
-                    team_avatar = group_team['team_avatar'].iloc[0]
-                    region_name = group_team['region_name'].iloc[0]
-                    
-                    stages = [
-                        {
-                            'stage_name': stage,
-                            'placement': json.loads(group_team.loc[group_team['stage_name'] == stage, 'placement'].iloc[0]),
-                            'wins': group_team.loc[group_team['stage_name'] == stage, 'wins'].iloc[0],
-                            'losses': group_team.loc[group_team['stage_name'] == stage, 'losses'].iloc[0]
-                        }
-                        for stage in group_team['stage_name'].unique().tolist()
-                    ]
+        # Pre-load all team names, player data, matches, and map stats for efficiency
+        all_team_ids = df_teams_benelux['team_id'].unique().tolist()
+        all_season_numbers = df_teams_benelux['season_number'].unique().tolist()
+        
+        # Batch load team names
+        if all_team_ids:
+            placeholders = ', '.join(['%s'] * len(all_team_ids))
+            cursor.execute(f"""
+                SELECT team_id, team_name 
+                FROM teams
+                WHERE team_id IN ({placeholders})
+            """, all_team_ids)
+            team_names_data = {row[0]: row[1] for row in cursor.fetchall()}
+        else:
+            team_names_data = {}
 
-                    def safe_load_json(value):
-                        try:
-                            return json.loads(value)
-                        except Exception:
-                            return []
+        # Batch load all player data
+        all_player_ids = set()
+        for _, row in df_teams_benelux.iterrows():
+            def safe_load_json(value):
+                # Handle PostgreSQL jsonb format
+                if value is None:
+                    return []
+                if isinstance(value, (list, dict)):
+                    return value if isinstance(value, list) else []
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                        return parsed if isinstance(parsed, list) else []
+                    except (json.JSONDecodeError, TypeError):
+                        return []
+                return []
+            
+            if pd.notna(row['stage_name']) and 'regular' in str(row['stage_name']).lower():
+                players_main = safe_load_json(row['players_main'])
+                players_sub = safe_load_json(row['players_sub'])
+                players_coach = safe_load_json(row['players_coach'])
+                for p in players_main + players_sub + players_coach:
+                    if isinstance(p, dict) and 'player_id' in p:
+                        all_player_ids.add(p['player_id'])
 
-                    # Get all rows in the group as a list of dicts
-                    players_main_all = group_team.loc[
-                        group_team['stage_name'].str.contains('regular', case=False, na=False),
-                        'players_main'
-                    ].apply(safe_load_json).tolist()
-                    players_sub_all = group_team.loc[
-                        group_team['stage_name'].str.contains('regular', case=False, na=False),
-                        'players_sub'
-                    ].apply(safe_load_json).tolist()
-                    players_coach_all = group_team.loc[
-                        group_team['stage_name'].str.contains('regular', case=False, na=False),
-                        'players_coach'
-                    ].apply(safe_load_json).tolist()
+        players_data = {}
+        if all_player_ids:
+            player_ids_list = list(all_player_ids)
+            placeholders = ','.join(f"'{pid}'" for pid in player_ids_list)
+            cursor.execute(f"""
+                SELECT
+                    p.player_id,
+                    p.player_name AS player_name,
+                    p.avatar AS player_avatar,
+                    COALESCE(pc.country, p.country) AS player_country,
+                    p.faceit_elo AS player_elo,
+                    p.faceit_level AS player_faceit_level
+                FROM players p
+                LEFT JOIN players_country pc ON p.player_id = pc.player_id
+                WHERE p.player_id IN ({placeholders})
+            """)
+            for row in cursor.fetchall():
+                players_data[row[0]] = {
+                    'player_id': row[0],
+                    'player_name': row[1],
+                    'player_avatar': row[2],
+                    'player_country': row[3],
+                    'player_elo': row[4],
+                    'player_faceit_level': row[5]
+                }
 
-                    # Pick the longest list from each category
-                    players_main = max(players_main_all, key=len, default=[])
-                    players_sub = max(players_sub_all, key=len, default=[])
-                    players_coach = max(players_coach_all, key=len, default=[])
-
-                    # Make sure there are no players in both main and sub lists
-                    players_sub = [p for p in players_sub if p['player_id'] not in [pm['player_id'] for pm in players_main]]
-                    
-                    player_ids = [p['player_id'] for p in players_main + players_sub + players_coach]
-                    if player_ids:
-                        cursor.execute(f"""
-                            SELECT
-                                p.player_id,
-                                p.player_name AS player_name,
-                                p.avatar AS player_avatar,
-                                COALESCE(pc.country, p.country) AS player_country,
-                                p.faceit_elo AS player_elo,
-                                p.faceit_level AS player_faceit_level
-                            FROM players p
-                            LEFT JOIN players_country pc ON p.player_id = pc.player_id
-                            WHERE p.player_id IN ({','.join(f"'{pid}'" for pid in player_ids)})
-                        """)
-                        res_players = cursor.fetchall()
-                        df_players = pd.DataFrame(res_players, columns=[desc[0] for desc in cursor.description])
-                        players_main = df_players[df_players['player_id'].isin([p['player_id'] for p in players_main])].to_dict('records')
-                        players_sub = df_players[df_players['player_id'].isin([p['player_id'] for p in players_sub])].to_dict('records')
-                        players_coach = df_players[df_players['player_id'].isin([p['player_id'] for p in players_coach])].to_dict('records')
-
-                    # --- MATCHES: Adjusted column names based on schema ---
+        # Batch load all matches data
+        matches_data = {}
+        if all_team_ids and all_season_numbers:
+            for season_num in all_season_numbers:
+                for team_id in all_team_ids:
                     cursor.execute("""
                         WITH team_matches AS (
                             SELECT m.match_id, m.match_time, m.winner_id, m.status,
@@ -695,7 +755,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                             JOIN seasons s ON m.event_id = s.event_id
                             JOIN teams_matches tm ON tm.match_id = m.match_id
                             JOIN teams_matches opp ON opp.match_id = m.match_id AND opp.team_id != tm.team_id
-                            WHERE s.season_number = ? AND tm.team_id = ?
+                            WHERE s.season_number = %s AND tm.team_id = %s
                         ),
                         map_counts AS (
                             SELECT match_id, COUNT(DISTINCT match_round) AS map_count FROM maps GROUP BY match_id
@@ -734,11 +794,157 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         LEFT JOIN bo1_scores bs ON t.match_id = bs.match_id
                         ORDER BY t.match_time DESC
                         LIMIT 6;
-                    """, (season_number, team_id))
+                    """, (season_num, team_id))
                     match_rows = cursor.fetchall()
-                    df_matches = pd.DataFrame(match_rows, columns=[desc[0] for desc in cursor.description])
+                    matches_data[(team_id, season_num)] = pd.DataFrame(match_rows, columns=[desc[0] for desc in cursor.description])
 
-                    map_stats = gather_esea_map_stats(team_id=team_id, szn_number=season_number)
+        # Batch load map stats data
+        map_stats_data = {}
+        
+        # Load map pools for all seasons
+        map_pools = {}
+        for season_num in all_season_numbers:
+            cursor.execute("""
+                SELECT e.maps 
+                FROM events e
+                LEFT JOIN seasons s ON e.event_id = s.event_id
+                WHERE s.season_number = %s
+            """, (season_num,))
+            rows = cursor.fetchall()
+            map_pool = []
+            for row in rows:
+                if row[0]:
+                    try:
+                        parsed = json.loads(row[0])
+                        if isinstance(parsed, list):
+                            map_pool = parsed
+                            break
+                    except Exception:
+                        continue
+            map_pools[season_num] = map_pool
+
+        # Load team map stats for all teams and seasons
+        for season_num in all_season_numbers:
+            for team_id in all_team_ids:
+                cursor.execute("""
+                    SELECT
+                        tm.team_id,
+                        tm.team_win,
+                        ma.map
+                    FROM teams_maps tm
+                    LEFT JOIN maps ma ON ma.match_id = tm.match_id AND ma.match_round = tm.match_round
+                    LEFT JOIN matches m ON tm.match_id = m.match_id
+                    INNER JOIN seasons s ON m.event_id = s.event_id
+                    WHERE tm.team_id = %s AND s.season_number = %s
+                """, (team_id, season_num))
+                
+                map_rows = cursor.fetchall()
+                df_team_maps = pd.DataFrame(map_rows, columns=[desc[0] for desc in cursor.description])
+                
+                # Calculate stats per map
+                map_stats_dict = {}
+                if not df_team_maps.empty:
+                    df_team_maps = df_team_maps[df_team_maps["map"].notna()]
+                    map_group = df_team_maps.groupby("map")
+                    for map_name, group in map_group:
+                        played = len(group)
+                        won = group["team_win"].sum()
+                        winrate = round((won / played) * 100, 1) if played > 0 else 0
+                        map_stats_dict[map_name] = {
+                            "map_name": map_name,
+                            "played": played,
+                            "won": int(won),
+                            "winrate": winrate
+                        }
+
+                # Ensure all maps from pool exist in final output
+                final_map_stats = []
+                map_pool = map_pools.get(season_num, [])
+                for map_name in map_pool:
+                    stats = map_stats_dict.get(map_name, {
+                        "map_name": map_name,
+                        "played": 0,
+                        "won": 0,
+                        "winrate": 0.0
+                    })
+                    final_map_stats.append(stats)
+                
+                map_stats_data[(team_id, season_num)] = final_map_stats
+
+        for season_number, group_season in df_teams_benelux.sort_values(by=["season_number"], ascending=False).groupby("season_number", sort=False):
+            esea_data[season_number] = {}
+            for division_name, group_division in group_season.sort_values(by=["division_sort_rank"]).groupby('division_name', sort=False):
+                esea_data[season_number][division_name] = []
+                
+                team_ids = group_division['team_id'].unique().tolist()
+                if not team_ids:
+                    function_logger.warning(f"No teams found for division {division_name} in season {season_number}.")
+                    continue
+                 
+                for team_id, group_team in group_division.groupby('team_id'):
+                    team_name = group_team['team_name'].iloc[0]
+                    team_name_cur = team_names_data.get(team_id, team_name)
+                    nickname = group_team['nickname'].iloc[0]
+                    team_avatar = group_team['team_avatar'].iloc[0]
+                    region_name = group_team['region_name'].iloc[0]
+                    
+                    stages = [
+                        {
+                            'stage_name': stage,
+                            'placement': json.loads(group_team.loc[group_team['stage_name'] == stage, 'placement'].iloc[0]),
+                            'wins': group_team.loc[group_team['stage_name'] == stage, 'wins'].iloc[0],
+                            'losses': group_team.loc[group_team['stage_name'] == stage, 'losses'].iloc[0]
+                        }
+                        for stage in group_team['stage_name'].unique().tolist()
+                    ]
+
+                    def safe_load_json(value):
+                        # Handle PostgreSQL jsonb format
+                        if value is None:
+                            return []
+                        if isinstance(value, (list, dict)):
+                            return value if isinstance(value, list) else []
+                        if isinstance(value, str):
+                            try:
+                                parsed = json.loads(value)
+                                return parsed if isinstance(parsed, list) else []
+                            except (json.JSONDecodeError, TypeError):
+                                return []
+                        return []
+
+                    # Get all rows in the group as a list of dicts
+                    players_main_all = group_team.loc[
+                        group_team['stage_name'].str.contains('regular', case=False, na=False),
+                        'players_main'
+                    ].apply(safe_load_json).tolist()
+                    players_sub_all = group_team.loc[
+                        group_team['stage_name'].str.contains('regular', case=False, na=False),
+                        'players_sub'
+                    ].apply(safe_load_json).tolist()
+                    players_coach_all = group_team.loc[
+                        group_team['stage_name'].str.contains('regular', case=False, na=False),
+                        'players_coach'
+                    ].apply(safe_load_json).tolist()
+                    
+                    
+                    # Pick the longest list from each category
+                    players_main = max(players_main_all, key=len, default=[])
+                    players_sub = max(players_sub_all, key=len, default=[])
+                    players_coach = max(players_coach_all, key=len, default=[])
+
+                    # Make sure there are no players in both main and sub lists
+                    players_sub = [p for p in players_sub if p['player_id'] not in [pm['player_id'] for pm in players_main]]
+                    
+                    # Use pre-loaded player data
+                    players_main = [players_data.get(p['player_id'], p) for p in players_main if p['player_id'] in players_data]
+                    players_sub = [players_data.get(p['player_id'], p) for p in players_sub if p['player_id'] in players_data]
+                    players_coach = [players_data.get(p['player_id'], p) for p in players_coach if p['player_id'] in players_data]
+
+                    # Use pre-loaded matches data
+                    df_matches = matches_data.get((team_id, season_number), pd.DataFrame())
+
+                    # Use pre-loaded map stats data  
+                    map_stats = map_stats_data.get((team_id, season_number), [])
                     
                     recent_matches, upcoming_matches = [], []
                     for _, row in df_matches.iterrows():
@@ -799,17 +1005,16 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
         return esea_data
 
     except Exception as e:
-        function_logger.error(f"Error gathering ESEA teams: {e}")
+        function_logger.error(f"Error gathering ESEA teams: {e}", exc_info=True)
         return {}
 
     finally:
-        close_database(db, cursor)
+        close_database(db)
 
 def gather_teams_benelux() -> pd.DataFrame:
     """
     Gathers the teams from the Benelux region from the database
     """
-    
     db, cursor = start_database()
     
     try:
@@ -847,7 +1052,7 @@ def gather_teams_benelux() -> pd.DataFrame:
         return pd.DataFrame()
     
     finally:   
-        close_database(db, cursor)
+        close_database(db)
         
 def gather_esea_map_stats(team_id, szn_number) -> list:
     db, cursor = start_database()
@@ -858,7 +1063,7 @@ def gather_esea_map_stats(team_id, szn_number) -> list:
                 e.maps 
             FROM events e
             LEFT JOIN seasons s ON e.event_id = s.event_id
-            WHERE s.season_number = ?
+            WHERE s.season_number = %s
         """, (szn_number,))
         rows = cursor.fetchall()
         map_pool = []
@@ -882,7 +1087,7 @@ def gather_esea_map_stats(team_id, szn_number) -> list:
             LEFT JOIN maps ma ON ma.match_id = tm.match_id AND ma.match_round = tm.match_round
             LEFT JOIN matches m ON tm.match_id = m.match_id
             INNER JOIN seasons s ON m.event_id = s.event_id
-            WHERE tm.team_id = ? AND s.season_number = ?
+            WHERE tm.team_id = %s AND s.season_number = %s
         """, (team_id, szn_number))
 
         map_rows = cursor.fetchall()
@@ -921,7 +1126,7 @@ def gather_esea_map_stats(team_id, szn_number) -> list:
         return []
     
     finally:
-        close_database(db, cursor)
+        close_database(db)
 
 def gather_esea_seasons_divisions() -> tuple:
     """ Gathers all ESEA seasons and divisions from the database"""
@@ -941,8 +1146,120 @@ def gather_esea_seasons_divisions() -> tuple:
         function_logger.error(f"Error gathering ESEA seasons and divisions: {e}")
         return [], []
     finally:
-        close_database(db, cursor)
+        close_database(db)
 
+def get_todays_matches():
+    db, cursor = start_database()
+    try:
+        now = datetime.now(timezone.utc)
+        start_of_day = int(datetime(now.year, now.month, now.day, tzinfo=timezone.utc).timestamp())
+        end_of_day = int((datetime(now.year, now.month, now.day, tzinfo=timezone.utc) + timedelta(days=1)).timestamp())
+
+        query = """
+            WITH match_teams AS (
+                SELECT
+                    m.match_id,
+                    m.match_time,
+                    m.status,
+                    s.division_name,
+                    tm.team_id,
+                    COALESCE(tb.team_name, tm.team_name) AS team_name,
+                    t.avatar,
+                    CASE WHEN tb.team_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_benelux,
+                    ROW_NUMBER() OVER (PARTITION BY m.match_id ORDER BY CASE WHEN tb.team_id IS NOT NULL THEN 0 ELSE 1 END) AS team_rank
+                FROM matches m
+                JOIN seasons s ON m.event_id = s.event_id
+                JOIN teams_matches tm ON m.match_id = tm.match_id
+                LEFT JOIN teams t ON tm.team_id = t.team_id
+                LEFT JOIN teams_benelux tb ON tm.team_id = tb.team_id AND m.event_id = tb.event_id
+                WHERE m.match_time >= %s AND m.match_time < %s
+            )
+
+            SELECT 
+                mt1.match_id,
+                mt1.match_time,
+                mt1.status,
+                mt1.division_name,
+
+                mt1.team_id AS team1_id,
+                mt1.team_name AS team1_name,
+                mt1.avatar AS team1_avatar,
+                mt1.is_benelux AS team1_is_benelux,
+
+                mt2.team_id AS team2_id,
+                mt2.team_name AS team2_name,
+                mt2.avatar AS team2_avatar,
+                mt2.is_benelux AS team2_is_benelux
+
+            FROM match_teams mt1
+            JOIN match_teams mt2 ON mt1.match_id = mt2.match_id AND mt1.team_rank = 1 AND mt2.team_rank = 2
+            ORDER BY mt1.match_time ASC;
+        """
+
+        cursor.execute(query, (start_of_day, end_of_day))
+        rows = cursor.fetchall()
+
+        # Sort by division name
+        division_order = {"Advanced": 0, "Main": 1, "Intermediate": 2, "Entry": 3}
+        def compute_division_rank(division_name):
+            if division_name in division_order:
+                return division_order[division_name]
+            elif division_name and division_name.lower().startswith("open"):
+                match = re.search(r'(\d+)', division_name)
+                return 4 + (100 - int(match.group(1))) if match else 999
+            return 999
+        
+        grouped_matches = defaultdict(list)
+        
+        for row in rows:
+            match = {
+                "match_id": row[0],
+                "match_time": row[1],
+                "status": row[2],
+                "division_name": row[3]
+            }
+
+            team1 = {
+                "team_id": row[4],
+                "team_name": row[5],
+                "team_avatar": row[6],
+                "is_benelux": row[7]
+            }
+
+            team2 = {
+                "team_id": row[8],
+                "team_name": row[9],
+                "team_avatar": row[10],
+                "is_benelux": row[11]
+            }
+
+            # Determine which is the Benelux team
+            if team1["is_benelux"] and not team2["is_benelux"]:
+                match["team"] = team1
+                match["opponent"] = team2
+            elif team2["is_benelux"] and not team1["is_benelux"]:
+                match["team"] = team2
+                match["opponent"] = team1
+            else:
+                continue  # Skip matches where both teams are Benelux or neither is
+
+            # Add match to the appropriate division group
+            grouped_matches[match["division_name"]].append(match)
+
+        # Step 2: Sort the division groups
+        sorted_grouped_matches = {
+            division: grouped_matches[division]
+            for division in sorted(grouped_matches.keys(), key=compute_division_rank)
+        }
+
+        return sorted_grouped_matches
+
+    except Exception as e:
+        function_logger.error(f"Error fetching today's matches: {e}")
+        return []
+    finally:
+        close_database(db)
+    
 def gather_player_stats_esea(
     countries=None,
     seasons=None,
@@ -965,20 +1282,37 @@ def gather_player_stats_esea(
         cursor.execute("SELECT team_id, event_id, players_main, players_sub FROM teams_benelux")
         valid_combos = set()
         for team_id, event_id, main_json, sub_json in cursor.fetchall():
-            try:
-                main_players = json.loads(main_json or "[]")
-                sub_players = json.loads(sub_json or "[]")
-            except json.JSONDecodeError:
-                main_players, sub_players = [], []
+            def safe_load_json_for_validation(value):
+                # Handle PostgreSQL jsonb format
+                if value is None:
+                    return []
+                if isinstance(value, (list, dict)):
+                    return value if isinstance(value, list) else []
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                        return parsed if isinstance(parsed, list) else []
+                    except (json.JSONDecodeError, TypeError):
+                        return []
+                return []
+            
+            main_players = safe_load_json_for_validation(main_json)
+            sub_players = safe_load_json_for_validation(sub_json)
+            
             for player in main_players + sub_players:
-                pid = player.get('player_id')
-                if pid:
-                    valid_combos.add((pid, team_id, event_id))
+                if isinstance(player, dict):
+                    pid = player.get('player_id')
+                    if pid:
+                        valid_combos.add((pid, team_id, event_id))
 
         # Get stat columns and build AVG expressions
         non_stat_cols = {'player_id', 'player_name', 'team_id', 'match_id', 'match_round'}
-        cursor.execute("PRAGMA table_info(players_stats)")
-        all_columns = [row[1] for row in cursor.fetchall()]
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'players_stats'
+        """)
+        all_columns = [row[0] for row in cursor.fetchall()]
         stat_columns = [col for col in all_columns if col not in non_stat_cols]
         avg_expressions = [f'AVG(ps."{col}") AS "{col}"' for col in stat_columns]
 
@@ -987,41 +1321,41 @@ def gather_player_stats_esea(
         params = []
 
         if countries:
-            placeholders = ','.join(['?'] * len(countries))
+            placeholders = ','.join(['%s'] * len(countries))
             conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
             params.extend(countries)
             params.extend(countries)
 
         if seasons:
-            placeholders = ','.join(['?'] * len(seasons))
+            placeholders = ','.join(['%s'] * len(seasons))
             conditions.append(f"s.season_number IN ({placeholders})")
             params.extend(seasons)
 
         if divisions:
-            like_clauses = ' OR '.join(["s.division_name LIKE ?"] * len(divisions))
+            like_clauses = ' OR '.join(["s.division_name LIKE %s"] * len(divisions))
             conditions.append(f"({like_clauses})")
             params.extend([f"%{d}%" for d in divisions])
 
         if stages:
-            like_clauses = ' OR '.join(["LOWER(s.stage_name) LIKE ?"] * len(stages))
+            like_clauses = ' OR '.join(["LOWER(s.stage_name) LIKE %s"] * len(stages))
             conditions.append(f"({like_clauses})")
             params.extend([f"%{stage.lower()}%" for stage in stages])
 
         if timestamp_start > 0:
-            conditions.append("m.match_time >= ?")
+            conditions.append("m.match_time >= %s")
             params.append(timestamp_start)
 
         if timestamp_end > 0:
-            conditions.append("m.match_time <= ?")
+            conditions.append("m.match_time <= %s")
             params.append(timestamp_end)
 
         if team_ids:
-            placeholders = ','.join(['?'] * len(team_ids))
+            placeholders = ','.join(['%s'] * len(team_ids))
             conditions.append(f"ps.team_id IN ({placeholders})")
             params.extend(team_ids)
 
         if search_player_name:
-            conditions.append("p.player_name LIKE ?")
+            conditions.append("p.player_name LIKE %s")
             params.append(f"%{search_player_name}%")
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
@@ -1044,7 +1378,12 @@ def gather_player_stats_esea(
             LEFT JOIN players p ON ps.player_id = p.player_id
             LEFT JOIN players_country pc ON p.player_id = pc.player_id
             {where_clause}
-            GROUP BY ps.player_id
+            GROUP BY 
+                ps.player_id,
+                COALESCE(pc.country, p.country),
+                p.avatar,
+                ps.team_id,
+                s.event_id
         """
         cursor.execute(query, params)
         rows = cursor.fetchall()
@@ -1099,11 +1438,10 @@ def gather_player_stats_esea(
         function_logger.error(f"Error gathering player stats: {e}", exc_info=True)
         return [], []
     finally:
-        close_database(db, cursor)
+        close_database(db)
     
 if __name__ == "__main__":
     # Allow standalone execution
     import sys
     import os
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    
