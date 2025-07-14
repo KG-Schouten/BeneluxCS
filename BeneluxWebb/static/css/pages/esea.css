@@ -1,5 +1,10 @@
 /* esea.css */
 :root {
+
+  /* Main wrapper (ESEA wrapper) ratios */
+  --esea-wrapper-width: 85%;
+  --sidebar-width: 15%;
+
   /* Match Info Box */
   --match-info-box-height: clamp(1.5rem, 2vw, 2rem);
   --match-info-box-width: 80%;
@@ -24,14 +29,125 @@
 }
 
 /* === ESEA Content Wrapper === */
+.esea-page-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 .esea-wrapper {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  width: 100%;
-  max-width: 1300px;
-  margin: auto;
+  justify-content: flex-start;
+  width: var(--esea-wrapper-width);
+  margin: 0 auto;
   background-color: var(--background);
+  padding: 20px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  width: var(--sidebar-width);
+}
+
+/* === Todays Matches sidebar === */
+.todays-matches {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  height: max-content;
+  margin: 10px;
+  width: 100%;
+
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+}
+
+.todays-matches-division {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: auto;
+
+  border-bottom: 1px solid var(--primary)
+}
+
+.todays-matches-header {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--card-bg-highlight);
+
+  /* font-size: clamp(.6rem, 1rem, 1.5rem); */
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  font-weight: bold;
+}
+.todays-matches-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  padding: 5px;
+}
+
+.todays-match-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: auto;
+  padding: 5px;
+  background-color: var(--card-bg-secondary);
+  border: 1px solid var(--border);
+
+  /* Make the whole box clickable without looking like a link */
+  color: inherit;
+  text-decoration: none;
+}
+.todays-match-box:hover {
+  background-color: var(--card-bg-highlight);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  color: inherit;
+  text-decoration: none;
+}
+
+.team {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  font-weight: bold;
+  padding-inline: 5px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+  color: var(--form-text);
+  transition: color 0.3s ease;
+}
+.team.team-left {
+  justify-content: flex-start;
+}
+.team.team-right {
+  justify-content: flex-end;
+}
+.highlight-text {
+  color: orange;
 }
 
 /* === ESEA Season navbar === */
