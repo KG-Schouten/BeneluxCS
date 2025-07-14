@@ -3,14 +3,15 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import sqlite3
+from psycopg2 import sql
+from psycopg2.extras import execute_values
+
 
 import datetime
 import pandas as pd
 import json
 
 from database.db_manage import start_database, close_database
-from database.db_config import db_name
 
 from data_processing.faceit_api.logging_config import function_logger
 
@@ -32,15 +33,15 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
     db, cursor = start_database()
     try:
         if clear:
-            # Clear the table if clear is True
-            cursor.execute(f"DELETE FROM {table_name};")
+            # Safely construct DELETE query
+            cursor.execute(f'DELETE FROM "{table_name}"')
             function_logger.info(f"Cleared data from {table_name} table.")
         
         if df.empty:
             function_logger.info(f"No data to upload for table {table_name}. DataFrame is empty.")
             return
            
-        keys, primary_keys = gather_keys(table_name, db_name)
+        keys, primary_keys = gather_keys(table_name)
         if not keys or not primary_keys:
             function_logger.info(f"No keys found for table {table_name}. Skipping upload.")
             return
@@ -63,7 +64,7 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
             function_logger.info(f"No data to upload for table {table_name}. Skipping upload.")
         else:
             # Start the database connection and cursor
-            cursor.executemany(sql, data)
+            execute_values(cursor, sql, data)
             function_logger.info(f"Successfully uploaded {len(data)} rows to {table_name} table.")
       
     except Exception as e:
@@ -73,177 +74,208 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
     finally:
         # Commit the transaction and close the database connection
         db.commit()
-        close_database(db, cursor)
+        close_database(db)
 
-def gather_keys(table_name: str, db_name: str) -> tuple[list[str], list[str]]:
+def gather_keys(table_name: str) -> tuple[list[str], list[str]]:
     """
-    Gather all keys and primary keys from the specified table in the database
+    Gather all column names and primary key column names from the specified PostgreSQL table.
     """
     all_keys = []
     primary_keys = []
-    
+
     db, cursor = start_database()
     try:
-        # Get all column info
-        cursor.execute(f"PRAGMA table_info({table_name});")
-        columns = cursor.fetchall()
-        
-        # PRAGMA table_info returns:
-        # cid, name, type, notnull, dflt_value, pk
-        
-        for col in columns:
-            col_name = col[1]
-            is_pk = col[5]  # 1 if part of the PK, 0 otherwise
+        # Fetch all column names
+        cursor.execute(sql.SQL("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = %s
+            ORDER BY ordinal_position
+        """), (table_name,))
+        all_keys = [row[0] for row in cursor.fetchall()]
 
-            all_keys.append(col_name)
-            if is_pk:
-                primary_keys.append(col_name)
-    
-    except sqlite3.Error as e:
+        # Fetch primary key column names
+        cursor.execute(sql.SQL("""
+            SELECT a.attname
+            FROM pg_index i
+            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+            WHERE i.indrelid = %s::regclass AND i.indisprimary
+        """), (table_name,))
+        primary_keys = [row[0] for row in cursor.fetchall()]
+
+    except Exception as e:
         print(f"Error while gathering keys for table {table_name}: {e}")
         return [], []
-    except Exception as e:
-        print(f"Unexpected error while gathering keys for table {table_name}: {e}")
-        return [], []
     finally:
-        # Close the database connection
-        close_database(db, cursor)
-    
-    # Return both all keys and primary keys as tuples of lists
+        close_database(db)
+
     return all_keys, primary_keys
 
-def upload_data_query(table_name: str, keys: list, primary_keys: list) -> str:
+def upload_data_query(table_name: str, keys: list[str], primary_keys: list[str]) -> str:
     """
-    Creating the queries used for creating the tables based on the keys in the dictionary
+    Create the SQL insert (with optional upsert) query for PostgreSQL using execute_values.
 
     Args:
         table_name (str)    : Name of the table
-        keys (list)         : list of all keys
-        primary_keys (list) : list of all primary keys
-        
+        keys (list)         : List of all column keys
+        primary_keys (list) : List of primary key columns
+
     Returns:
-        upload_query (str)   : String of the upload query to use in the cursor.executemany command
+        str : SQL query string compatible with psycopg2.extras.execute_values()
     """
-    
+
     if not keys or not primary_keys:
         raise ValueError(f"Cannot build upload query without keys or primary keys for table {table_name}")
-    
-    # SQL injection prevention: sanitize keys and primary keys
-    keys = [key.replace('"', '""') for key in keys]  # Escape double quotes
-    sanitized_keys = [f'"{key}"' for key in keys]
-    sanitized_primary = [f'"{pk}"' for pk in primary_keys]
-    
-    placeholders = ', '.join(['?'] * len(keys))
-    
-    if all(key in sanitized_primary for key in sanitized_keys):
-        # Insert without ON CONFLICT if all keys are primary keys
-        upload_query = f"""
-            INSERT INTO {table_name} ({", ".join(sanitized_keys)})
-            VALUES ({placeholders})
+
+    # Sanitize/quote identifiers
+    escaped_keys = [f'"{key.replace("\"", "\"\"")}"' for key in keys]
+    escaped_pks = [f'"{pk.replace("\"", "\"\"")}"' for pk in primary_keys]
+
+    if all(k in primary_keys for k in keys):
+        # No upsert, just INSERT
+        query = f"""
+            INSERT INTO "{table_name}" ({', '.join(escaped_keys)})
+            VALUES %s;
         """
     else:
-        # Insert with ON CONFLICT for partial primary keys
-        upload_query = f"""
-            INSERT INTO {table_name} ({", ".join(sanitized_keys)})
-            VALUES ({placeholders})
-            ON CONFLICT ({', '.join(sanitized_primary)})
-            DO UPDATE SET
-                {", ".join([f"{key} = EXCLUDED.{key}" for key in sanitized_keys if key not in sanitized_primary])};
+        # INSERT with ON CONFLICT DO UPDATE
+        update_clause = ', '.join([
+            f'{key} = EXCLUDED.{key}' for key in escaped_keys if key not in escaped_pks
+        ])
+        query = f"""
+            INSERT INTO "{table_name}" ({', '.join(escaped_keys)})
+            VALUES %s
+            ON CONFLICT ({', '.join(escaped_pks)})
+            DO UPDATE SET {update_clause};
         """
-    return upload_query.strip()
+    return query.strip()
 
 def clean_invalid_foreign_keys(df: pd.DataFrame, table_name: str) -> pd.DataFrame:
     """
-    Removes rows with invalid foreign keys from the DataFrame before uploading to the database
+    Removes rows from a DataFrame that would violate foreign key constraints in PostgreSQL.
     """
     db, cursor = start_database()
-    
-    # Ensure foreign key enforcement
-    cursor.execute("PRAGMA foreign_keys = ON;")
-    
-    # Get foreign key constraints
-    fk_info = pd.read_sql_query(f"PRAGMA foreign_key_list({table_name});", db)
-    
-    if fk_info.empty:
-        function_logger.info(f"No foreign keys found for table {table_name}. Skipping foreign key validation.")
-        close_database(db, cursor)
-        return df
-    
-    original_df = df.copy()  # Keep a copy of the original DataFrame for logging
-    valid_mask = pd.Series([True] * len(df), index=df.index)
-    
-    # For each foreign key, check if the values in the df match the existing values in the referenced table
-    for fk_id, fk_group in fk_info.groupby('id'):
-        local_cols = fk_group['from'].tolist()  # Local columns in the current table
-        ref_table = fk_group['table'].iloc[0]  # Referenced table
-        ref_cols = fk_group['to'].tolist()
-        
-        missing_fk_cols = [col for col in local_cols if col not in df.columns]
-        if missing_fk_cols:
-            function_logger.warning(f"Skipping FK check {fk_id} due to missing local columns: {missing_fk_cols}")
-            continue
-        
-        # Build query to get valid key tuples from referenced table
-        ref_query = f"SELECT {', '.join(ref_cols)} FROM {ref_table};"
-        
-        try:
-            valid_tuples = pd.read_sql_query(ref_query, db)
-            valid_set = set([tuple(map(str, row)) for row in valid_tuples[ref_cols].itertuples(index=False, name=None)])
-            
-            df_tuples = df[local_cols].astype(str).apply(lambda row: tuple(row), axis=1)
-            this_valid_mask = df_tuples.isin(valid_set)
-            
-            removed_mask = valid_mask & ~this_valid_mask
-            removed_rows = df[removed_mask]
-            
-            if not removed_rows.empty:
-                function_logger.warning(f"Removing {len(removed_rows)} rows with invalid foreign keys in table {table_name} for FK {fk_id}.")
-                function_logger.debug(f"Invalid rows: {removed_rows.to_dict(orient='records')}")
 
-            valid_mask &= this_valid_mask
-            
-        except sqlite3.OperationalError as e:
-            function_logger.error(f"Operational error while checking foreign keys for table {table_name}: {e}")
-            close_database(db, cursor)
+    try:
+        # Get foreign key relationships from PostgreSQL catalog
+        query = """
+        SELECT
+            tc.constraint_name,
+            kcu.column_name AS local_column,
+            ccu.table_name AS ref_table,
+            ccu.column_name AS ref_column
+        FROM 
+            information_schema.table_constraints AS tc
+        JOIN 
+            information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+           AND tc.table_schema = kcu.table_schema
+        JOIN 
+            information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+           AND ccu.table_schema = tc.table_schema
+        WHERE 
+            tc.constraint_type = 'FOREIGN KEY'
+            AND tc.table_name = %s
+        """
+        cursor.execute(query, (table_name,))
+        fk_info = cursor.fetchall()
+
+        if not fk_info:
+            function_logger.info(f"No foreign keys found for table {table_name}. Skipping foreign key validation.")
             return df
-        except sqlite3.Error as e:
-            function_logger.error(f"Error while checking foreign keys for table {table_name}: {e}")
-            close_database(db, cursor)
-            return df
-        except Exception as e:
-            function_logger.error(f"Unexpected error while checking foreign keys for table {table_name}: {e}")
-            close_database(db, cursor)
-            return df
-    
-    clean_df = original_df[valid_mask].copy()
-    close_database(db, cursor)
-    return clean_df
+
+        # Build a DataFrame from the results
+        fk_df = pd.DataFrame(fk_info, columns=["constraint_name", "local_column", "ref_table", "ref_column"])
+
+        original_df = df.copy()
+        valid_mask = pd.Series([True] * len(df), index=df.index)
+
+        for constraint_name, fk_group in fk_df.groupby("constraint_name"):
+            local_cols = fk_group['local_column'].tolist()
+            ref_table = fk_group['ref_table'].iloc[0]
+            ref_cols = fk_group['ref_column'].tolist()
+
+            # Skip if missing required local columns
+            missing_cols = [col for col in local_cols if col not in df.columns]
+            if missing_cols:
+                function_logger.warning(f"Skipping FK check {constraint_name} due to missing columns: {missing_cols}")
+                continue
+
+            try:
+                # Get valid referenced values
+                ref_query = f'SELECT {", ".join(ref_cols)} FROM "{ref_table}";'
+                cursor.execute(ref_query)
+                rows = cursor.fetchall()
+                valid_tuples = pd.DataFrame(rows, columns=ref_cols)
+
+                valid_set = set([tuple(map(str, row)) for row in valid_tuples.itertuples(index=False, name=None)])
+                df_tuples = df[local_cols].astype(str).apply(lambda row: tuple(row), axis=1)
+
+                this_valid_mask = df_tuples.isin(valid_set)
+                removed_rows = df[valid_mask & ~this_valid_mask]
+
+                if not removed_rows.empty:
+                    function_logger.warning(
+                        f"Removing {len(removed_rows)} rows violating foreign key {constraint_name} "
+                        f"from table {table_name}."
+                    )
+                    function_logger.debug(f"Invalid rows: {removed_rows.to_dict(orient='records')}")
+
+                valid_mask &= this_valid_mask
+
+            except Exception as e:
+                function_logger.error(f"Error validating FK {constraint_name} for table {table_name}: {e}")
+                return df
+
+        return original_df[valid_mask].copy()
+
+    except Exception as e:
+        function_logger.error(f"Unexpected error gathering FKs for table {table_name}: {e}")
+        return df
+
+    finally:
+        close_database(db)
 
 def safe_convert_to_datetime(last_match_time):
-    # Ensure last_match_time is a number (either int or float)
-    if not isinstance(last_match_time, (int, float)):
-        raise ValueError(f"Invalid timestamp type: {type(last_match_time).__name__}")
-    elif isinstance(last_match_time, str):
+    """
+    Safely converts a timestamp or ISO datetime string to a Unix timestamp at 00:00:00 UTC.
+    Accepts:
+        - int or float Unix timestamps (in seconds or milliseconds)
+        - ISO 8601 datetime strings
+    Returns:
+        float: Unix timestamp at midnight
+    Raises:
+        ValueError if input is invalid or out of range.
+    """
+
+    # Handle ISO 8601 strings
+    if isinstance(last_match_time, str):
         try:
             dt = datetime.datetime.fromisoformat(last_match_time)
             return dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         except ValueError:
-            raise ValueError("Invalid ISO datetime string")
-    
-    # Special case for 0 timestamp (Unix epoch)
-    if last_match_time == 0:
-        return 0  # Directly return 0 as timestamp
+            raise ValueError(f"Invalid ISO datetime string: {last_match_time}")
 
-    # Check if last_match_time is a valid timestamp (should be non-negative and not too large)
-    if not (0 <= last_match_time <= 253402300800):
-        raise ValueError(f"Timestamp {last_match_time} out of valid range (0 to year 9999)")
+    # Handle numeric input
+    elif isinstance(last_match_time, (int, float)):
+        if last_match_time == 0:
+            return 0
 
-    # If in milliseconds, convert to seconds
-    if last_match_time > 9999999999:  # If it's a timestamp in milliseconds
-        last_match_time /= 1000
+        # Convert milliseconds to seconds if needed
+        if last_match_time > 9999999999:
+            last_match_time /= 1000
 
-    # Convert to datetime
-    return datetime.datetime.fromtimestamp(last_match_time).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        # Validate range (years 1970 to 9999)
+        if not (0 <= last_match_time <= 253402300800):
+            raise ValueError(f"Timestamp {last_match_time} out of valid range (0 to year 9999)")
+
+        return datetime.datetime.fromtimestamp(last_match_time).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).timestamp()
+
+    else:
+        raise ValueError(f"Invalid input type: {type(last_match_time).__name__}")
 
 if __name__ == "__main__":
     # Allow standalone execution
