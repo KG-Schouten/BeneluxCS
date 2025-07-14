@@ -176,9 +176,10 @@ def esea():
     from datetime import datetime
     current_time = int(datetime.now().timestamp())
     
-    from database.db_down import gather_esea_season_info    
+    from database.db_down import gather_esea_season_info, get_todays_matches
+    todays_matches = get_todays_matches()  
     season_info = gather_esea_season_info()
-    return render_template('esea.html', season_info=season_info, current_time=current_time)
+    return render_template('esea.html', season_info=season_info, current_time=current_time, todays_matches=todays_matches)
 
 @views.route('/esea/season/<int:season_number>')
 def esea_season_partial(season_number):
