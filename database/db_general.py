@@ -44,7 +44,7 @@ def delete_table(table_names: str | list, confirm: bool = True):
                 print("Database table deletion aborted")
                 return
         
-        db, cursor = start_database()
+        db, cursor, engine = start_database()
         
         try:
             # Disable foreign key checks temporarily (SQLite)
@@ -80,7 +80,7 @@ def delete_table(table_names: str | list, confirm: bool = True):
             # Enable the foreign key checks again
             cursor.execute("PRAGMA foreign_keys = ON;")
             db.commit()
-            close_database(db, cursor)
+            close_database(db)
 
 def create_tables():
     ## Gather esea data for one team in one season
@@ -157,7 +157,7 @@ def create_table(table_name: str, table_columns: dict = {}, primary_keys: list =
         Creating table: {table_name}:
     -------------------------------------------------
     """)
-    db, cursor = start_database()
+    db, cursor, engine = start_database()
     try:
         # Check for correct type of table_name
         if not isinstance(table_name, str):
@@ -182,7 +182,7 @@ def create_table(table_name: str, table_columns: dict = {}, primary_keys: list =
         return
     finally:
         db.commit()
-        close_database(db, cursor)
+        close_database(db)
 
 def create_table_query(table_name: str, table_columns: dict = {}, primary_keys: list = [], foreign_keys: list = []) -> str | None:
     """
