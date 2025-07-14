@@ -533,6 +533,12 @@ async def process_player_details_batch(player_ids: list[str], faceit_data_v1: Fa
         
         df_players = pd.DataFrame(player_list)
         
+        # Modify the faceit_elo and faceit_level columns to be integers
+        if 'faceit_elo' in df_players.columns:
+            df_players['faceit_elo'] = pd.to_numeric(df_players['faceit_elo'], errors='coerce').fillna(0).astype(int)
+        if 'faceit_level' in df_players.columns:
+            df_players['faceit_level'] = pd.to_numeric(df_players['faceit_level'], errors='coerce').fillna(0).astype(int)
+        
         ## Modify the keys to work with the database
         df_players = modify_keys(df_players)
         
