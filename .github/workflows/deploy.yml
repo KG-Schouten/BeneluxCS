@@ -19,8 +19,9 @@ jobs:
         port: 10272
         script: |
           cd /srv/BeneluxCS
-          git config pull.rebase false  # Prevents pull prompt
+          git config pull.rebase true  # Prevents pull prompt
           git checkout main
-          git pull origin main
+          git pull --rebase origin main
+          git lfs pull 
           sudo systemctl restart beneluxcs.service
 
