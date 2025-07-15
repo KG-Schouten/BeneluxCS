@@ -62,9 +62,6 @@ async def update_esea_seasons_events():
         
 async def update_esea_teams_benelux():
     try:
-        # Remove all data from the teams_benelux table
-        upload_data("teams_benelux", pd.DataFrame(), clear=True)
-        
         async with RequestDispatcher(request_limit=350, interval=10, concurrency=5) as dispatcher:
             async with FaceitData_v1(dispatcher) as faceit_data_v1: 
                 # Updates the teams_benelux data to the database
@@ -125,6 +122,9 @@ async def update_esea_teams_benelux():
                     upload_data("players", df_players)
     
         if isinstance(df_teams_benelux, pd.DataFrame) and not df_teams_benelux.empty:
+            # Remove all data from the teams_benelux table
+            upload_data("teams_benelux", pd.DataFrame(), clear=True)
+            
             upload_data("teams_benelux", df_teams_benelux)
     
     except Exception as e:
