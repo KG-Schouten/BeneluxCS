@@ -315,8 +315,8 @@ def read_league_teams_json(
         pd.DataFrame: DataFrame with team details.
     """
     # Data path
-    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    DATA_PATH = os.path.join(PROJECT_ROOT, 'data_processing', 'data', 'league_teams.json')
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    DATA_PATH = os.path.join(BASE_DIR, 'data', 'league_teams.json')
 
     try:
         with open(DATA_PATH, 'r', encoding='utf-8') as f:  # Open the file in read mode with UTF-8 encoding
