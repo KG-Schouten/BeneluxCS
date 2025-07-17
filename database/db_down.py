@@ -815,12 +815,12 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
             for row in rows:
                 if row[0]:
                     try:
-                        parsed = json.loads(row[0])
-                        if isinstance(parsed, list):
-                            map_pool = parsed
+                        if isinstance(row[0], list):
+                            map_pool = row[0]
                             break
                     except Exception:
                         continue
+            
             map_pools[season_num] = map_pool
 
         # Load team map stats for all teams and seasons
@@ -943,7 +943,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     # Use pre-loaded matches data
                     df_matches = matches_data.get((team_id, season_number), pd.DataFrame())
 
-                    # Use pre-loaded map stats data  
+                    # Use pre-loaded map stats data
                     map_stats = map_stats_data.get((team_id, season_number), [])
                     
                     recent_matches, upcoming_matches = [], []
@@ -1076,7 +1076,7 @@ def gather_esea_map_stats(team_id, szn_number) -> list:
                         break  # use first valid one found
                 except Exception:
                     continue
-        
+                
         # Gather team map stats
         cursor.execute("""
             SELECT
