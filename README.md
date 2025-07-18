@@ -9,15 +9,6 @@ Want to be a part of the BeNeLux CS Community? [Join the Discord!](https://disco
 - Leaderboard: Elo slider filtering unresponsive with fast movements
 - Narrow layout (phones etc.) not working. Breaks the website layout lol
 - Stats: At first load, country filters show active even though no filters are applied.
-### Upcoming Features/Projects
-- Benelux Hub integration! Matches, Stats, Leaderboards and the rest :D
-- Leaderboard enhancements: Configure slider min/max to match leaderboard elo range
-- ESEA: Add detailed player statistics to team pages
-- Stats: Add additional filters (Maps played, Map-specific filtering, Team filtering)
-- Stats/Leaderboard: Add Team label when player participates in ESEA
-- An info hub for casters / observers / hosts in the BeNeLux.
-- An Events page containing info about past and upcoming BeNeLux CS events (lans, tourneys, comps)
-- A stylistic overhaul of the website (desperately needed lol)
 
 ## Project Overview
 BeneluxCS provides a centralized hub for Counter-Strike statistics focused on the Benelux region. The platform offers:
@@ -33,7 +24,7 @@ Web interface made with Flask, HTML and JS providing a means to show off the dat
 All functions and files connected to gathering and processing the data from the FACEIT (and in beta STEAM) API's.
 
 ### Database
-The SQLite relational database storing data on various events and leagues on faceit:
+The Postgresql relational database storing data on various events and leagues on faceit:
 - Players and stats
 - Teams and events played
 - Match results and statistics
