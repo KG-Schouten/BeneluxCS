@@ -962,7 +962,8 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                                 'opponent_id': row['opp_id'],
                                 'opponent': row['opp_name'],
                                 'opponent_avatar': row['opp_avatar'],
-                                'score': score
+                                'score': score,
+                                'match_time': int(row['match_time']),
                             })
 
                         elif row['status'] == 'SCHEDULED':
@@ -976,6 +977,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         
                         # Sort upcoming matches by match_time
                         upcoming_matches.sort(key=lambda x: x['match_time'])
+                        recent_matches.sort(key=lambda x: x['match_time'])
 
                     team_dict = {
                         'team_id': team_id,
