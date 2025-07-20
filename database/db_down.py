@@ -963,7 +963,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                                 'opponent': row['opp_name'],
                                 'opponent_avatar': row['opp_avatar'],
                                 'score': score,
-                                'match_time': int(row['match_time']),
+                                'match_time': int(row['match_time']) if pd.notna(row['match_time']) else 0,
                             })
 
                         elif row['status'] == 'SCHEDULED':
