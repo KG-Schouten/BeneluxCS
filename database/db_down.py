@@ -1218,16 +1218,15 @@ def get_todays_matches():
                 "match_id": row[0],
                 "match_time": row[1],
                 "status": row[2],
-                "division_name": row[3]
+                "division_name": row[3],
             }
-
             team1 = {
                 "team_id": row[4],
                 "team_name": row[5],
                 "team_avatar": row[6],
                 "is_benelux": row[7]
             }
-
+            
             team2 = {
                 "team_id": row[8],
                 "team_name": row[9],
@@ -1242,9 +1241,13 @@ def get_todays_matches():
             elif team2["is_benelux"] and not team1["is_benelux"]:
                 match["team"] = team2
                 match["opponent"] = team1
+            elif team1["is_benelux"] and team2["is_benelux"]:
+                # If both teams are Benelux, we can still include the match
+                match["team"] = team1
+                match["opponent"] = team2
             else:
                 continue  # Skip matches where both teams are Benelux or neither is
-
+            
             # Add match to the appropriate division group
             grouped_matches[match["division_name"]].append(match)
 
@@ -1253,7 +1256,7 @@ def get_todays_matches():
             division: grouped_matches[division]
             for division in sorted(grouped_matches.keys(), key=compute_division_rank)
         }
-
+        
         return sorted_grouped_matches
 
     except Exception as e:
