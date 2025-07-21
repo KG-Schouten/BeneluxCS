@@ -16,7 +16,7 @@ body.dark-mode {
   --form-bg: #333;
   --form-text: #ddd;
   --form-border: #555;
-  --score-logo-filter: invert(1) brightness(1.2) contrast(1.1);
+  --logo-filter: invert(1) brightness(1.2) contrast(1.1);
 }
 
 body.dark-mode {
@@ -57,7 +57,7 @@ body.dark-mode .form-control {
 }
 
 body.dark-mode .score-logo {
-  filter: var(--score-logo-filter);
+  filter: var(--logo-filter);
 }
 
 body.dark-mode .text-muted {
