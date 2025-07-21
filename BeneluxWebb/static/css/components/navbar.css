@@ -1,48 +1,107 @@
 /* navbar.css */
-
-/* Navbar background and border */
-.navbar {
-  background-color: var(--background) !important;
-  border-bottom: 1px solid var(--border);
+:root {
+  --navbar-height: 50px;
 }
 
-/* Nav link colors */
+/* === Navbar === */
+.navbar {
+  color: white;
+  background-color: var(--background) !important;
+  border-bottom: 1px solid var(--border);
+  min-height: var(--navbar-height);
+}
+
+.navbar-container {
+  height: var(--navbar-height);
+  display: flex;
+  align-items: center;
+}
+
+.container-boxed {
+  height: 100%;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* === Navbar Brand === */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  height: var(--navbar-height);
+  padding: 0;
+}
+.navbar-brand img {
+  max-height: 100%;
+  height: auto;
+  width: auto;
+  display: block;
+}
+
+/* === Navbar Links === */
+.navbar-nav {
+  gap: 2rem;
+}
 .navbar-nav .nav-link {
   color: var(--foreground);
   transition: color 0.3s ease;
+  font-size: 1.2rem;
 }
-
-/* Active nav link */
 .navbar-nav .nav-link.active {
   font-weight: bold;
   border-bottom: 2px solid var(--primary);
   background-color: transparent;
   color: var(--primary);
 }
-
-/* Nav link hover */
 .navbar-nav .nav-link:hover {
   color: var(--accent) !important;
 }
 
-/* Navbar toggler */
+/* === Toggler === */
 .navbar-toggler {
   border-color: rgba(255, 255, 255, 0.1);
 }
-
-/* Invert toggler icon for dark backgrounds */
 .navbar-toggler-icon {
   filter: invert(100%);
 }
 
-/* Dark mode toggle button */
-#darkModeToggle {
-  min-width: 100px;
+/* === Dark mode toggle === */
+.checkbox {
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
 }
-
-/* Responsive nav spacing */
-@media (max-width: 575.98px) {
-  .navbar-nav {
-    margin-top: 0.5rem;
-  }
+.checkbox-label {
+  background-color: #111;
+  width: 50px;
+  height: 26px;
+  border-radius: 50px;
+  padding: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+.fa-moon {
+  color: #f1c40f;
+}
+.fa-sun {
+  color: #f39c12;
+}
+.checkbox-label .ball {
+  background-color: #fff;
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  border-radius: 50%;
+  transition: transform 0.2s linear;
+  z-index: 1;
+}
+.checkbox:checked + .checkbox-label .ball {
+  transform: translateX(24px);
 }

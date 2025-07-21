@@ -42,85 +42,107 @@
   <body class="dark-mode">
     
     <!-- Nav bar top -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-      <!-- Navbar brand or toggler -->
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbar"
-        aria-controls="navbar"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
+    <nav class="navbar navbar-expand-md">
+      <div class="container-fluid navbar-container">
+        <div class="container-boxed">
+          
+          <a class="navbar-brand nav-link {% if request.path == '/home' %}active{% endif %}" 
+            id="home"
+            href="/home"
+            aria-current="{% if request.path == '/home' %}page{% endif %}">
+            <img src="{{ url_for('static', filename='img/beneluxcs_logo.png') }}" alt="Logo">
+          </a>
 
-      <!-- Nav bar collapse - add navbar-collapse class -->
-      <div class="collapse navbar-collapse" id="navbar">
-        <!-- Left-aligned nav links -->
-        <div class="navbar-nav me-auto">
-          <a class="nav-item nav-link {% if request.path == '/esea' %}active{% endif %}" 
-            id="esea" 
-            href="/esea" 
-            aria-current="{% if request.path == '/esea' %}page{% endif %}">ESEA</a>
-          <a class="nav-item nav-link {% if request.path == '/leaderboard' %}active{% endif %}"
-            id="leaderboard" 
-            href="/leaderboard"
-            aria-current="{% if request.path == '/leaderboard' %}page{% endif %}">Leaderboard</a>
-          <a class="nav-item nav-link {% if request.path == '/stats' %}active{% endif %}"
-            id="stats" 
-            href="/stats"
-            aria-current="{% if request.path == '/stats' %}page{% endif %}">Stats</a>
-        </div>
-
-        <!-- Right-aligned dark mode toggle -->
-        <div class="ms-auto">
-          <button id="darkModeToggle" class="btn btn-secondary btn-sm" type="button">
-            Dark Mode
+          <button 
+            class="navbar-toggler" 
+            type="button" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#navbarNav" 
+            aria-controls="navbarNav" 
+            aria-expanded="false" 
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
           </button>
+
+          <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a class="nav-link {% if request.path == '/esea' %}active{% endif %}" href="/esea"
+                  aria-current="{% if request.path == '/esea' %}page{% endif %}">ESEA</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.path == '/hub' %}active{% endif %}" href="/hub"
+                  aria-current="{% if request.path == '/hub' %}page{% endif %}">Hub</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.path == '/events' %}active{% endif %}" href="/events"
+                  aria-current="{% if request.path == '/events' %}page{% endif %}">Events</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.path == '/leaderboard' %}active{% endif %}" href="/leaderboard"
+                  aria-current="{% if request.path == '/leaderboard' %}page{% endif %}">Leaderboard</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.path == '/stats' %}active{% endif %}" href="/stats"
+                  aria-current="{% if request.path == '/stats' %}page{% endif %}">Stats</a>
+              </li>
+            </ul>
+          </div>
+
+          <div class="d-flex align-items-center ms-auto">
+            <input type="checkbox" class="checkbox" id="darkModeToggle">
+            <label for="darkModeToggle" class="checkbox-label">
+              <i class="fas fa-moon"></i>
+              <i class="fas fa-sun"></i>
+              <span class="ball"></span>
+            </label>
+          </div>
         </div>
       </div>  
     </nav>
 
-    <div class="container-fluid" style="min-height: 100vh">
-      {% block content %}
-      {% endblock %}
+    <div class="container-fluid">
+      <div class="container-boxed" style="min-height: 100vh">
+        {% block content %}
+        {% endblock %}
+      </div>
     </div>
 
     <footer class="footer-box text-center py-4">
-      <!-- Social & Project Info -->
-      <div class="contact-links mb-3">
-        <p class="mb-3">
-          Contact me:  
-          <a href="https://discordapp.com/users/228206535405207552" class="icon-box" target="_blank" rel="noopener" title="Discord">
-            <i class="bi bi-discord"></i>
-          </a>
-          <a href="https://x.com/Fowlz_" class="icon-box" target="_blank" rel="noopener" title="Twitter">
-            <i class="bi bi-twitter-x"></i>
-          </a>
-          <a href="https://steamcommunity.com/id/Fowlz1/" class="icon-box" target="_blank" rel="noopener" title="Steam">
-            <i class="bi bi-steam"></i>
-          </a>
-        </p>
-        <p class="mb-1">
-          <a href="https://github.com/KG-Schouten/BeneluxCS" target="_blank" rel="noopener" title="GitHub Repo">
-            <i class="bi bi-github"></i> View source on GitHub
-          </a>
-        </p>
-        <p class="mb-0">
-          <a href="https://discord.gg/9xzsGTGhjm" target="_blank" rel="noopener" title="Join our Discord">
-            <i class="bi bi-discord"></i> Join the Benelux Discord
-          </a>
-        </p>
-      </div>
+      <div class="container-boxed">
+        <!-- Social & Project Info -->
+        <div class="contact-links mb-3">
+          <p class="mb-3">
+            Contact me:  
+            <a href="https://discordapp.com/users/228206535405207552" class="icon-box" target="_blank" rel="noopener" title="Discord">
+              <i class="bi bi-discord"></i>
+            </a>
+            <a href="https://x.com/Fowlz_" class="icon-box" target="_blank" rel="noopener" title="Twitter">
+              <i class="bi bi-twitter-x"></i>
+            </a>
+            <a href="https://steamcommunity.com/id/Fowlz1/" class="icon-box" target="_blank" rel="noopener" title="Steam">
+              <i class="bi bi-steam"></i>
+            </a>
+          </p>
+          <p class="mb-1">
+            <a href="https://github.com/KG-Schouten/BeneluxCS" target="_blank" rel="noopener" title="GitHub Repo">
+              <i class="bi bi-github"></i> View source on GitHub
+            </a>
+          </p>
+          <p class="mb-0">
+            <a href="https://discord.gg/9xzsGTGhjm" target="_blank" rel="noopener" title="Join our Discord">
+              <i class="bi bi-discord"></i> Join the Benelux Discord
+            </a>
+          </p>
+        </div>
 
-      <!-- Licensing Note -->
-      <div class="text-muted small mt-3">
-        © 2025 Koen Schouten. Code licensed under 
-        <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer" class="text-muted">
-          GPL v3
-        </a>.
+        <!-- Licensing Note -->
+        <div class="text-muted small mt-3">
+          © 2025 Koen Schouten. Code licensed under 
+          <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer" class="text-muted">
+            GPL v3
+          </a>.
+        </div>
       </div>
     </footer>
 
