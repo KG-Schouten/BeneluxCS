@@ -1,6 +1,5 @@
 /* esea.css */
 :root {
-
   /* Main wrapper (ESEA wrapper) ratios */
   --esea-wrapper-width: 85%;
   --sidebar-width: 15%;
@@ -431,7 +430,7 @@ h3, h4, .team-link {
   height: auto;
   object-fit: contain;
 
-  filter: var(--score-logo-filter);
+  filter: var(--logo-filter);
 }
 
 .stage-score {
