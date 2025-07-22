@@ -65,8 +65,8 @@
             <span class="navbar-toggler-icon"></span>
           </button>
 
-          <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-            <ul class="navbar-nav">
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav" id="navList">
               <li class="nav-item">
                 <a class="nav-link {% if request.path == '/esea' %}active{% endif %}" href="/esea"
                   aria-current="{% if request.path == '/esea' %}page{% endif %}">ESEA</a>
@@ -86,6 +86,19 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.path == '/stats' %}active{% endif %}" href="/stats"
                   aria-current="{% if request.path == '/stats' %}page{% endif %}">Stats</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.path == '/something' %}active{% endif %}" href="/something"
+                  aria-current="{% if request.path == '/something' %}page{% endif %}">AVeryLongWordAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</a>
+              </li>
+
+              <li class="nav-item dropdown d-none" id="moreDropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="moreMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  More
+                </a>
+                <ul class="dropdown-menu" id="moreMenuList" aria-labelledby="moreMenu">
+                  <!-- Overflowing links go here -->
+                </ul>
               </li>
             </ul>
           </div>
@@ -153,6 +166,7 @@
 
   {% block javascript %}
     <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
   {% endblock %}
   </body>
 </html>
