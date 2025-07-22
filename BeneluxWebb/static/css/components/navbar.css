@@ -13,12 +13,15 @@
 
 .navbar-container {
   height: var(--navbar-height);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   display: flex;
   align-items: center;
 }
 
 .container-boxed {
-  height: 100%;
+  /* height: 100%; */
   display: flex;
   width: 100%;
   justify-content: space-between;
@@ -40,7 +43,20 @@
 }
 
 /* === Navbar Links === */
+.collapse.navbar-collapse {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  justify-content: center;
+
+  border: 1px solid red;
+}
 .navbar-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+
   gap: 2rem;
 }
 .navbar-nav .nav-link {
@@ -64,6 +80,11 @@
 }
 .navbar-toggler-icon {
   filter: invert(100%);
+}
+
+.nav-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px dashed orange;
 }
 
 /* === Dark mode toggle === */
