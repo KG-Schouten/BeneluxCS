@@ -177,6 +177,7 @@ async def process_match_details_batch(
         for row in results or []
         if row and isinstance(row, (list, tuple)) and len(row) > 1 and row[0]
     ])
+    df_matches['match_time'] = df_matches['match_time'].astype('Int64', errors='ignore')  # Convert to nullable integer type
     df_teams_matches = pd.DataFrame([
         item
         for row in results or [] 
@@ -242,7 +243,7 @@ async def process_match_details(match_id: str, event_id, faceit_data: FaceitData
             "competition_type": match_details.get("competition_type", None),
             "competition_name": match_details.get("competition_name", None),
             "organizer_id": match_details.get("organizer_id", None),
-            "match_time": match_time,
+            "match_time": int(match_time) if match_time else None,
             "best_of": match_details.get("best_of", None),
             "winner_id": winning_id,
             "status": status,
