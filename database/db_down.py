@@ -396,6 +396,29 @@ def gather_event_teams(event_ids: list = [], ONGOING: bool = False, ESEA: bool =
         function_logger.error(f"Error gathering event teams: {e}")
         return pd.DataFrame()
 
+def gather_event_matches(event_ids: list) -> list:
+    """ Gathers all matches for each (event_id, team_id) pair"""
+    db, cursor = start_database()
+    try:
+        query_base = """
+            SELECT
+                match_id
+            FROM matches
+            WHERE event_id IN ({})
+        """
+        placeholders = ', '.join(['%s'] * len(event_ids))
+        query_base = query_base.format(placeholders)
+        cursor.execute(query_base, event_ids)
+        res = cursor.fetchall()
+        match_ids = [match[0] for match in res]
+        
+        return match_ids
+    except Exception as e:
+        function_logger.error(f"Error gathering event matches: {e}")
+        return []
+    finally:
+        close_database(db)
+    
 def gather_last_match_time_database(event_ids: list = [], ONGOING: bool = False, ESEA: bool = False) -> int:
     db, cursor = start_database()
     try:
@@ -459,6 +482,28 @@ def gather_internal_event_ids(event_ids: list) -> pd.DataFrame:
         function_logger.error(f"Error gathering internal event IDs: {e}")
         return pd.DataFrame()
 
+def gather_upcoming_matches() -> pd.DataFrame:
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                m.match_id,
+                m.event_id,
+                m.match_time,
+                m.status
+            FROM matches m
+            WHERE m.status != 'FINISHED'
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_upcoming = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+    except Exception as e:
+        function_logger.error(f"Error gathering upcoming matches: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
+    
+    return df_upcoming  
 ### ----------------------------
 ### Website functions
 ### ----------------------------
