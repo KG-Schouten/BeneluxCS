@@ -1,4 +1,6 @@
 import asyncio
+import os
+import sys
 
 def get_tqdm():
     try:
@@ -14,26 +16,25 @@ def get_tqdm():
     return tqdm
 
 async def gather_with_progress(coros: list, desc="Processing", unit="tasks") -> list:
-    """ 
-    Function to gather multiple coroutines with a progress bar.
-        Way to use: "results = await gather_with_progress(tasks, desc='...', unit='...')"
-    
-    Args:
-        coros (list): List of coroutines (tasks)
-        desc (str): Description for the progress bar.
-        unit (str): Unit of work for the progress bar.
+    """
+    Gathers multiple coroutines with an optional progress bar (only shown if running in a terminal).
     """
     tqdm = get_tqdm()
+    use_pbar = sys.stdout.isatty()  # Only show progress if running in a terminal
+
     total = len(coros)
-    pbar = tqdm(total=total, desc=desc, unit=unit, smoothing=0)
-    
+    pbar = tqdm(total=total, desc=desc, unit=unit, smoothing=0, disable=not use_pbar)
+
     async def run(coro):
         result = await coro
-        pbar.update(1)
+        if use_pbar:
+            pbar.update(1)
         return result
-    
+
     results = await asyncio.gather(*(run(coro) for coro in coros))
-    pbar.close()
+
+    if use_pbar:
+        pbar.close()
     return results
 
 def run_async(coro_or_func, *args, **kwargs):
