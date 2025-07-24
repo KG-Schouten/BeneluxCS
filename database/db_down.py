@@ -1304,6 +1304,8 @@ def get_todays_matches():
             for division in sorted(grouped_matches.keys(), key=compute_division_rank)
         }
         
+        print(sorted_grouped_matches)
+        
         return sorted_grouped_matches
 
     except Exception as e:

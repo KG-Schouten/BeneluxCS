@@ -67,9 +67,29 @@
                   <div class="team team-left {{ 'highlight-text' if match.team.is_benelux else '' }}">
                     <span>{{ match.team.team_name }}</span>
                   </div>
-                  <div class="match-time">
-                    <span>{{ match.match_time | datetimeformat('%H:%M') }}</span>
-                  </div>
+                  {% if match.status == 'FINISHED' %}
+                    <div class="match_time">
+                      <span>{{ match.status }}</span>
+                    </div>
+                  {% elif match.status == 'SCHEDULED' %}
+                    <div class="match-time">
+                      <span>{{ match.match_time | datetimeformat('%H:%M') }}</span>
+                    </div>
+                  {% elif match.status == 'ONGOING' %}
+                    {% if match.score %}
+                      <div class="match-time">
+                        <span>LIVE: {{ match.score[match.team.team_id] | default(0) }} / {{ match.score[match.opponent.team_id] | default(0) }}</span>
+                      </div>
+                    {% else %}
+                      <div class="match_time">
+                        <span>{{ match.status }}</span>
+                      </div>
+                    {% endif %}
+                  {% else %}
+                    <div class="match_time">
+                      <span>{{ match.status }}</span>
+                    </div>
+                  {% endif %}
                   <div class="team team-right {{ 'highlight-text' if match.opponent.is_benelux else '' }}">
                     <span>{{ match.opponent.team_name }}</span>
                   </div>

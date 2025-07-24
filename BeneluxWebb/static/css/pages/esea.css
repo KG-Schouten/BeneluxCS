@@ -586,12 +586,15 @@ h3, h4, .team-link {
   align-items: center;
 
   height: 100%;
-  width: var(--match-info-time-width);
+  width: 100%;
   font-size: .8rem;
   font-weight: bold;
 
   overflow: visible;
   flex-wrap: nowrap;
+}
+.match-time.upcoming {
+  width: var(--match-info-time-width);
 }
 
 
