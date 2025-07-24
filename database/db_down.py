@@ -793,7 +793,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 for team_id in all_team_ids:
                     cursor.execute("""
                         WITH team_matches AS (
-                            SELECT m.match_id, m.match_time, m.winner_id, m.status,
+                            SELECT m.match_id, m.match_time, m.winner_id, m.status, m.score,
                                 tm.team_id AS our_id, tm.team_name AS our_name,
                                 opp.team_id AS opp_id, opp.team_name AS opp_name, opp.avatar AS opp_avatar
                             FROM matches m
@@ -1011,7 +1011,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                                 'match_time': int(row['match_time']) if pd.notna(row['match_time']) else 0,
                             })
 
-                        elif row['status'] == 'SCHEDULED':
+                        elif row['status'] != 'FINISHED':
                             upcoming_matches.append({
                                 'match_id': row['match_id'],
                                 'opponent_id': row['opp_id'],
@@ -1208,6 +1208,7 @@ def get_todays_matches():
                     m.match_id,
                     m.match_time,
                     m.status,
+                    m.score,
                     s.division_name,
                     tm.team_id,
                     COALESCE(tb.team_name, tm.team_name) AS team_name,
@@ -1226,6 +1227,7 @@ def get_todays_matches():
                 mt1.match_id,
                 mt1.match_time,
                 mt1.status,
+                mt1.score,
                 mt1.division_name,
 
                 mt1.team_id AS team1_id,
@@ -1257,26 +1259,26 @@ def get_todays_matches():
             return 999
         
         grouped_matches = defaultdict(list)
-        
         for row in rows:
             match = {
                 "match_id": row[0],
                 "match_time": row[1],
                 "status": row[2],
-                "division_name": row[3],
+                "score": row[3],
+                "division_name": row[4],
             }
             team1 = {
-                "team_id": row[4],
-                "team_name": row[5],
-                "team_avatar": row[6],
-                "is_benelux": row[7]
+                "team_id": row[5],
+                "team_name": row[6],
+                "team_avatar": row[7],
+                "is_benelux": row[8]
             }
             
             team2 = {
-                "team_id": row[8],
-                "team_name": row[9],
-                "team_avatar": row[10],
-                "is_benelux": row[11]
+                "team_id": row[9],
+                "team_name": row[10],
+                "team_avatar": row[11],
+                "is_benelux": row[12]
             }
 
             # Determine which is the Benelux team
