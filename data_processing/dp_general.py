@@ -177,6 +177,7 @@ async def process_match_details_batch(
         for row in results or []
         if row and isinstance(row, (list, tuple)) and len(row) > 1 and row[0]
     ])
+    df_matches['match_time'] = df_matches['match_time'].astype('Int64', errors='ignore')  # Convert to nullable integer type
     df_teams_matches = pd.DataFrame([
         item
         for row in results or [] 
@@ -235,6 +236,16 @@ async def process_match_details(match_id: str, event_id, faceit_data: FaceitData
             winning_fac = match_details.get('results', {}).get('winner', None)
             winning_id = match_details['teams'].get(winning_fac, {}).get('faction_id', None)
         
+        # Get score for match
+        score = {}
+        if 'detailed_results' in match_details:
+            detailed_results = match_details['detailed_results']
+            if isinstance(detailed_results, list):
+                for faction, score_dict in detailed_results[0]['factions'].items():
+                    team_id = match_details['teams'].get(faction, {}).get('faction_id', None)
+                    team_score = score_dict.get('score', 0)
+                    score[team_id] = team_score
+
         match_dict = {
             "match_id": match_id,
             "event_id": event_id,
@@ -242,13 +253,14 @@ async def process_match_details(match_id: str, event_id, faceit_data: FaceitData
             "competition_type": match_details.get("competition_type", None),
             "competition_name": match_details.get("competition_name", None),
             "organizer_id": match_details.get("organizer_id", None),
-            "match_time": match_time,
+            "match_time": int(match_time) if match_time else None,
             "best_of": match_details.get("best_of", None),
             "winner_id": winning_id,
             "status": status,
             "round": match_details.get("round", None),
             "group_id": match_details.get("group", None),
             "demo_url": match_details.get("demo_url", None),
+            "score": score,
         }
         match_team_list = []
         for team in match_details['teams'].values():
@@ -286,7 +298,7 @@ async def process_match_stats_batch(match_ids, faceit_data: FaceitData) -> tuple
             raise TypeError(msg)
         if not match_ids:
             msg = "No match IDs provided for processing."
-            function_logger.warning(msg)
+            function_logger.error(msg)
             raise ValueError(msg)
         
         tasks = [process_match_stats(match_id, faceit_data) for match_id in match_ids]
@@ -298,8 +310,8 @@ async def process_match_stats_batch(match_ids, faceit_data: FaceitData) -> tuple
 
         if df_maps.empty or df_teams_maps.empty or df_players_stats.empty:
             msg = "No map stats data found for the provided match IDs."
-            function_logger.warning(msg)
-            raise ValueError(msg)
+            function_logger.info(msg)
+            return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
         
         # Modify the keys to work with the database
         df_maps = modify_keys(df_maps)
@@ -332,10 +344,11 @@ async def process_match_stats(match_id: str, faceit_data: FaceitData) -> tuple[l
         
         if not isinstance(match_stats, dict):
             msg = f"player_details is not a dictionary: {match_stats}"
-            raise TypeError(msg)
+            return [], [], []
+            
         if not match_stats:
             msg = f"No data found for player IDs: {match_stats}"
-            raise ValueError(msg)
+            return [], [], []
         
         ## Check for replayed matches
         seen = {}

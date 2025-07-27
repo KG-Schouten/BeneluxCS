@@ -65,7 +65,8 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
         else:
             # Start the database connection and cursor
             execute_values(cursor, sql, data)
-            function_logger.info(f"Successfully uploaded {len(data)} rows to {table_name} table.")
+            updated_rows = cursor.fetchall()
+            function_logger.info(f"Successfully uploaded {len(updated_rows)}/{len(data)} rows to {table_name} table.")
       
     except Exception as e:
         function_logger.error(f"Error while uploading data to {table_name}: {e}")
@@ -146,7 +147,8 @@ def upload_data_query(table_name: str, keys: list[str], primary_keys: list[str])
             INSERT INTO "{table_name}" ({', '.join(escaped_keys)})
             VALUES %s
             ON CONFLICT ({', '.join(escaped_pks)})
-            DO UPDATE SET {update_clause};
+            DO UPDATE SET {update_clause}
+            RETURNING {', '.join(escaped_keys)};
         """
     return query.strip()
 

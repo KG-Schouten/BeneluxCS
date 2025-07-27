@@ -396,6 +396,29 @@ def gather_event_teams(event_ids: list = [], ONGOING: bool = False, ESEA: bool =
         function_logger.error(f"Error gathering event teams: {e}")
         return pd.DataFrame()
 
+def gather_event_matches(event_ids: list) -> list:
+    """ Gathers all matches for each (event_id, team_id) pair"""
+    db, cursor = start_database()
+    try:
+        query_base = """
+            SELECT
+                match_id
+            FROM matches
+            WHERE event_id IN ({})
+        """
+        placeholders = ', '.join(['%s'] * len(event_ids))
+        query_base = query_base.format(placeholders)
+        cursor.execute(query_base, event_ids)
+        res = cursor.fetchall()
+        match_ids = [match[0] for match in res]
+        
+        return match_ids
+    except Exception as e:
+        function_logger.error(f"Error gathering event matches: {e}")
+        return []
+    finally:
+        close_database(db)
+    
 def gather_last_match_time_database(event_ids: list = [], ONGOING: bool = False, ESEA: bool = False) -> int:
     db, cursor = start_database()
     try:
@@ -459,6 +482,28 @@ def gather_internal_event_ids(event_ids: list) -> pd.DataFrame:
         function_logger.error(f"Error gathering internal event IDs: {e}")
         return pd.DataFrame()
 
+def gather_upcoming_matches() -> pd.DataFrame:
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                m.match_id,
+                m.event_id,
+                m.match_time,
+                m.status
+            FROM matches m
+            WHERE m.status != 'FINISHED'
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_upcoming = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+    except Exception as e:
+        function_logger.error(f"Error gathering upcoming matches: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
+    
+    return df_upcoming  
 ### ----------------------------
 ### Website functions
 ### ----------------------------
@@ -748,7 +793,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 for team_id in all_team_ids:
                     cursor.execute("""
                         WITH team_matches AS (
-                            SELECT m.match_id, m.match_time, m.winner_id, m.status,
+                            SELECT m.match_id, m.match_time, m.winner_id, m.status, m.score,
                                 tm.team_id AS our_id, tm.team_name AS our_name,
                                 opp.team_id AS opp_id, opp.team_name AS opp_name, opp.avatar AS opp_avatar
                             FROM matches m
@@ -966,7 +1011,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                                 'match_time': int(row['match_time']) if pd.notna(row['match_time']) else 0,
                             })
 
-                        elif row['status'] == 'SCHEDULED':
+                        elif row['status'] != 'FINISHED':
                             upcoming_matches.append({
                                 'match_id': row['match_id'],
                                 'opponent_id': row['opp_id'],
@@ -1163,6 +1208,7 @@ def get_todays_matches():
                     m.match_id,
                     m.match_time,
                     m.status,
+                    m.score,
                     s.division_name,
                     tm.team_id,
                     COALESCE(tb.team_name, tm.team_name) AS team_name,
@@ -1181,6 +1227,7 @@ def get_todays_matches():
                 mt1.match_id,
                 mt1.match_time,
                 mt1.status,
+                mt1.score,
                 mt1.division_name,
 
                 mt1.team_id AS team1_id,
@@ -1212,26 +1259,26 @@ def get_todays_matches():
             return 999
         
         grouped_matches = defaultdict(list)
-        
         for row in rows:
             match = {
                 "match_id": row[0],
                 "match_time": row[1],
                 "status": row[2],
-                "division_name": row[3],
+                "score": row[3],
+                "division_name": row[4],
             }
             team1 = {
-                "team_id": row[4],
-                "team_name": row[5],
-                "team_avatar": row[6],
-                "is_benelux": row[7]
+                "team_id": row[5],
+                "team_name": row[6],
+                "team_avatar": row[7],
+                "is_benelux": row[8]
             }
             
             team2 = {
-                "team_id": row[8],
-                "team_name": row[9],
-                "team_avatar": row[10],
-                "is_benelux": row[11]
+                "team_id": row[9],
+                "team_name": row[10],
+                "team_avatar": row[11],
+                "is_benelux": row[12]
             }
 
             # Determine which is the Benelux team
@@ -1256,6 +1303,8 @@ def get_todays_matches():
             division: grouped_matches[division]
             for division in sorted(grouped_matches.keys(), key=compute_division_rank)
         }
+        
+        print(sorted_grouped_matches)
         
         return sorted_grouped_matches
 
