@@ -4,6 +4,11 @@ body.dark-mode {
   --secondary: #555;
   --background: #121212;
   --foreground: #e0e0e0;
+
+  --navbar-bg: #555;
+  --navbar-text: #ffffff;
+  --navbar-border: ;
+
   --card-bg: #1e1e1e;
   --card-bg-secondary: #2c2c2c;
   --card-bg-highlight: #333;

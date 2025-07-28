@@ -45,79 +45,46 @@
   <body class="dark-mode">
     
     <!-- Nav bar top -->
-    <nav class="navbar navbar-expand-md">
-      <div class="container-fluid navbar-container">
-        <div class="container-boxed">
-          
-          <a class="navbar-brand nav-link {% if request.path == '/home' %}active{% endif %}" 
-            id="home"
-            href="/home"
-            aria-current="{% if request.path == '/home' %}page{% endif %}">
-            <img src="{{ url_for('static', filename='img/beneluxcs_logo.png') }}" alt="Logo">
+    <div class="container-fluid navbar-container">
+      
+      <nav class="container-boxed navbar-boxed">
+        
+        <div class="nav-logo">
+          <a class="nav-logo-small" href="/">
+            <img src="{{ url_for('static', filename='img/beneluxcs_logo.png') }}" alt="Logo" loading="lazy">
           </a>
-
-          <button 
-            class="navbar-toggler" 
-            type="button" 
-            data-bs-toggle="collapse" 
-            data-bs-target="#navbarNav" 
-            aria-controls="navbarNav" 
-            aria-expanded="false" 
-            aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-
-          <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav" id="navList">
-              <li class="nav-item">
-                <a class="nav-link {% if request.path == '/esea' %}active{% endif %}" href="/esea"
-                  aria-current="{% if request.path == '/esea' %}page{% endif %}">ESEA</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.path == '/hub' %}active{% endif %}" href="/hub"
-                  aria-current="{% if request.path == '/hub' %}page{% endif %}">Hub</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.path == '/events' %}active{% endif %}" href="/events"
-                  aria-current="{% if request.path == '/events' %}page{% endif %}">Events</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.path == '/leaderboard' %}active{% endif %}" href="/leaderboard"
-                  aria-current="{% if request.path == '/leaderboard' %}page{% endif %}">Leaderboard</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.path == '/stats' %}active{% endif %}" href="/stats"
-                  aria-current="{% if request.path == '/stats' %}page{% endif %}">Stats</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.path == '/something' %}active{% endif %}" href="/something"
-                  aria-current="{% if request.path == '/something' %}page{% endif %}">AVeryLongWordAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</a>
-              </li>
-
-              <li class="nav-item dropdown d-none" id="moreDropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="moreMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  More
-                </a>
-                <ul class="dropdown-menu" id="moreMenuList" aria-labelledby="moreMenu">
-                  <!-- Overflowing links go here -->
-                </ul>
-              </li>
-            </ul>
-          </div>
-
-          <div class="d-flex align-items-center ms-auto">
-            <input type="checkbox" class="checkbox" id="darkModeToggle">
-            <label for="darkModeToggle" class="checkbox-label">
-              <i class="fas fa-moon"></i>
-              <i class="fas fa-sun"></i>
-              <span class="ball"></span>
-            </label>
-          </div>
         </div>
-      </div>  
-    </nav>
 
-    <div class="container-fluid">
+        <div class="hamburger">
+          <div class="line1"></div>
+          <div class="line2"></div>
+          <div class="line3"></div>
+        </div>
+
+        <ul class="nav-links">
+          <li><a href="/esea">ESEA</a></li>
+          <li><a href="/hub">Hub</a></li>
+          <li><a href="/events">Events</a></li>
+          <li><a href="/matches">Matches</a></li>
+          <li><a href="/stats">Stats</a></li>
+          <li><a href="/leaderboard">Leaderboard</a></li>
+        </ul>
+
+        <div class="darkmode-toggle">
+          
+          <input type="checkbox" class="checkbox" id="darkModeToggle">
+          
+          <label for="darkModeToggle" class="checkbox-label">
+            <i class="fas fa-moon"></i>
+            <i class="fas fa-sun"></i>
+            <span class="ball"></span>
+          </label>
+
+        </div>
+      </nav>
+    </div>
+
+    <div class="container-fluid content-container">
       <div class="container-boxed" style="min-height: 100vh">
         {% block content %}
         {% endblock %}
