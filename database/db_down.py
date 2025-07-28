@@ -699,7 +699,32 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
         if df_teams_benelux.empty:
             function_logger.warning("No ESEA teams found in the Benelux region.")
             return {}
-
+        
+        # Gather info on ESEA szn if szn_number is not "ALL"
+        if szn_number != "ALL":
+            query = """
+                SELECT
+                    s.season_number,
+                    e.event_start,
+                    e.event_end
+                FROM seasons s
+                LEFT JOIN events e ON s.event_id = e.event_id
+                WHERE s.season_number = %s
+            """
+            
+            cursor.execute(query, (szn_number,))
+            res = cursor.fetchone()
+            if not res:
+                function_logger.warning(f"No ESEA season found for season number {szn_number}.")
+                return {'season_number': szn_number, 'event_start': 0, 'event_end': 0}
+            szn_info = {
+                'season_number': res[0],
+                'event_start': res[1],
+                'event_end': res[2]
+            }
+        else:
+            szn_info = {'season_number': 'ALL', 'event_start': 0, 'event_end': 0}
+        
         esea_data = {}
 
         division_order = {"Advanced": 0, "Main": 1, "Intermediate": 2, "Entry": 3}
@@ -724,7 +749,9 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
         all_season_numbers = df_teams_benelux['season_number'].unique().tolist()
         
         # Batch load team names
-        if all_team_ids:
+        import time
+        cur_time = int(time.time())
+        if all_team_ids and szn_info['event_start'] < cur_time < szn_info['event_end']:
             placeholders = ', '.join(['%s'] * len(all_team_ids))
             cursor.execute(f"""
                 SELECT team_id, team_name 
@@ -734,6 +761,9 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
             team_names_data = {row[0]: row[1] for row in cursor.fetchall()}
         else:
             team_names_data = {}
+            
+        print(szn_info['event_start'], cur_time, szn_info['event_end'], team_names_data)
+        
 
         # Batch load all player data
         all_player_ids = set()
@@ -1303,8 +1333,6 @@ def get_todays_matches():
             division: grouped_matches[division]
             for division in sorted(grouped_matches.keys(), key=compute_division_rank)
         }
-        
-        print(sorted_grouped_matches)
         
         return sorted_grouped_matches
 
