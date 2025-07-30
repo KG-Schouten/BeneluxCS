@@ -1,12 +1,22 @@
 /* base/lightmode.css */
 body.light-mode {
+  /* === General styling === */
   --primary: #f39c12;
   --secondary: #005f87;
-  --background: #eeeeee;
+  --background: #ffffff;
+  --content-bg: #eeeeee;
   --foreground: #121212;
-
   --text: #121212;
 
+  /* === Navbar & footer styling === */
+  --navbar-bg: rgba(41, 31, 4, 0.5);
+  --navbar-shadow: var(--primary);
+  --glass-effect: blur(15px);
+  --glass-effect-scrolled: blur(50px);
+  --border-glow: rgba(241, 156, 99, 0.3);
+  --transition-normal: 0.3s ease;
+
+  /* === ESEA Styling === */
   --card-bg: #e4e5f1;
   --card-bg-secondary: #f0f1f5;
   --card-bg-highlight: #f8f9fa;
@@ -20,11 +30,6 @@ body.light-mode {
   --form-text: #121212;
   --form-border: #ccc;
   --logo-filter: invert(1) brightness(1.2) contrast(1.1);
-}
-
-body.light-mode {
-  background-color: var(--background);
-  color: var(--foreground);
 }
 
 body.light-mode .btn-outline-secondary {

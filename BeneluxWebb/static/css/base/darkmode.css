@@ -1,12 +1,22 @@
 /* base/darkmode.css */
 body.dark-mode {
+  /* === General styling === */
   --primary: #f39c12;
   --secondary: #555;
-  --background: #121212;
+  --background: #000000;
+  --content-bg: #121212;
   --foreground: #e0e0e0;
-
   --text: #e0e0e0;
 
+  /* === Navbar & footer styling === */
+  --navbar-bg: rgba(41, 31, 4, 0.5);
+  --navbar-shadow: var(--primary);
+  --glass-effect: blur(15px);
+  --glass-effect-scrolled: blur(50px);
+  --border-glow: rgba(241, 156, 99, 0.3);
+  --transition-normal: 0.3s ease;
+
+  /* === ESEA styling === */
   --card-bg: #1e1e1e;
   --card-bg-secondary: #2c2c2c;
   --card-bg-highlight: #333;
@@ -20,11 +30,6 @@ body.dark-mode {
   --form-text: #ddd;
   --form-border: #555;
   --logo-filter: invert(1) brightness(1.2) contrast(1.1);
-}
-
-body.dark-mode {
-  background-color: var(--background);
-  color: var(--foreground);
 }
 
 body.dark-mode .btn-outline-secondary {

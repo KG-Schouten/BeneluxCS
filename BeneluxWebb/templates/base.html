@@ -35,6 +35,7 @@
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/flags_filter.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/navbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/footer.css') }}">
 
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet" />
     
@@ -45,54 +46,56 @@
   <body class="dark-mode">
     
     <!-- Nav bar top -->
-    <div class="container-fluid navbar-container">
-      <nav class="container-boxed navbar-boxed">
-        <div class="nav-mobile-top">
-          <div class="nav-logo">
-            <a class="nav-logo-small" href="/">
-              <img src="{{ url_for('static', filename='img/beneluxcs_logo.png') }}" alt="Logo" loading="lazy">
-            </a>
+    <div class="page-wrapper">
+      <div class="container-fluid navbar-container">
+        <nav class="container-boxed navbar-boxed">
+          <div class="nav-mobile-top">
+            <div class="nav-logo">
+              <a class="nav-logo-small" href="/">
+                <img src="{{ url_for('static', filename='img/beneluxcs_logo.png') }}" alt="Logo" loading="lazy">
+              </a>
+            </div>
+
+            <div class="hamburger">
+              <div class="line1"></div>
+              <div class="line2"></div>
+              <div class="line3"></div>
+            </div>
           </div>
 
-          <div class="hamburger">
-            <div class="line1"></div>
-            <div class="line2"></div>
-            <div class="line3"></div>
+          <ul class="nav-links">
+            <li><a href="/esea">ESEA</a></li>
+            <li><a href="/hub">Hub</a></li>
+            <li><a href="/events">Events</a></li>
+            <li><a href="/matches">Matches</a></li>
+            <li><a href="/stats">Stats</a></li>
+            <li><a href="/leaderboard">Leaderboard</a></li>
+          </ul>
+
+          <div class="darkmode-toggle">
+            
+            <input type="checkbox" class="checkbox" id="darkModeToggle">
+            
+            <label for="darkModeToggle" class="checkbox-label">
+              <i class="fas fa-moon"></i>
+              <i class="fas fa-sun"></i>
+              <span class="ball"></span>
+            </label>
+
           </div>
+        </nav>
+      </div>
+
+      <div class="container-fluid content-container">
+        <div class="container-boxed content-boxed" style="min-height: 100vh">
+          {% block content %}
+          {% endblock %}
         </div>
-
-        <ul class="nav-links">
-          <li><a href="/esea">ESEA</a></li>
-          <li><a href="/hub">Hub</a></li>
-          <li><a href="/events">Events</a></li>
-          <li><a href="/matches">Matches</a></li>
-          <li><a href="/stats">Stats</a></li>
-          <li><a href="/leaderboard">Leaderboard</a></li>
-        </ul>
-
-        <div class="darkmode-toggle">
-          
-          <input type="checkbox" class="checkbox" id="darkModeToggle">
-          
-          <label for="darkModeToggle" class="checkbox-label">
-            <i class="fas fa-moon"></i>
-            <i class="fas fa-sun"></i>
-            <span class="ball"></span>
-          </label>
-
-        </div>
-      </nav>
-    </div>
-
-    <div class="container-fluid content-container">
-      <div class="container-boxed" style="min-height: 100vh">
-        {% block content %}
-        {% endblock %}
       </div>
     </div>
 
-    <footer class="footer-box text-center py-4">
-      <div class="container-boxed">
+    <footer class="container-fluid footer-container py-4">
+      <div class="container-boxed footer-boxed">
         <!-- Social & Project Info -->
         <div class="contact-links mb-3">
           <p class="mb-3">

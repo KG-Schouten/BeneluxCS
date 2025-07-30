@@ -4,13 +4,6 @@
 :root {
   --navbar-height: 60px;
   --navbar-height-inner: 50px; 
-
-  --navbar-bg: rgba(41, 31, 4, 0.5);
-  --navbar-shadow: var(--primary);
-  --glass-effect: blur(15px);
-  --glass-effect-scrolled: blur(50px);
-  --border-glow: rgba(241, 156, 99, 0.3);
-  --transition-normal: 0.3s ease;
 }
 
 /* === Navbar === */
