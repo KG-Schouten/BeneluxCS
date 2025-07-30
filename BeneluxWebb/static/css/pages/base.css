@@ -2,65 +2,43 @@
     --max-width-content: 1500px;
 }
 
-.content-container {
-    padding-top: var(--navbar-height);
+/* === General styling === */
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+.page-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .container-boxed {
     max-width: var(--max-width-content);
     margin-left: auto;
     margin-right: auto;
-    padding: 0 1rem;
+    width: 100%;
 }
 
-.footer-box {
-    border-top: 1px solid var(--card-bg-secondary);
-    background-color: var(--card-bg); /* Or match your theme */
-    padding-top: 1.5rem;
-    font-size: 0.95rem;
+/* === Content section styling */
+.content-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--navbar-height);
+    background-color: var(--background);
 }
 
-.footer-box a {
-    text-decoration: none;
-    color: var(--form-text);
-}
+.content-boxed {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 
-.footer-box a:hover {
-    text-decoration: underline;
-    color: var(--primary);
-}
-
-.footer-box i {
-    margin-right: 0.3em;
-}
-
-.icon-box {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    margin: 0 0.3rem;
-    border-radius: 0.5rem;
-    background-color: var(--card-bg-secondary);
-    color: #fff;
-    font-size: 1.3rem;
-    text-decoration: none;
-    vertical-align: middle;
-    padding: 0;
-    border: none;
-}
-
-.icon-box:hover {
-    background-color: var(--card-bg-highlight);
-    color: #fff;
-    text-decoration: none;
-}
-
-.icon-box i {
-    display: block;
-    line-height: 1;
-    margin: 0;
-    padding: 0;
-    text-align: center;
+    background-color: var(--content-bg);
 }
