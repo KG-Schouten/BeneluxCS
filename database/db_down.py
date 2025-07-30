@@ -655,7 +655,8 @@ def gather_esea_season_info() -> list:
             SELECT 
                 s.season_number,
                 e.event_start,
-                e.event_end
+                e.event_end,
+                e.event_banner
             FROM seasons s
             LEFT JOIN events e ON s.event_id = e.event_id
             WHERE s.event_id IN (
@@ -675,7 +676,8 @@ def gather_esea_season_info() -> list:
                 unique_seasons[season_number] = {
                     'season_number': season_number,
                     'event_start': row[1],
-                    'event_end': row[2]
+                    'event_end': row[2],
+                    'event_banner': row[3]
                 }
 
         # Convert dict values to list and sort descending by season_number

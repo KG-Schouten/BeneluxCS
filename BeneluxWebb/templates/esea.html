@@ -12,35 +12,44 @@
 <!-- center-aligned tabs -->
 <div class="esea-page-wrapper">
   <div class="sidebar left">
-
   </div>
+
   <div class="esea-wrapper">
-    <ul class="season-nav nav nav-tabs" id="eseaTabs" role="tablist">
-      {% for season in season_info %}
-        {% set label = "" %}
-        {% if season.event_start and season.event_end %}
-          {% if current_time >= season.event_start and current_time <= season.event_end %}
-            {% set label = "ongoing" %}
-          {% elif current_time >= season.event_start - 604800 and current_time < season.event_start %} {# 604800 seconds = 7 days #}
-            {% set label = "starting soon" %}
-          {% endif %}
-        {% endif %}
-        <li class="nav-item" role="presentation">
-          <button 
-            class="nav-link d-flex align-items-center gap-2 {% if loop.first %}active{% endif %}" 
-            id="season-tab-{{ season.season_number }}"
-            data-season="{{ season.season_number }}"
-            type="button"
-            role="tab"
-          >
-            <span>Season {{ season.season_number }}</span>
-            {% if label %}
-              <span class="badge bg-secondary">{{ label }}</span>
+    <div class="position-relative text-center">
+      <!-- Banner Image -->
+      <img id="seasonBanner" src="{{ season_info[0].event_banner }}" alt="Season Banner" class="img-fluid"/>
+
+      <!-- Season nav container -->
+      <div class="season-nav-box">
+        <ul class="season-nav" id="eseaTabs" role="tablist">
+          {% for season in season_info %}
+            {% set label = "" %}
+            {% if season.event_start and season.event_end %}
+              {% if current_time >= season.event_start and current_time <= season.event_end %}
+                {% set label = "ongoing" %}
+              {% elif current_time >= season.event_start - 604800 and current_time < season.event_start %}
+                {% set label = "starting soon" %}
+              {% endif %}
             {% endif %}
-          </button>
-        </li>
-      {% endfor %}
-    </ul>
+            <li class="nav-item" role="presentation">
+              <button 
+                class="nav-link d-flex align-items-center gap-2 {% if loop.first %}active{% endif %}" 
+                id="season-tab-{{ season.season_number }}"
+                data-season="{{ season.season_number }}"
+                data-banner="{{ season.event_banner }}"
+                type="button"
+                role="tab">
+                
+                <span>Szn {{ season.season_number }}</span>
+                {% if label %}
+                  <span class="badge bg-secondary">{{ label }}</span>
+                {% endif %}
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
 
     <!-- Content container -->
     <div class="tab-content mt-4" id="season-content">

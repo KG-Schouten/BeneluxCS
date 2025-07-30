@@ -2,9 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Tooltip initialization function
   function initTooltips(context = document) {
     const tooltipTriggerList = [].slice.call(context.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    return tooltipTriggerList.map(function (el) {
-      return new bootstrap.Tooltip(el);
-    });
+    return tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
   }
 
   // Initialize tooltips on page load
@@ -13,9 +11,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // ESEA tabs logic
   const tabs = document.querySelectorAll('#eseaTabs .nav-link, #eseaTabs button.nav-link');
   const content = document.getElementById('season-content');
+  const bannerImg = document.getElementById('seasonBanner');
 
-  if (!tabs.length || !content) {
-    // If no tabs or content found, abort script to prevent errors on other pages
+  if (!tabs.length || !content || !bannerImg) {
+    // Abort if any critical elements are missing
     return;
   }
 
@@ -25,15 +24,24 @@ document.addEventListener('DOMContentLoaded', function () {
   tabs.forEach(tab => {
     tab.addEventListener('click', function () {
       const season = this.dataset.season;
+      const newBanner = this.dataset.banner;
 
       // Save the selected season to localStorage
       localStorage.setItem('selectedSeason', season);
 
+      // Update active class
       tabs.forEach(t => t.classList.remove('active'));
       this.classList.add('active');
 
+      // Update the banner image
+      if (newBanner) {
+        bannerImg.src = newBanner;
+      }
+
+      // Show loading placeholder
       content.innerHTML = '<div class="text-muted">Loading...</div>';
 
+      // Fetch season content
       fetch(`/esea/season/${season}`)
         .then(res => {
           if (!res.ok) throw new Error("Failed to fetch");
@@ -41,15 +49,11 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(html => {
           content.innerHTML = html;
-          
-          // Re-initialize tooltips
+
+          // Re-initialize tooltips and Bootstrap-specific components
           initTooltips(content);
-          
-          // Initialize Bootstrap collapse elements
-          initBootstrapCollapse();
-          
-          // Set up expand/collapse all button
-          setupExpandAllButton();
+          initBootstrapCollapse?.(); // safe check in case it's undefined
+          setupExpandAllButton?.();
         })
         .catch(err => {
           content.innerHTML = `<div class="text-danger">Error loading season: ${err}</div>`;
@@ -57,13 +61,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Auto-click the last selected tab or the first tab if no selection is saved
+  // Auto-click the last selected tab or the first tab
   const defaultTab = lastSelectedSeason
     ? Array.from(tabs).find(tab => tab.dataset.season === lastSelectedSeason)
     : tabs[0];
 
   defaultTab?.click();
 });
+
 
 // Initialize Bootstrap collapse functionality
 function initBootstrapCollapse() {

@@ -1,8 +1,8 @@
 /* esea.css */
 :root {
   /* Main wrapper (ESEA wrapper) ratios */
-  --esea-wrapper-width: 85%;
-  --sidebar-width: 15%;
+  --esea-wrapper-width: calc(100% - var(--sidebar-width) * 2);
+  --sidebar-width: 150px;
 
   /* Match Info Box */
   --match-info-box-height: clamp(1.5rem, 2vw, 2rem);
@@ -33,9 +33,6 @@
   flex-direction: row;
   justify-content: center;
   width: 100%;
-  min-height: 100vh;
-  background-color: var(--background);
-  color: var(--foreground);
 }
 
 .esea-wrapper {
@@ -44,16 +41,24 @@
   justify-content: flex-start;
   width: var(--esea-wrapper-width);
   margin: 0 auto;
-  background-color: var(--background);
-  padding: 20px;
+  padding-top: 10px;
 }
 
+
+/* === Sidebar general styles === */
 .sidebar {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
   width: var(--sidebar-width);
+  padding-inline: 5px;
+}
+.sidebar.left {
+  border-right: 1px solid var(--border);
+}
+.sidebar.right {
+  border-left: 1px solid var(--border);
 }
 
 /* === Todays Matches sidebar === */
@@ -149,13 +154,47 @@
   color: orange;
 }
 
+
 /* === ESEA Season navbar === */
+#seasonBanner {
+  width: 100%;
+  height: auto;
+  max-height: 200px; 
+  object-fit: cover;
+}
+
+.season-nav-box {
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  padding: 1rem;
+
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-block: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .season-nav {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  margin-top: 20px;
-  padding-inline: 10px;}
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-inline: 10px;
+}
+
+.nav-item {
+  flex: 1;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 
 /* === Division Separator Line === */
 .division-separator {
