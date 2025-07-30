@@ -1,13 +1,14 @@
 /* base/lightmode.css */
 body.light-mode {
-  --primary: #005faf;
+  --primary: #f39c12;
   --secondary: #005f87;
   --background: #eeeeee;
   --foreground: #121212;
 
-  --navbar-bg: #005f87;
-  --navbar-text: #121212;
-  --navbar-border: ;
+  --text: #121212;
+
+  --navbar-bg: var(--background);
+  --navbar-shadow: var(--foreground);
 
   --card-bg: #e4e5f1;
   --card-bg-secondary: #f0f1f5;

@@ -761,10 +761,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
             team_names_data = {row[0]: row[1] for row in cursor.fetchall()}
         else:
             team_names_data = {}
-            
-        print(szn_info['event_start'], cur_time, szn_info['event_end'], team_names_data)
         
-
         # Batch load all player data
         all_player_ids = set()
         for _, row in df_teams_benelux.iterrows():

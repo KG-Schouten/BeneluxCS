@@ -1,13 +1,14 @@
 /* base/darkmode.css */
 body.dark-mode {
-  --primary: #0d6efd;
+  --primary: #f39c12;
   --secondary: #555;
   --background: #121212;
   --foreground: #e0e0e0;
 
-  --navbar-bg: #555;
-  --navbar-text: #ffffff;
-  --navbar-border: ;
+  --text: #e0e0e0;
+
+  --navbar-bg: var(--background);
+  --navbar-shadow: var(--primary);
 
   --card-bg: #1e1e1e;
   --card-bg-secondary: #2c2c2c;
