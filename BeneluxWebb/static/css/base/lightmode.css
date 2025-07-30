@@ -7,9 +7,6 @@ body.light-mode {
 
   --text: #121212;
 
-  --navbar-bg: var(--background);
-  --navbar-shadow: var(--foreground);
-
   --card-bg: #e4e5f1;
   --card-bg-secondary: #f0f1f5;
   --card-bg-highlight: #f8f9fa;
@@ -22,7 +19,7 @@ body.light-mode {
   --form-bg: #fff;
   --form-text: #121212;
   --form-border: #ccc;
-  --score-logo-filter: none;
+  --logo-filter: invert(1) brightness(1.2) contrast(1.1);
 }
 
 body.light-mode {

@@ -7,9 +7,6 @@ body.dark-mode {
 
   --text: #e0e0e0;
 
-  --navbar-bg: var(--background);
-  --navbar-shadow: var(--primary);
-
   --card-bg: #1e1e1e;
   --card-bg-secondary: #2c2c2c;
   --card-bg-highlight: #333;
