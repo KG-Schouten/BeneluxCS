@@ -68,14 +68,12 @@
 }
 
 .match-info-box {
-  display: grid;
-  grid-template-columns: 100px 1fr calc(3 * var(--match-info-box-height));
-  align-items: center;
-
-  width: 100%;
+  display: flex;
   height: var(--match-info-box-height);
-  
-  padding: 2px; 
+  width: 100%;
+  box-sizing: border-box;
+
+  gap: 2px;
 
   border: 1px solid var(--foreground);  
   border-radius: 2px;         
@@ -100,82 +98,79 @@
   justify-content: center;
   align-items: center;
 
-  height: 100%;
-  width: 100%;
+  flex: 0 0 40px;
+
+  font-size: .8rem;
+}
+.match-info-time.upcoming {
+  flex: 0 0 80px;
 }
 
 /*  === Match info maps styling === */
 .match-info-maps {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-
-  width: calc(3 * var(--match-info-box-height));
   height: 100%;
-  overflow: hidden;
+
+  white-space: nowrap;
+  width: auto;
 }
 .match-info-maps img {
-  height: 100%;
+  height: 80%;
   width: auto;
-  max-width: 100%;
+  display: block;
   object-fit: contain;
 }
 
 /* === Match info (teams + score) styling === */
 .match-info-team-wrapper {
-  display: grid;
-  grid-template-columns: 40px 60px auto;
-  align-items: center;
-
-  width: 100%;
-  height: 100%;
-
-  border: 1px solid blue;
-}
-
-.match-info-team {
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  text-align: right;
+  height: 100%;
 
-  width: 100%;
+  gap: 5px;
+
   min-width: 0;
   overflow: hidden;
-
-  height: 100%;
-  padding: 0 2px;
 }
-.match-info-team.opponent {
-  justify-content: flex-start;
-  text-align: left;
-}
-
-.match-info-avatar {
+.match-info-team-wrapper > * {
   display: flex;
   align-items: center;
-  justify-content: center;
+  height: 100%;
+}
 
-  height: var(--match-info-box-height);
-  aspect-ratio: 1 / 1;
+.match-info-team-avatar {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+}
 
-  flex-shrink: 0;
-  margin: 0 4px;
+.match-info-team.opponent {
+  display: flex;
+  align-items: center;
+  height: 100%;
+
+  gap: 5px;
+
+  overflow: hidden;
+  white-space: nowrap;
+}
+.match-info-avatar {
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 .match-info-avatar img {
   height: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 3px;
-  flex-shrink: 0;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 
 .match-info-name {
-  display: block;
-  width: 100%;
-  
   text-overflow: ellipsis;
   overflow: hidden;
-  white-space: nowrap;
 
   font-size: 1rem;
   font-weight: bold;
@@ -183,13 +178,10 @@
 
 /* === Recent Matches ===  */
 .match-score {
-  display: flex;
+  flex: 0 0 40px;
   justify-content: center;
-  align-items: center;
 
-  height: 100%;
-  width: 100%;
-  font-size: 1rem;
+  font-size: .8rem;
   font-weight: bold;
 
   overflow: visible;
@@ -205,6 +197,32 @@
   width: 100%;
   text-align: center;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /* === Upcoming matches === */

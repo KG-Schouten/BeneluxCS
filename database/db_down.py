@@ -874,7 +874,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         LEFT JOIN bo1_scores bs ON t.match_id = bs.match_id
                         LEFT JOIN match_maps mm ON t.match_id = mm.match_id
                         ORDER BY t.match_time DESC
-                        LIMIT 6;
+                        LIMIT 12;
                     """, (season_num, team_id))
                     match_rows = cursor.fetchall()
                     matches_data[(team_id, season_num)] = pd.DataFrame(match_rows, columns=[desc[0] for desc in cursor.description])

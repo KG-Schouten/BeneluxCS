@@ -135,15 +135,11 @@
 
                                 <div class="match-info-team-wrapper">
 
-                                    <div class="match-info-team">
-                                        <!-- <span class="match-info-name">{{ team.team_name }}</span> -->
-                                        <div class="match-info-avatar">
-                                            <img src="{{ team.team_avatar }}"
-                                                alt="{{ team.team_name }}"
-                                                data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
-                                                onerror="this.onerror=null;this.src=this.dataset.placeholder;">
-                                        </div>
-                                    </div>
+                                    <img class="match-info-team-avatar"
+                                        src="{{ team.team_avatar }}"
+                                        alt="{{ team.team_name }}"
+                                        data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
 
                                     <div class="match-score">
                                         {% if match.score == 'FFW' %}
@@ -200,7 +196,7 @@
                         Upcoming Matches
                     </div>
 
-                    <!-- <div class="matches-box upcoming">
+                    <div class="matches-box upcoming">
                         {% if team.upcoming_matches %}
                             {% for match in team.upcoming_matches %}
                             <a href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" 
@@ -208,34 +204,33 @@
                                 target="_blank" 
                                 rel="noopener noreferrer">
 
-                                <div class="match-info-team">
-                                    <div class="match-info-avatar">
-                                        <img src="{{ team.team_avatar }}"
-                                            alt="{{ team.team_name }}"
-                                            data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
-                                            onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                <div class="match-info-time upcoming">
+                                    {% if match.match_time %}
+                                        <span>{{ match.match_time | datetimeformat('%d/%m %H:%M') }}<span>
+                                    {% else %}
+                                        <span>TBA</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="match-info-team-wrapper">
+                                    <img class="match-info-team-avatar"
+                                        src="{{ team.team_avatar }}"
+                                        alt="{{ team.team_name }}"
+                                        data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+
+                                    <div class="match-score">
+                                        <span> vs. </span>
                                     </div>
-                                    <span class="match-info-name">{{ team.team_name }}</span>
 
-                                </div>
-
-                                <div class="match-time upcoming">
-                                    <span>
-                                        {% if match.match_time %}
-                                            {{ match.match_time | datetimeformat('%d/%m %H:%M') }}
-                                        {% else %}
-                                            TBA
-                                        {% endif %}
-                                    </span>
-                                </div>
-
-                                <div class="match-info-team opponent">
-                                    <span class="match-info-name opponent">{{ match.opponent }}</span>
-                                    <div class="match-info-avatar">
-                                        <img src="{{ match.opponent_avatar }}"
-                                            alt="{{ match.opponent }}"
-                                            data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
-                                            onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                    <div class="match-info-team opponent">
+                                        <div class="match-info-avatar">
+                                            <img src="{{ match.opponent_avatar }}"
+                                                alt="{{ match.opponent }}"
+                                                data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                                onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                        </div>
+                                        <span class="match-info-name opponent">{{ match.opponent }}</span>
                                     </div>
                                 </div>
                             </a>
@@ -243,7 +238,7 @@
                         {% else %}
                             <p class="d-flex align-items-center text-muted mb-0">No upcoming matches.</p>
                         {% endif %}
-                    </div> -->
+                    </div>
                 </div>
                 
                 <!-- <div class="details-box col">
