@@ -841,6 +841,11 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         ),
                         bo1_scores AS (
                             SELECT match_id, score FROM maps WHERE match_round = 1
+                        ),
+                        match_maps AS (
+                            SELECT match_id, ARRAY_AGG(map ORDER BY match_round) AS maps_played
+                            FROM maps
+                            GROUP BY match_id
                         )
                         SELECT
                             t.match_id,
@@ -860,12 +865,14 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                             COALESCE(mc.map_count, 1) AS map_count,
                             COALESCE(ms.win_count, 0) AS our_score,
                             COALESCE(ms_opp.win_count, 0) AS opp_score,
-                            bs.score AS bo1_score
+                            bs.score AS bo1_score,
+                            mm.maps_played
                         FROM team_matches t
                         LEFT JOIN map_counts mc ON t.match_id = mc.match_id
                         LEFT JOIN map_scores ms ON t.match_id = ms.match_id AND ms.team_id = t.our_id
                         LEFT JOIN map_scores ms_opp ON t.match_id = ms_opp.match_id AND ms_opp.team_id = t.opp_id
                         LEFT JOIN bo1_scores bs ON t.match_id = bs.match_id
+                        LEFT JOIN match_maps mm ON t.match_id = mm.match_id
                         ORDER BY t.match_time DESC
                         LIMIT 6;
                     """, (season_num, team_id))
@@ -1038,6 +1045,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                                 'opponent_avatar': row['opp_avatar'],
                                 'score': score,
                                 'match_time': int(row['match_time']) if pd.notna(row['match_time']) else 0,
+                                'maps_played': row['maps_played'],
                             })
 
                         elif row['status'] != 'FINISHED':
