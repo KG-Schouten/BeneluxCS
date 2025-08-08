@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', function () {
   initTooltips();
 
   // ESEA tabs logic
-  const tabs = document.querySelectorAll('#eseaTabs .nav-link, #eseaTabs button.nav-link');
+  const tabs = document.querySelectorAll('#eseaTabs .nav-link:not(.dropdown-toggle), #eseaTabs button.nav-link:not(.dropdown-toggle)');
+
   const content = document.getElementById('season-content');
   const bannerImg = document.getElementById('seasonBanner');
 
@@ -67,8 +68,15 @@ document.addEventListener('DOMContentLoaded', function () {
     : tabs[0];
 
   defaultTab?.click();
-});
 
+  // Run autocollapse after tab logic
+  autocollapse('#eseaTabs', 40);
+
+  // Re-run on resize
+  window.addEventListener('resize', () => {
+    autocollapse('#eseaTabs', 40);
+  });
+});
 
 // Initialize Bootstrap collapse functionality
 function initBootstrapCollapse() {
@@ -160,4 +168,60 @@ function handleExpandAllClick() {
   
   // Toggle button text accordingly
   this.textContent = anyCollapsed ? 'Collapse All' : 'Expand All';
+}
+
+// Auto-collapse overflowing tabs into the dropdown
+function autocollapse(menuSelector, maxHeight) {
+  const nav = document.querySelector(menuSelector);
+  const dropdown = nav.querySelector('.dropdown');
+  const dropdownMenu = dropdown.querySelector('.dropdown-menu');
+
+  function getNavHeight() {
+    return nav.getBoundingClientRect().height;
+  }
+
+  function moveLastVisibleToDropdown() {
+    const items = Array.from(nav.children).filter(li => !li.classList.contains('dropdown'));
+    if (items.length > 0) {
+      dropdownMenu.insertBefore(items[items.length - 1], dropdownMenu.firstChild);
+    }
+  }
+
+  function moveFirstDropdownItemBack() {
+    const dropdownItems = Array.from(dropdownMenu.children);
+    if (dropdownItems.length > 0) {
+      nav.insertBefore(dropdownItems[0], dropdown);
+    }
+  }
+
+  console.log('Autocollapse running, nav height:', getNavHeight(), 'maxHeight:', maxHeight);
+
+  if (getNavHeight() >= maxHeight) {
+    console.log('Nav too tall, moving items into dropdown...');
+    dropdown.classList.remove('d-none');
+    nav.classList.remove('w-auto');
+    nav.classList.add('w-100');
+
+    while (getNavHeight() > maxHeight) {
+      moveLastVisibleToDropdown();
+    }
+
+    nav.classList.add('w-auto');
+    nav.classList.remove('w-100');
+  } else {
+    let collapsedItems = Array.from(dropdownMenu.children);
+    
+    if (collapsedItems.length === 0) {
+      dropdown.classList.add('d-none');
+    }
+
+    while (getNavHeight() < maxHeight && collapsedItems.length > 0) {
+      moveFirstDropdownItemBack();
+      collapsedItems = Array.from(dropdownMenu.children);
+    }
+
+    if (getNavHeight() > maxHeight) {
+      autocollapse(menuSelector, maxHeight); // re-check in case we overflow again
+    }
+  }
 }

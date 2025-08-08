@@ -1,5 +1,9 @@
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_card_details.css') }}">
+{% endblock %}
+
+{% block extra_js %}
 {% endblock %}
 
 {% for division_name, teams in divisions.items() %}
@@ -20,7 +24,6 @@
         <div class="team-card-visible">
             <div class="team-card-body">
             
-                <!-- Avatar -->
                 <div class="team-avatar">
                     <img src="{{ team.team_avatar }}"
                         alt="Team Avatar"
@@ -28,59 +31,47 @@
                         onerror="this.onerror=null;this.src=this.dataset.placeholder;">
                 </div>
                 
-                <!-- Middle: Team name and Players -->
-                <div class="team-card-middle">
-                    
-                    <!-- Team name top left -->
-                    <div class="team-card-name">
-                        <a class="team-link" href="https://www.faceit.com/en/teams/{{ team.team_id }}/leagues" target="_blank">
-                            {{ team.team_name_cur }}
-                        </a>
-                    </div>
-
-                    <!-- Players -->
-                    <div class="team-card-players">
-                        
-                        <!-- Main players (on the left) -->
-                        <div class="main-players-box">
-                            {% for player in team.players_main %}
-                            <a href="https://www.faceit.com/en/players/{{player.player_name}}" class="text-decoration-none text-reset" target="_blank">
-                                <div class="main-player">
-                                    <div class="main-player-avatar">
-                                        <img src="{{ player.player_avatar }}"
-                                            alt="{{ player.player_name }}"
-                                            data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-                                            onerror="this.onerror=null;this.src=this.dataset.placeholder;">
-                                    </div>
-                                    <div class="main-player-name">
-                                        <strong>{{ player.player_name }}</strong>
-                                        <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
-                                            alt="{{ player.player_country }}">
-                                    </div>
-                                </div>
-                            </a>
-                            {% endfor%}
-                        </div>
-
-                        <!-- Subs (on the right) -->
-                        <div class="sub-players-box">
-                            {% if team.players_sub %}
-                            {% for player in team.players_sub %}
-                            <a href="https://www.faceit.com/en/players/{{ player.player_name }}" class="text-decoration-none text-reset" target="_blank">
-                                <div class="sub-player">
-                                    <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
-                                        alt="{{ player.player_country }}">
-                                    <span>{{ player.player_name }}</span>
-                                </div>
-                            </a>
-                            {% endfor %}
-                            {% endif %}
-                        </div>
-                    </div>
+                <div class="team-card-name">
+                    <a class="team-link" href="https://www.faceit.com/en/teams/{{ team.team_id }}/leagues" target="_blank">
+                        {{ team.team_name_cur }}
+                    </a>
                 </div>
 
-                <!-- Score box -->
-                <div class="score-box">
+                <div class="main-players-box">
+                    {% for player in team.players_main %}
+                    <a href="https://www.faceit.com/en/players/{{player.player_name}}" class="text-decoration-none text-reset" target="_blank">
+                        <div class="main-player">
+                            <div class="main-player-avatar">
+                                <img src="{{ player.player_avatar }}"
+                                    alt="{{ player.player_name }}"
+                                    data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
+                                    onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                            </div>
+                            <div class="main-player-name">
+                                <strong>{{ player.player_name }}</strong>
+                                <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
+                                    alt="{{ player.player_country }}">
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor%}
+                </div>
+
+                <div class="sub-players-box">
+                    {% if team.players_sub %}
+                    {% for player in team.players_sub %}
+                    <a href="https://www.faceit.com/en/players/{{ player.player_name }}" class="text-decoration-none text-reset" target="_blank">
+                        <div class="sub-player">
+                            <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
+                                alt="{{ player.player_country }}">
+                            <span>{{ player.player_name }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="score-boxes">
                     {% for stage in team.stages %}
                         <div class="stage-box" 
                             data-bs-toggle="tooltip" 
@@ -104,9 +95,8 @@
                     {% endfor %}
                 </div>
                 
-                <!-- Details button -->
-                <div class="d-flex" style="flex: 0 0 3%;">
-                    <button class="btn btn-secondary w-100 h-100 collapsed" type="button"
+                <div class="details-btn">
+                    <button class="btn collapsed" type="button"
                         data-bs-toggle="collapse"
                         data-bs-target="#collapseTeam{{ division_name | replace(' ', '') }}{{ loop.index }}"
                         aria-expanded="false"
@@ -120,9 +110,9 @@
         <!-- Collapsible section for team details -->
         <div class="collapse" id="collapseTeam{{ division_name | replace(' ', '') }}{{ loop.index }}">
             <div class="collapse-body">
-                <!-- Box for recent and upcoming matches -->
+
                 <div class="details-box col">
-                    <!-- Recent matches -->
+
                     <div class="details-box-header">
                         Recent Matches
                     </div>
@@ -134,18 +124,28 @@
                                 class="match-info-box {{ 'highlight-border' if match.opponent_id in teams | map(attribute='team_id') | list else '' }}" 
                                 target="_blank" 
                                 rel="noopener noreferrer">
-                                <div class="match-info-team">
-                                    <img src="{{ team.team_avatar }}"
-                                        alt="{{ team.team_name }}"
-                                        data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-                                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
-                                    <span class="match-info-name">
-                                        {{ team.team_name }}
-                                    </span>
+                                
+                                <div class="match-info-time">
+                                    {% if match.match_time %}
+                                        <span>{{ match.match_time | datetimeformat('%d/%m') }}<span>
+                                    {% else %}
+                                        <span>TBA</span>
+                                    {% endif %}
                                 </div>
 
-                                <div class="match-score">
-                                    <span>
+                                <div class="match-info-team-wrapper">
+
+                                    <div class="match-info-team">
+                                        <!-- <span class="match-info-name">{{ team.team_name }}</span> -->
+                                        <div class="match-info-avatar">
+                                            <img src="{{ team.team_avatar }}"
+                                                alt="{{ team.team_name }}"
+                                                data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                                onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                        </div>
+                                    </div>
+
+                                    <div class="match-score">
                                         {% if match.score == 'FFW' %}
                                             <span class="fst-italic text-success">{{ match.score }}</span>
                                         {% elif match.score == 'FFL' %}
@@ -158,21 +158,36 @@
                                             {% set left = score1 if is_win and score1 > score2 or not is_win and score1 < score2 else score2 %}
                                             {% set right = score2 if left == score1 else score1 %}
 
-                                            <span class="{{ 'text-success' if is_win else 'text-danger' }}">
-                                                {{ left }} - {{ right }}
+                                            <span class="match-score-full">
+                                                <span class="match-score-left {{ 'text-success' if is_win else 'text-danger' }}">
+                                                    {{ left }}
+                                                </span>
+                                                <span class="match-score-divider">-</span>
+                                                <span class="match-score-right {{ 'text-danger' if is_win else 'text-success' }}">
+                                                    {{ right }}
+                                                </span>
                                             </span>
                                         {% endif %}
-                                    </span>
+                                    </div>
+                                    
+                                    <div class="match-info-team opponent">
+                                        <div class="match-info-avatar">
+                                            <img src="{{ match.opponent_avatar }}"
+                                                alt="{{ match.opponent }}"
+                                                data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                                onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                        </div>
+                                        <span class="match-info-name opponent">{{ match.opponent }}</span>
+                                    </div>
                                 </div>
-                                
-                                <div class="match-info-team opponent">
-                                    <span class="match-info-name opponent">
-                                        {{ match.opponent }}
-                                    </span>
-                                    <img src="{{ match.opponent_avatar }}"
-                                        alt="{{ match.opponent }}"
-                                        data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-                                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+
+                                <div class="match-info-maps">
+                                    {% if match.maps_played %}
+                                        {% for map in match.maps_played %}
+                                            <img src="{{ url_for('static', filename='img/maps/' ~ map ~ '.png') }}"
+                                                alt="{{ map }}">
+                                        {% endfor %}
+                                    {% endif %}
                                 </div>
                             </a>
                             {% endfor %}
@@ -181,12 +196,11 @@
                         {% endif %}
                     </div>
 
-                    <!-- Upcoming matches -->
                     <div class="details-box-header">
                         Upcoming Matches
                     </div>
 
-                    <div class="matches-box upcoming">
+                    <!-- <div class="matches-box upcoming">
                         {% if team.upcoming_matches %}
                             {% for match in team.upcoming_matches %}
                             <a href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" 
@@ -195,13 +209,14 @@
                                 rel="noopener noreferrer">
 
                                 <div class="match-info-team">
-                                    <img src="{{ team.team_avatar }}"
-                                        alt="{{ team.team_name }}"
-                                        data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-                                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
-                                    <span class="match-info-name">
-                                        {{ team.team_name }}
-                                    </span>
+                                    <div class="match-info-avatar">
+                                        <img src="{{ team.team_avatar }}"
+                                            alt="{{ team.team_name }}"
+                                            data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                            onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                    </div>
+                                    <span class="match-info-name">{{ team.team_name }}</span>
+
                                 </div>
 
                                 <div class="match-time upcoming">
@@ -215,25 +230,24 @@
                                 </div>
 
                                 <div class="match-info-team opponent">
-                                    <span class="match-info-name opponent">
-                                        {{ match.opponent }}
-                                    </span>
-                                    <img src="{{ match.opponent_avatar }}"
-                                        alt="{{ match.opponent }}"
-                                        data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-                                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                    <span class="match-info-name opponent">{{ match.opponent }}</span>
+                                    <div class="match-info-avatar">
+                                        <img src="{{ match.opponent_avatar }}"
+                                            alt="{{ match.opponent }}"
+                                            data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                            onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                                    </div>
                                 </div>
                             </a>
                             {% endfor %}
                         {% else %}
                             <p class="d-flex align-items-center text-muted mb-0">No upcoming matches.</p>
                         {% endif %}
-                    </div>
+                    </div> -->
                 </div>
                 
-                <!-- Box for team statistics (i.e. map and player stats)  -->
-                <div class="details-box col">
-                    <!-- Recent matches -->
+                <!-- <div class="details-box col">
+
                     <div class="details-box-header">
                         Map Statistics
                     </div>
@@ -269,7 +283,7 @@
                             <p class="text-muted">No map stats available.</p>
                         </div>
                     {% endif %}
-                </div>
+                </div> -->
             </div>
         </div>
     </div>

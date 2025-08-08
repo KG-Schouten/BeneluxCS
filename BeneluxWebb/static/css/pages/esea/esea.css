@@ -1,0 +1,129 @@
+/* esea.css */
+:root {
+  /* Main wrapper (ESEA wrapper) ratios */
+  --esea-wrapper-width: calc(100% - var(--sidebar-width) * 2);
+  --sidebar-width: 150px;
+
+  /* Spacing & sizing */
+  --gap-small: 5px;
+  --border-radius-small: 3px;
+}
+
+/* === ESEA Content Wrapper === */
+.esea-page-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  width: 100%;
+}
+
+.esea-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: var(--esea-wrapper-width);
+  margin: 0 auto;
+  padding-top: 0;
+}
+
+/* === ESEA Season navbar === */
+#seasonBanner {
+  width: 100%;
+  height: auto;
+  max-height: 200px; 
+  object-fit: cover;
+}
+
+.season-nav-box {
+  display: flex;
+  justify-content: center;
+  position: absolute;
+  z-index: 1000;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-block: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.season-nav {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  
+  width: max-content;
+  padding-left: 0;
+  margin-left: 0;
+
+  margin: 0 auto;
+
+  list-style-type: none;
+
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.nav-item {
+  display: flex;
+  height: 35px;
+  width: max-content;
+
+  border-inline: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav-link {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+
+  gap: 0.5rem;
+  padding-inline: 10px;
+}
+
+.nav-link.active {
+  background-color: var(--primary);
+  color: var(--foreground);
+}
+.nav-link.active:hover {
+  background-color: var(--primary);
+  color: var(--foreground);
+}
+.nav-link:hover {
+  background-color: var(--secondary);
+  color: var(--foreground);
+}
+
+.nav-link span {
+  white-space: nowrap;
+}
+
+.dropdown-menu {
+  position: absolute;
+  min-width: 0;
+  background-color: var(--card-bg);
+  background-clip: padding-box;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  z-index: 1010;
+}
+
+.dropdown-menu li {
+  color: var(--text);
+}
+
+@media screen and (max-width: 992px) {
+  .esea-wrapper {
+    width: calc(100% - var(--sidebar-width));
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .esea-wrapper {
+    width: 100%;
+  }
+}

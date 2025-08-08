@@ -1,0 +1,268 @@
+:root {
+    /* Match Info Box */
+    --match-info-box-height: 30px;
+}
+
+/* === Team Details Collapsible Area === */
+.collapse-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  width: 100%;
+  height: auto;
+
+  border-top: 2px solid var(--secondary);
+  
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 10px;
+}
+
+
+/* === Details box === */
+.details-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+
+    width: 100%;
+    max-width: 500px;
+    
+    padding: 5px;
+}
+
+.details-box-header {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+
+  color: var(--form-text);
+  background-color: var(--card-bg-highlight);
+  font-size: 1.2rem;
+  font-weight: bold;
+
+  border-bottom: 2px solid var(--secondary);
+
+}
+
+/* === Match box general styling */
+.matches-box{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  width: 100%;
+  height: auto;
+
+  padding-inline: 5px;
+  gap: 2px;
+
+  color: var(--form-text);
+  background-color: var(--card-bg-secondary);
+  font-size: 1rem;
+}
+
+.match-info-box {
+  display: grid;
+  grid-template-columns: 100px 1fr calc(3 * var(--match-info-box-height));
+  align-items: center;
+
+  width: 100%;
+  height: var(--match-info-box-height);
+  
+  padding: 2px; 
+
+  border: 1px solid var(--foreground);  
+  border-radius: 2px;         
+  background-color: var(--btn-bg);
+
+  text-decoration: none;
+  color: var(--btn-text);
+}
+.match-info-box:hover {
+  background-color: var(--btn-hover-bg);
+  color: var(--btn-text);
+
+  cursor: pointer;
+}
+.highlight-border {
+  border: 2px solid orange;
+}
+
+/* === Match info date styling === */
+.match-info-time {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  height: 100%;
+  width: 100%;
+}
+
+/*  === Match info maps styling === */
+.match-info-maps {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  width: calc(3 * var(--match-info-box-height));
+  height: 100%;
+  overflow: hidden;
+}
+.match-info-maps img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* === Match info (teams + score) styling === */
+.match-info-team-wrapper {
+  display: grid;
+  grid-template-columns: 40px 60px auto;
+  align-items: center;
+
+  width: 100%;
+  height: 100%;
+
+  border: 1px solid blue;
+}
+
+.match-info-team {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: right;
+
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+
+  height: 100%;
+  padding: 0 2px;
+}
+.match-info-team.opponent {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.match-info-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: var(--match-info-box-height);
+  aspect-ratio: 1 / 1;
+
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+.match-info-avatar img {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.match-info-name {
+  display: block;
+  width: 100%;
+  
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+/* === Recent Matches ===  */
+.match-score {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  height: 100%;
+  width: 100%;
+  font-size: 1rem;
+  font-weight: bold;
+
+  overflow: visible;
+  flex-wrap: nowrap;
+}
+.match-score-full {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+}
+.match-score-left, .match-score-right, .match-score-divider {
+  width: 100%;
+  text-align: center;
+}
+
+
+/* === Upcoming matches === */
+.match-time {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  height: 100%;
+  width: 100%;
+  font-size: .8rem;
+  font-weight: bold;
+
+  overflow: visible;
+  flex-wrap: nowrap;
+}
+.match-time.upcoming {
+  width: var(--match-info-time-width);
+}
+
+/* === Team statistics === */
+.stats-box.maps {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  width: 100%;
+
+  color: var(--form-text);
+  background-color: var(--card-bg-secondary);
+  font-size: 1rem;
+}
+.stats-box.unavailable {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  color: var(--form-text);
+  background-color: var(--card-bg-secondary);
+}
+
+.stats-box.maps .map-stat-box {
+  border: 1px solid #ccc;  /* border around each box */
+  padding: 10px;
+  box-sizing: border-box;
+  text-align: center;      /* center content horizontally */
+}
+
+.map-stat-box img {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  object-fit: cover;
+  margin-bottom: 5px; /* space between image and text */
+}
+
+@media screen and (max-width: 768px) {
+    .collapse-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+}

@@ -1,0 +1,398 @@
+:root {
+  --team-card-height: 150px;
+
+  --team-avatar-height-scale: 1;
+  --team-avatar-width-scale: 1;
+
+  --team-name-height-scale: 0.3;
+
+  --score-boxes-height-scale: 0.3;
+  --score-box-width: 100px;
+  --stage-logo-width: 38px;
+
+  --details-btn-width: 50px;
+
+  --main-player-avatar-height-scale: 0.5;
+
+  --players-box-width: calc(100% - var(--details-btn-width) - calc(var(--team-card-height) * var(--team-avatar-width-scale)));
+  --players-main-width-scale: 0.8;
+  --players-sub-width-scale: calc(1 - var(--players-main-width-scale));
+}
+
+/* === Division Separator Line === */
+.division-separator {
+  display: flex;
+  flex-direction: row;
+  justify-content: between;
+  border-bottom: 2px solid var(--secondary);
+  width: 100%;
+
+  padding-inline: 10px;
+  margin-bottom: 20px;
+}
+
+/* === Team Card Styles === */
+.team-card {
+  display: flex;
+  flex-direction: column;
+  
+  width: 100%;
+
+  height: auto;
+  position: relative;
+  margin: 1rem auto;
+  padding: .5vw;
+  background-color: var(--card-bg);
+  color: var(--foreground);
+  border: var(--border) 1px solid;
+}
+
+.team-card-visible {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: var(--team-card-height);
+}
+
+.team-card-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+/* === Team avatar styling === */
+.team-card-body .team-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: calc(var(--team-card-height) * var(--team-avatar-height-scale));
+  width: calc(var(--team-card-height) * var(--team-avatar-width-scale));
+
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.team-card-body .team-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+
+/* === Team name styling === */
+.team-card-name {
+  display: flex;
+  align-items: center;
+
+  height: calc(var(--team-card-height) * var(--team-name-height-scale));
+  width: max-content;
+
+  position: absolute;
+  top: 0;
+  left: calc(var(--team-card-height) * var(--team-avatar-width-scale));
+
+  padding-inline: 10px;
+
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--primary);
+}
+.team-link {
+  text-decoration: none;
+  color: var(--primary);
+  transition: color 0.3s ease;
+}
+.team-link:hover {
+  text-decoration: underline;
+  color: var(--accent);
+}
+
+
+/* === Score boxes styling === */
+.score-boxes {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  
+  gap: 2px;
+  padding-inline: 5px;
+  padding-block: 5px;
+
+  height: calc(var(--team-card-height) * var(--score-boxes-height-scale));
+  width: max-content;
+
+  position: absolute;
+  top: 0;
+  right: calc(var(--details-btn-width));
+}
+.stage-box {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  width: fit-content;
+  height: 100%;
+
+  border: 2px solid var(--secondary);
+  border-radius: 4px;
+
+  z-index: 10;
+  cursor: pointer;
+  background-color: transparent;
+  color: var(--foreground);
+  transition: background-color 0.3s ease;
+}
+.stage-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 100%;
+}
+.stage-logo img {
+  width: auto;
+  height: 100%;
+  object-fit: contain;
+
+  filter: var(--logo-filter);
+}
+.stage-score {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--foreground);
+
+  width: max-content;
+  height: 100%;
+
+  gap: 2px;
+  padding-right: 8px;
+}
+
+
+/* === Main players styling === */
+.main-players-box {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+
+  height: calc(var(--team-card-height) * (1 - var(--team-name-height-scale)));
+  width: calc(var(--players-box-width) * var(--players-main-width-scale));
+
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--team-card-height) * var(--team-avatar-width-scale));
+
+  overflow: hidden;
+}
+.main-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  height: 100%;
+}
+.main-player-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: calc(100% * var(--main-player-avatar-height-scale));
+
+  margin-top: 5px;
+
+  position: relative;
+}
+.main-player-avatar img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 100%;
+  width: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  object-fit: cover;
+  max-width: 100%;
+}
+.main-player-name {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  text-align: center;
+}
+.main-player-name strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-size: clamp(0.75rem, 1.5vw, 1rem);
+
+}
+.main-player-name img {
+  width: clamp(14px, 2vw, 18px);
+  height: clamp(10px, 1.5vw, 12px);
+  object-fit: contain;
+}
+
+
+/* === Sub player styling === */
+.sub-players-box {
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+
+  overflow: hidden;
+  height: calc(var(--team-card-height) * (1 - var(--score-boxes-height-scale)));
+  width: calc(var(--players-box-width) * var(--players-sub-width-scale));
+  
+  border-left: 1px solid var(--secondary);
+
+  padding-inline: 5px;
+
+  position: absolute;
+  bottom: 0;
+  right: calc(var(--details-btn-width));
+}
+.sub-players-box > a {
+  display: block;
+  width: 100%;
+  min-width: 0;
+
+  overflow: hidden;
+}
+.sub-player {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+
+  min-width: 0;
+  width: 100%;
+
+  overflow: hidden;
+  gap: 2px;
+}
+.sub-player span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: clamp(0.6rem, 1.2vw, 1rem);
+}
+.sub-player img {
+  width: clamp(14px, 2vw, 18px);
+  height: clamp(10px, 1.5vw, 12px);
+  object-fit: contain;
+}
+
+
+/* === Details button styling === */
+.details-btn {
+  display: flex;
+
+  height: 100%;
+  width: var(--details-btn-width);
+
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.details-btn button {
+  display: flex; 
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
+  border-radius: 0.25rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@media screen and (max-width: 992px) {
+  :root {
+    --players-main-width-scale: 1;
+  }
+
+  .sub-players-box {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  :root {
+    --team-card-height: 100px;
+
+    --team-avatar-height-scale: 0.6;
+    --team-avatar-width-scale: 0.6;
+
+    --team-name-height-scale: 0.6;
+
+    --details-btn-width: 35px;
+
+    --score-boxes-height-scale: 0.6;
+  }
+  /* === Team avatar styling === */
+  .team-card-body .team-avatar img {
+    width: 85%;
+    height: 85%;
+    border-radius: 3px;
+    object-fit: cover;
+  }
+
+  /* === Team name styling === */
+  .team-card-name {
+    font-size: 1rem;
+    padding-inline: 5px;
+  }
+
+  /* === Score box styling === */
+  .score-boxes {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .stage-box {
+    height: 50%;
+  }
+  .stage-score {
+    font-size: .8rem;
+    font-weight: bold;
+    gap: 2px;
+    padding-right: 8px;
+  }
+
+  /* === Players styling === */
+  .main-players-box {
+    gap: 5px;
+
+    height: calc(var(--team-card-height) * (1 - var(--team-avatar-height-scale)));
+    width: calc(100% - var(--details-btn-width));
+
+    bottom: 0;
+    left: 0;
+  }
+  .main-player-avatar {
+    display: none;
+  }
+}
