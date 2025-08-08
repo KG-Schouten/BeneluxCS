@@ -6,6 +6,7 @@
 html, body {
     height: 100%;
     margin: 0;
+    padding: 0;
 }
 
 body {
@@ -19,26 +20,31 @@ body {
     min-height: 100vh;
 }
 
+.container-fluid {
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0;
+    margin-right: 0;
+}
+
 .container-boxed {
+    width: 100%;
     max-width: var(--max-width-content);
     margin-left: auto;
     margin-right: auto;
-    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 /* === Content section styling */
-.content-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding-top: var(--navbar-height);
-    background-color: var(--background);
-}
-
 .content-boxed {
     flex: 1;
     display: flex;
     flex-direction: column;
+
+    min-height: 100vh;
+    padding-top: var(--navbar-height);
 
     background-color: var(--content-bg);
 }

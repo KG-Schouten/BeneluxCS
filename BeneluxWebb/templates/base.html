@@ -86,10 +86,12 @@
         </nav>
       </div>
 
-      <div class="container-fluid content-container">
-        <div class="container-boxed content-boxed" style="min-height: 100vh">
-          {% block content %}
-          {% endblock %}
+      <div class="container-fluid">
+        <div class="container-boxed">
+          <div class="content-boxed">
+            {% block content %}
+            {% endblock %}
+          </div>
         </div>
       </div>
     </div>
