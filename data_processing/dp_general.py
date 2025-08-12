@@ -576,6 +576,8 @@ async def process_player_details(player_ids: list[str] | str, faceit_data_v1: Fa
                 msg = f"player_ids should be a list or a string, got {type(player_ids)}"
                 raise TypeError(msg)
         
+        # Remove invalid player IDs
+        player_ids = [player_id for player_id in player_ids if isinstance(player_id, str) and player_id.strip()]
         
         if not player_ids:
             msg = "No player IDs provided for processing."
