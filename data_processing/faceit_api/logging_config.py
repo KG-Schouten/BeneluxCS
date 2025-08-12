@@ -27,8 +27,8 @@ if not api_logger.hasHandlers():
     
     api_file_handler = RotatingFileHandler(
         os.path.join(LOG_DIR, "api.log"),
-        maxBytes=10*1024*1024,
-        backupCount=2
+        maxBytes=1024*1024,
+        backupCount=1
     )
     api_file_handler.setLevel(logging.INFO)
     
@@ -50,8 +50,8 @@ if not function_logger.hasHandlers():
     
     function_file_handler = RotatingFileHandler(
         os.path.join(LOG_DIR, "functions.log"),
-        maxBytes=10*1024*1024,
-        backupCount=2
+        maxBytes=1024*1024,
+        backupCount=1
     )
     function_file_handler.setLevel(logging.INFO)
     

@@ -125,8 +125,11 @@ async def process_matches(
                 df_maps, df_teams_maps, df_players_stats = await process_match_stats_batch(match_ids, faceit_data=faceit_data)
             
                 # Player details
-                player_ids = [player_id for player_id in df_players_stats['player_id'].unique() if pd.notna(player_id) and player_id != '']
-                player_ids = list(set(player_ids))  # Remove duplicates
+                if df_players_stats.empty:
+                    player_ids = []
+                else:
+                    player_ids = [player_id for player_id in df_players_stats['player_id'].unique() if pd.notna(player_id) and player_id != '']
+                    player_ids = list(set(player_ids))  # Remove duplicates
                 if player_ids:
                     df_players = await process_player_details_batch(player_ids, faceit_data_v1=faceit_data_v1)
                 else:
@@ -573,6 +576,8 @@ async def process_player_details(player_ids: list[str] | str, faceit_data_v1: Fa
                 msg = f"player_ids should be a list or a string, got {type(player_ids)}"
                 raise TypeError(msg)
         
+        # Remove invalid player IDs
+        player_ids = [player_id for player_id in player_ids if isinstance(player_id, str) and player_id.strip()]
         
         if not player_ids:
             msg = "No player IDs provided for processing."
