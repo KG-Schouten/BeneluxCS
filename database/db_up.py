@@ -28,7 +28,7 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
         table_config (list) : List of keys for the table
         df (pd.DataFrame)   : DataFrame containing the data to upload
     """
-    print(f" --- Uploading data to {table_name} table --- ")
+    # print(f" --- Uploading data to {table_name} table --- ")
     
     db, cursor = start_database()
     try:
