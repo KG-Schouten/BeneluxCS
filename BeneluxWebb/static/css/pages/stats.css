@@ -543,13 +543,13 @@
 }
 
 td.numeric-cell.good-value {
-    color: green;
-    font-weight: bold;
+  color: green;
+  font-weight: bold;
 }
 
 td.numeric-cell.bad-value {
-    color: red;
-    opacity: 0.8;
+  color: red;
+  opacity: 0.8;
 }
 
 
