@@ -7,7 +7,7 @@
 .collapse-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 5px;
 
   width: 100%;
   height: auto;
@@ -59,7 +59,7 @@
   width: 100%;
   height: auto;
 
-  padding-inline: 5px;
+  padding: 5px;
   gap: 2px;
 
   color: var(--form-text);
@@ -198,33 +198,6 @@
   text-align: center;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* === Upcoming matches === */
 .match-time {
   display: flex;
@@ -243,44 +216,96 @@
   width: var(--match-info-time-width);
 }
 
+
 /* === Team statistics === */
-.stats-box.maps {
+.maps-box {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+
   width: 100%;
+  height: auto;
+
+  padding: 5px;
+  gap: 5px;
 
   color: var(--form-text);
   background-color: var(--card-bg-secondary);
   font-size: 1rem;
 }
-.stats-box.unavailable {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  color: var(--form-text);
-  background-color: var(--card-bg-secondary);
-}
+.map-stat-box {
+  padding: 2px;
 
-.stats-box.maps .map-stat-box {
-  border: 1px solid #ccc;  /* border around each box */
-  padding: 10px;
-  box-sizing: border-box;
-  text-align: center;      /* center content horizontally */
-}
+  font-size: clamp(0.6rem, -0.3662rem + 1.5584vw, 0.9rem);
+  gap: 2px;
 
+  text-align: center;
+
+  border: 1px solid var(--foreground);  
+  border-radius: 2px;         
+  background-color: var(--btn-bg);
+
+  text-decoration: none;
+  color: var(--btn-text);
+}
 .map-stat-box img {
-  width: 30px;
-  height: 30px;
+  width: 80%;
+  height: auto;
   border-radius: 3px;
   object-fit: cover;
   margin-bottom: 5px; /* space between image and text */
 }
+.map-name {
+  font-weight: bold;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  text-align: center;
+}
+.map-badge {
+  width: 100%;
+}
+
+
+/* === Player statistics styling ===  */
+.player-stats-box {
+  width: 100%;
+  height: auto;
+  padding: 5px;
+
+  color: var(--form-text);
+  background-color: var(--card-bg-secondary);
+}
+
+.table-custom {
+  width: 100%;
+  height: auto;
+
+  font-size: clamp(0.8rem, -0.3662rem + 1.5584vw, 1rem);
+}
+.table-custom .ellipsis {
+  max-width: 200px;
+}
+
+
+@media screen and (max-width: 992px) {
+  .table-custom .ellipsis {
+    max-width: 100px;
+  }
+}
 
 @media screen and (max-width: 768px) {
-    .collapse-body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
+  .collapse-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+  }
+
+  .map-stat-box {
+    font-size: 0.7rem;
+  }
+
+  .table-custom .ellipsis {
+    max-width: 200px;
+  }
 }
