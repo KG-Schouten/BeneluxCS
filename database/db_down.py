@@ -1220,6 +1220,9 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                                 "player_id": p_id,
                                 **stats
                             })
+                        
+                    # Order players by hltv
+                    player_stats.sort(key=lambda x: x['hltv'], reverse=True)
                             
                     # print(f"{player_stats} \n\n")
                     
@@ -1244,10 +1247,15 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
 
                     esea_data[season_number][division_name].append(team_dict)
 
-        # Sort teams by team_name within each division
+        # # Sort teams by team_name within each division
+        # for season in esea_data:
+        #     for division in esea_data[season]:
+        #         esea_data[season][division].sort(key=lambda x: x['team_name'])
+        
+        # Sort teams by standing within each division
         for season in esea_data:
             for division in esea_data[season]:
-                esea_data[season][division].sort(key=lambda x: x['team_name'])
+                esea_data[season][division].sort(key=lambda x: x['stages'][0]['placement']['left'], reverse=False)
         
         return esea_data
 
