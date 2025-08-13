@@ -329,7 +329,6 @@ async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
     #     function_logger.error(f"Error updating players_country table: {e}")
     #     raise
     
-# === Daily update interval ===
 async def update_new_matches_esea():
     """ Gathers and updates new matches from ESEA events """
     try:
@@ -462,10 +461,10 @@ async def main():
         await update_matches()
         await update_esea_teams_benelux()
     elif task == "hourly":
-        await update_new_matches_hub()
         await update_leaderboard(elo_cutoff=2000)
-    elif task == "daily":
+        await update_new_matches_hub()
         await update_new_matches_esea()
+    # elif task == "daily":
     elif task == "weekly":
         await update_hub_events()
         await update_esea_seasons_events()
