@@ -296,7 +296,7 @@
   text-overflow: ellipsis;
   flex: 1 1 auto;
   min-width: 0;
-  font-size: clamp(0.6rem, 1.2vw, 1rem);
+  font-size: 0.8rem;
 }
 .sub-player img {
   width: clamp(14px, 2vw, 18px);
