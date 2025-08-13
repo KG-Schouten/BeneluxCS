@@ -30,6 +30,14 @@ body.dark-mode {
   --form-text: #ddd;
   --form-border: #555;
   --logo-filter: invert(1) brightness(1.2) contrast(1.1);
+
+  /* === Table styling === */
+  --table-header-bg: #2c2c2c;
+  --table-header-border: #444;
+  --table-row-bg: #1e1e1e;
+  --table-row-bg-alternate: #252525;
+  --table-row-bg-hover: #333;
+  --table-row-border: #444;
 }
 
 body.dark-mode .btn-outline-secondary {
