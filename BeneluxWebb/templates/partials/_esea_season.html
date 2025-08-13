@@ -1,6 +1,8 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_card_details.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/table.css') }}">
 {% endblock %}
 
 {% block extra_js %}
@@ -138,6 +140,7 @@
                                     <img class="match-info-team-avatar"
                                         src="{{ team.team_avatar }}"
                                         alt="{{ team.team_name }}"
+                                        loading="lazy"
                                         data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
                                         onerror="this.onerror=null;this.src=this.dataset.placeholder;">
 
@@ -170,6 +173,7 @@
                                         <div class="match-info-avatar">
                                             <img src="{{ match.opponent_avatar }}"
                                                 alt="{{ match.opponent }}"
+                                                loading="lazy"
                                                 data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
                                                 onerror="this.onerror=null;this.src=this.dataset.placeholder;">
                                         </div>
@@ -181,7 +185,8 @@
                                     {% if match.maps_played %}
                                         {% for map in match.maps_played %}
                                             <img src="{{ url_for('static', filename='img/maps/' ~ map ~ '.png') }}"
-                                                alt="{{ map }}">
+                                                alt="{{ map }}"
+                                                loading="lazy">
                                         {% endfor %}
                                     {% endif %}
                                 </div>
@@ -216,6 +221,7 @@
                                     <img class="match-info-team-avatar"
                                         src="{{ team.team_avatar }}"
                                         alt="{{ team.team_name }}"
+                                        loading="lazy"
                                         data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
                                         onerror="this.onerror=null;this.src=this.dataset.placeholder;">
 
@@ -227,6 +233,7 @@
                                         <div class="match-info-avatar">
                                             <img src="{{ match.opponent_avatar }}"
                                                 alt="{{ match.opponent }}"
+                                                loading="lazy"
                                                 data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
                                                 onerror="this.onerror=null;this.src=this.dataset.placeholder;">
                                         </div>
@@ -241,14 +248,14 @@
                     </div>
                 </div>
                 
-                <!-- <div class="details-box col">
+                <div class="details-box col">
 
                     <div class="details-box-header">
                         Map Statistics
                     </div>
 
                     {% if team.map_stats %}
-                        <div class="stats-box maps">
+                        <div class="maps-box">
                             {% for map in team.map_stats %}
                                 <div class="map-stat-box"
                                     data-bs-toggle="tooltip"
@@ -257,12 +264,13 @@
                                     
                                     <img src="{{ url_for('static', filename='img/maps/' ~ map.map_name ~ '.png') }}"
                                         alt="{{ map.map_name }}"
+                                        loading="lazy"
                                         data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
                                     >
-                                    <div class="small fw-semibold mb-2" style="max-width: 100%;">
-                                        {{ map.map_name }}
+                                    <div class="map-name">
+                                        {{ map.map_name | replace('de_', '')}}
                                     </div>
-                                    <span class="badge px-3 py-1 mt-auto
+                                    <span class="map-badge badge
                                         {% if map.played == 0 %}bg-secondary{% elif map.winrate >= 50 %}bg-success{% else %}bg-danger{% endif %}">
                                         {% if map.played == 0 %}
                                             -
@@ -278,7 +286,69 @@
                             <p class="text-muted">No map stats available.</p>
                         </div>
                     {% endif %}
-                </div> -->
+
+                    <!-- Player statistics -->
+                    <div class="details-box-header">
+                        Player Statistics
+                    </div>
+
+                    {% if team.player_stats %}
+                        <div class="player-stats-box">
+                            <table class="table-custom">
+                                <thead>
+                                    <tr>
+                                        <th class="ellipsis">Player</th>
+                                        <th class="numeric-cell">Maps</th>
+                                        <th class="numeric-cell">HS%</th>
+                                        <th class="numeric-cell">K/D</th>
+                                        <th class="numeric-cell">HLTV</th>
+                                    </tr>
+                                </thead>
+                                
+                                <tbody>
+                                    {% for player in team.player_stats %}
+                                    <tr>
+                                        <td class="ellipsis">
+                                            <a class="player-link" href="https://www.faceit.com/en/players/{{ player['player_name'] }}" target="_blank">
+                                                <img
+                                                    src="{{ url_for('static', filename='img/flags/' ~ player['country']|lower ~ '.png') }}"
+                                                    alt="{{ player['country'] }}" width="20"
+                                                    class="me-2"
+                                                >
+                                                <span>{{ player['player_name'] }}</span>
+                                            </a>
+                                        </td>
+                                        <td class="numeric-cell">
+                                            {{ player['maps_played'] if player['maps_played'] else '-' }}
+                                        </td>
+                                        <td class="numeric-cell">
+                                            {{ player['headshots_percent'] | round(0) }}
+                                        </td>
+                                        <td class="numeric-cell">
+                                            {{ '%.2f' % player['k_d_ratio'] if player['k_d_ratio'] is not none else '-' }}
+                                        </td>
+                                        <td class="numeric-cell
+                                            {% set value = player['hltv'] %}
+                                            {% if value is not none %}
+                                                {% if value >= 1.05 %}
+                                                    good-value
+                                                {% elif value <= 0.95 %}
+                                                    bad-value
+                                                {% endif %}
+                                            {% endif %}">
+                                            {{ '%.2f' % player['hltv'] if player['hltv'] is not none else '-' }}
+                                        </td> 
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="stats-box unavailable">
+                            <p class="text-muted">No player stats available.</p>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
