@@ -942,14 +942,13 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         ps.team_id,
                         ps.player_id,
                         p.player_name,
-                        p.avatar AS player_avatar,
                         COALESCE(pc.country, p.country) AS country,
                         ps.match_id,
                         ps.match_round,
                         ps.adr,
-                        ps.headshots_percent,
-                        ps.k_d_ratio,
-                        ps.k_r_ratio,
+                        ps.headshots,
+                        ps.kills,
+                        ps.deaths,
                         ps.hltv
                     FROM players_stats ps
                     JOIN players p ON ps.player_id = p.player_id
@@ -966,16 +965,14 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     team_id,
                     player_id,
                     player_name,
-                    player_avatar,
                     country,
                     COUNT(DISTINCT (match_id, match_round)) AS maps_played,
                     AVG(adr) AS adr,
-                    AVG(headshots_percent) AS headshots_percent,
-                    AVG(k_d_ratio) AS k_d_ratio,
-                    AVG(k_r_ratio) AS k_r_ratio,
+                    SUM(headshots) * 100.0 / NULLIF(SUM(kills), 0) AS headshots_percent,
+                    SUM(kills) * 1.0 / NULLIF(SUM(deaths), 0) AS k_d_ratio,
                     AVG(hltv) AS hltv
                 FROM player_match_stats
-                GROUP BY season_number, team_id, player_id, player_name, player_avatar, country
+                GROUP BY season_number, team_id, player_id, player_name, country
                 ORDER BY season_number, team_id, player_id
             """)
             
@@ -1402,6 +1399,7 @@ def gather_esea_seasons_divisions() -> tuple:
         return [], []
     finally:
         close_database(db)
+        
 
 def get_todays_matches():
     db, cursor = start_database()
