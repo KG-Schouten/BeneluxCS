@@ -939,7 +939,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 WITH player_match_stats AS (
                     SELECT
                         s.season_number,
-                        tm.team_id,
+                        ps.team_id,
                         ps.player_id,
                         p.player_name,
                         p.avatar AS player_avatar,
@@ -955,11 +955,10 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     JOIN players p ON ps.player_id = p.player_id
                     JOIN matches m ON ps.match_id = m.match_id
                     JOIN seasons s ON m.event_id = s.event_id
-                    JOIN teams_matches tm ON tm.match_id = m.match_id
                     LEFT JOIN players_country pc ON p.player_id = pc.player_id
                     JOIN temp_season_teams_players t 
                         ON s.season_number = t.season_number
-                    AND tm.team_id = t.team_id
+                    AND ps.team_id = t.team_id
                     AND ps.player_id = t.player_id
                 )
                 SELECT
