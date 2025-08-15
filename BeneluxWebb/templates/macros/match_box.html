@@ -1,0 +1,42 @@
+{% macro match_box(division, match) %}
+<div class="sidebar-match-box {{ 'highlight-border' if match.team.is_benelux and match.opponent.is_benelux else '' }}">
+    <div class="sidebar-match-box-left">
+        <div class="event-name">
+            <span>{{ division }}</span>
+        </div>
+
+        <div class="team-name {{ 'highlight-text' if match.team.is_benelux else '' }}">
+            <span>{{ match.team.team_name }}</span>
+        </div>
+        <div class="team-name {{ 'highlight-text' if match.opponent.is_benelux else '' }}">
+            <span>{{ match.opponent.team_name }}</span>
+        </div>
+    </div>
+
+    <div class="sidebar-match-box-right">
+        {% if match.status == 'FINISHED' %}
+            <div class="match-score">
+                {% if match.map_count > 1 %}
+                    <span>{{ match.team.map_wins }} - {{ match.opponent.map_wins }}</span>
+                {% else %}
+                    <span>{{ match.team.round_wins }} - {{ match.opponent.round_wins }}</span>
+                {% endif %}
+            </div>
+        {% elif match.status == 'SCHEDULED' %}
+            <div class="match-time">
+                <span>{{ match.match_time | datetimeformat('%H:%M') }}</span>
+            </div>
+        {% elif match.status == 'ONGOING' %}
+            <div class="match-score">
+                {% if match.score %}
+                    <span>LIVE: {{ match.score[match.team.team_id] | default(0) }} / {{ match.score[match.opponent.team_id] | default(0) }}</span>
+                {% else %}
+                    <span>{{ match.status }}</span>
+                {% endif %}
+            </div>
+        {% else %}
+            <span>{{ match.status }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
