@@ -834,7 +834,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 AND s.season_number = ANY(%s)
             """, (list(all_team_ids), list(all_season_numbers)))
             
-            # Execute optimized query
             cursor.execute("""
                 WITH team_matches AS (
                     SELECT 
@@ -907,9 +906,9 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 if matches_data[key]:
                     cols = [desc[0] for desc in cursor.description][2:]
                     matches_data[key] = pd.DataFrame(matches_data[key], columns=cols)
-                    match_limit = 12
-                    if len(matches_data[key]) >match_limit:
-                        matches_data[key] = matches_data[key].head(match_limit)
+                    # match_limit = 12
+                    # if len(matches_data[key]) > match_limit:
+                    #     matches_data[key] = matches_data[key].head(match_limit)
 
         
         # Batch load player stats data
@@ -1175,39 +1174,45 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     if not map_stats:
                         map_stats = map_stats_data.get((team_id, season_number), [])
                     
-                    recent_matches, upcoming_matches = [], []
-                    for _, row in df_matches.iterrows():
-                        if row['status'] == 'FINISHED':
-                            if row['our_score'] == 0 and row['opp_score'] == 0:
-                                score = "FFW" if row['result'] == "W" else "FFL"
-                            elif row['map_count'] == 1 and row['bo1_score']:
-                                score = row['bo1_score']
+                    recent_matches = []
+                    upcoming_matches = []
+
+                    for row in df_matches.itertuples(index=False):
+                        if row.status == 'FINISHED':
+                            if row.our_score == 0 and row.opp_score == 0:
+                                score = "FFW" if row.result == "W" else "FFL"
+                            elif row.map_count == 1 and row.bo1_score:
+                                score = row.bo1_score
                             else:
-                                score = f"{int(row['our_score'])}/{int(row['opp_score'])}"
+                                score = f"{int(row.our_score)}/{int(row.opp_score)}"
 
                             recent_matches.append({
-                                'match_id': row['match_id'],
-                                'result': row['result'],
-                                'opponent_id': row['opp_id'],
-                                'opponent': row['opp_name'],
-                                'opponent_avatar': row['opp_avatar'],
+                                'match_id': row.match_id,
+                                'result': row.result,
+                                'opponent_id': row.opp_id,
+                                'opponent': row.opp_name,
+                                'opponent_avatar': row.opp_avatar,
                                 'score': score,
-                                'match_time': int(row['match_time']) if pd.notna(row['match_time']) else 0,
-                                'maps_played': row['maps_played'],
+                                'match_time': int(row.match_time) if pd.notna(row.match_time) else 0,
+                                'maps_played': row.maps_played,
                             })
 
-                        elif row['status'] != 'FINISHED':
+                        else:  # Upcoming matches
                             upcoming_matches.append({
-                                'match_id': row['match_id'],
-                                'opponent_id': row['opp_id'],
-                                'opponent': row['opp_name'],
-                                'opponent_avatar': row['opp_avatar'],
-                                'match_time': int(row['match_time'])
+                                'match_id': row.match_id,
+                                'opponent_id': row.opp_id,
+                                'opponent': row.opp_name,
+                                'opponent_avatar': row.opp_avatar,
+                                'match_time': int(row.match_time)
                             })
-                        
-                        # Sort upcoming matches by match_time
-                        upcoming_matches.sort(key=lambda x: x['match_time'])
-                        recent_matches.sort(key=lambda x: x['match_time'])
+
+                    recent_matches.sort(key=lambda x: x['match_time'], reverse=True)
+                    upcoming_matches.sort(key=lambda x: x['match_time'])
+
+                    # Limit to top 3
+                    match_limit = 4
+                    recent_matches = recent_matches[:match_limit]
+                    upcoming_matches = upcoming_matches[:match_limit]
 
                     # Create the player_stats dict
                     player_stats = []
@@ -1399,9 +1404,8 @@ def gather_esea_seasons_divisions() -> tuple:
         return [], []
     finally:
         close_database(db)
-        
 
-def get_todays_matches():
+def get_upcoming_matches() -> tuple:
     db, cursor = start_database()
     try:
         now = datetime.now(timezone.utc)
@@ -1426,32 +1430,53 @@ def get_todays_matches():
                 JOIN teams_matches tm ON m.match_id = tm.match_id
                 LEFT JOIN teams t ON tm.team_id = t.team_id
                 LEFT JOIN teams_benelux tb ON tm.team_id = tb.team_id AND m.event_id = tb.event_id
-                WHERE m.match_time >= %s AND m.match_time < %s
+                WHERE m.match_time >= %s
+            ),
+            map_counts AS (
+                SELECT match_id, COUNT(DISTINCT match_round) AS map_count
+                FROM teams_maps
+                GROUP BY match_id
+            ),
+            team_scores AS (
+                SELECT
+                    tm.match_id,
+                    tm.team_id,
+                    SUM(COALESCE(tm.team_win, 0)) AS map_wins,
+                    SUM(COALESCE(tm.final_score, 0)) AS round_wins
+                FROM teams_maps tm
+                GROUP BY tm.match_id, tm.team_id
             )
-
-            SELECT 
+            SELECT
                 mt1.match_id,
                 mt1.match_time,
                 mt1.status,
-                mt1.score,
+                mt1.score AS live_score,
                 mt1.division_name,
+                COALESCE(mc.map_count, 0) AS map_count,
 
                 mt1.team_id AS team1_id,
                 mt1.team_name AS team1_name,
                 mt1.avatar AS team1_avatar,
                 mt1.is_benelux AS team1_is_benelux,
+                COALESCE(ts1.map_wins,0) AS team1_map_wins,
+                COALESCE(ts1.round_wins,0) AS team1_round_wins,
 
                 mt2.team_id AS team2_id,
                 mt2.team_name AS team2_name,
                 mt2.avatar AS team2_avatar,
-                mt2.is_benelux AS team2_is_benelux
+                mt2.is_benelux AS team2_is_benelux,
+                COALESCE(ts2.map_wins,0) AS team2_map_wins,
+                COALESCE(ts2.round_wins,0) AS team2_round_wins
 
             FROM match_teams mt1
             JOIN match_teams mt2 ON mt1.match_id = mt2.match_id AND mt1.team_rank = 1 AND mt2.team_rank = 2
-            ORDER BY mt1.match_time ASC;
+            LEFT JOIN team_scores ts1 ON mt1.match_id = ts1.match_id AND mt1.team_id = ts1.team_id
+            LEFT JOIN team_scores ts2 ON mt2.match_id = ts2.match_id AND mt2.team_id = ts2.team_id
+            LEFT JOIN map_counts mc ON mt1.match_id = mc.match_id
+            ORDER BY mt1.match_time ASC
         """
 
-        cursor.execute(query, (start_of_day, end_of_day))
+        cursor.execute(query, (start_of_day, ))
         rows = cursor.fetchall()
 
         # Sort by division name
@@ -1470,21 +1495,26 @@ def get_todays_matches():
                 "match_id": row[0],
                 "match_time": row[1],
                 "status": row[2],
-                "score": row[3],
+                "live_score": row[3],
                 "division_name": row[4],
+                "map_count": row[5],
             }
             team1 = {
-                "team_id": row[5],
-                "team_name": row[6],
-                "team_avatar": row[7],
-                "is_benelux": row[8]
+                "team_id": row[6],
+                "team_name": row[7],
+                "team_avatar": row[8],
+                "is_benelux": row[9],
+                "map_wins": row[10],
+                "round_wins": row[11]
             }
             
             team2 = {
-                "team_id": row[9],
-                "team_name": row[10],
-                "team_avatar": row[11],
-                "is_benelux": row[12]
+                "team_id": row[12],
+                "team_name": row[13],
+                "team_avatar": row[14],
+                "is_benelux": row[15],
+                "map_wins": row[16],
+                "round_wins": row[17]
             }
 
             # Determine which is the Benelux team
@@ -1509,15 +1539,15 @@ def get_todays_matches():
             division: grouped_matches[division]
             for division in sorted(grouped_matches.keys(), key=compute_division_rank)
         }
-        
-        return sorted_grouped_matches
+
+        return sorted_grouped_matches, end_of_day
 
     except Exception as e:
         function_logger.error(f"Error fetching today's matches: {e}")
-        return []
+        return {}, 0
     finally:
         close_database(db)
-    
+  
 def gather_player_stats_esea(
     countries=None,
     seasons=None,
