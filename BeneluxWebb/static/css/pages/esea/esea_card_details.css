@@ -88,9 +88,6 @@
 
   cursor: pointer;
 }
-.highlight-border {
-  border: 2px solid orange;
-}
 
 /* === Match info date styling === */
 .match-info-time {

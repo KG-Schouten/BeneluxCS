@@ -103,9 +103,6 @@
 .team.team-right {
   justify-content: flex-end;
 }
-.highlight-text {
-  color: orange;
-}
 
 @media screen and (max-width: 992px) {
   .sidebar.left {
