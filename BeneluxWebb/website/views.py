@@ -176,10 +176,43 @@ def esea():
     from datetime import datetime
     current_time = int(datetime.now().timestamp())
     
-    from database.db_down import gather_esea_season_info, get_todays_matches
-    todays_matches = get_todays_matches()  
+    from database.db_down import gather_esea_season_info, get_upcoming_matches
+    
+    # Gathering and separating upcoming matches
+    upcoming_matches, end_of_day = get_upcoming_matches()
+    
+    benelux_matches = {
+        div: [
+            match
+            for match in matches
+            if match["team"]["is_benelux"] and match["opponent"]["is_benelux"]
+        ]
+        for div, matches in upcoming_matches.items()
+    }
+    has_benelux_matches = any(benelux_matches[div] for div in benelux_matches)
+    
+    todays_matches = {
+        div: [
+            match
+            for match in matches
+            if match["match_time"] < end_of_day
+        ]
+        for div, matches in upcoming_matches.items()
+    }
+    has_todays_matches = any(todays_matches[div] for div in todays_matches)
+    
+    # Gather ESEA season info
     season_info = gather_esea_season_info()
-    return render_template('esea.html', season_info=season_info, current_time=current_time, todays_matches=todays_matches)
+    
+    return render_template(
+        'esea.html', 
+        season_info=season_info, 
+        current_time=current_time, 
+        benelux_matches=benelux_matches, 
+        has_benelux_matches=has_benelux_matches,
+        todays_matches=todays_matches,
+        has_todays_matches=has_todays_matches,
+    )
 
 @views.route('/esea/season/<int:season_number>')
 def esea_season_partial(season_number):
