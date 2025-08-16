@@ -195,7 +195,7 @@ def esea():
         div: [
             match
             for match in matches
-            if match["match_time"] < end_of_day
+            # if match["match_time"] < end_of_day
         ]
         for div, matches in upcoming_matches.items()
     }

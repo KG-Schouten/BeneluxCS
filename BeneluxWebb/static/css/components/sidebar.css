@@ -1,0 +1,55 @@
+/* === General sidebar styling === */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    
+    width: var(--sidebar-width);
+    
+    padding-inline: 5px;
+    padding-top: 10px;
+    gap: 20px;
+}
+.sidebar.left {
+    border-right: 1px solid var(--border) !important;
+}
+.sidebar.right {
+    border-left: 1px solid var(--border) !important;
+}
+
+/* === Sidebar content styling === */
+.sidebar-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: nowrap;
+
+    width: 100%;
+    height: auto;
+
+    gap: 10px;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 100%;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+
+    width: 100%;
+    height: auto;
+
+    gap: 10px;
+}

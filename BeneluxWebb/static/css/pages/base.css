@@ -19,6 +19,13 @@ a {
     text-decoration: none;
 }
 
+.highlight-border {
+  border: 2px solid orange !important;
+}   
+.highlight-text {
+  color: orange !important;
+}
+
 .page-wrapper {
     display: flex;
     flex-direction: column;

@@ -4,11 +4,12 @@
 {% from "macros/match_box.html" import match_box %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/sidebar.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/match_box.css') }}">
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_sidebar.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_cards.css') }}">
-
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/match_box.css') }}">
 {% endblock %}
 
 {% block title %}ESEA{% endblock %}

@@ -1,32 +1,4 @@
-/* === Sidebar general styles === */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  width: var(--sidebar-width);
-  padding-inline: 5px;
-}
-.sidebar.left {
-  border-right: 1px solid var(--border);
-}
-.sidebar.right {
-  border-left: 1px solid var(--border);
-}
 
-/* === Todays Matches sidebar === */
-.todays-matches {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  height: max-content;
-  margin: 10px;
-  width: 100%;
-
-  background-color: var(--card-bg);
-  border: 1px solid var(--border);
-}
 
 .todays-matches-division {
   display: flex;
@@ -37,71 +9,6 @@
   height: auto;
 
   border-bottom: 1px solid var(--primary)
-}
-
-.todays-matches-header {
-  display: flex;
-  width: 100%;
-  justify-content: center;
-  align-items: center;
-  background-color: var(--card-bg-highlight);
-
-  /* font-size: clamp(.6rem, 1rem, 1.5rem); */
-  font-size: clamp(1rem, 1.5vw, 1.2rem);
-  font-weight: bold;
-}
-.todays-matches-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  width: 100%;
-  gap: 10px;
-  padding: 5px;
-}
-
-.todays-match-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: auto;
-  padding: 5px;
-  background-color: var(--card-bg-secondary);
-  border: 1px solid var(--border);
-
-  /* Make the whole box clickable without looking like a link */
-  color: inherit;
-  text-decoration: none;
-}
-.todays-match-box:hover {
-  background-color: var(--card-bg-highlight);
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  color: inherit;
-  text-decoration: none;
-}
-
-.team {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  font-weight: bold;
-  padding-inline: 5px;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: clamp(0.8rem, 1.2vw, 1rem);
-  color: var(--form-text);
-  transition: color 0.3s ease;
-}
-.team.team-left {
-  justify-content: flex-start;
-}
-.team.team-right {
-  justify-content: flex-end;
 }
 
 @media screen and (max-width: 992px) {

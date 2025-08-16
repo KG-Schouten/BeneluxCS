@@ -1,6 +1,38 @@
-.highlight-border {
-  border: 2px solid orange;
-}   
-.highlight-text {
-  color: orange;
+.sidebar-match-box {
+  flex-direction: column;
+  width: 100%;
+
+  padding: 3px;
+
+  border: 2px solid var(--border);
+}
+
+.sidebar-match-box .event-name {
+  width: 100%;
+  height: auto;
+}
+.sidebar-match-box .event-name span {
+  font-size: 11px;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.sidebar-match-box .match-content {
+  display: grid;
+  grid-template-columns: 1fr 20px;
+  align-items: center;
+}
+
+.sidebar-match-box .match-content .match-content-left {
+  width: 100%;
+}
+.sidebar-match-box .match-content .match-content-left .team-name {
+  font-size: 12px;
+  font-weight: bold;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
