@@ -1,5 +1,5 @@
 :root {
-    --max-width-content: 1300px;
+    --max-width-content: 1320px;
 }
 
 /* === General styling === */
@@ -11,7 +11,7 @@ html, body {
 
 body {
     background-color: var(--background);
-    color: var(--foreground);
+    color: var(--text);
 }
 
 a {
@@ -20,10 +20,10 @@ a {
 }
 
 .highlight-border {
-  border: 2px solid orange !important;
+  border: 2px solid var(--primary) !important;
 }   
 .highlight-text {
-  color: orange !important;
+  color: var(--primary) !important;
 }
 
 .page-wrapper {

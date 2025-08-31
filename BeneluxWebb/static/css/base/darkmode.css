@@ -1,26 +1,34 @@
 /* base/darkmode.css */
 body.dark-mode {
   /* === General styling === */
-  --primary: #f39c12;
-  --secondary: #555;
+  --text: #e0e0e0;
   --background: #000000;
   --content-bg: #121212;
+
+  --primary: rgba(243, 156, 18, 1);
+  --primary1: rgba(243, 156, 18, .1);
+
+  --secondary: rgba(3, 173, 171, 1);
+  --secondary1: rgba(3, 173, 171, .1);
+
+  --accent: rgba(24, 249, 205, 1);
+  --accent1: rgba(24, 249, 205, .1);
+
+  --border: #444;
+
+  --static: rgba(255, 255, 255, 0.2);
+
+  --secondary: #555;
   --foreground: #e0e0e0;
-  --text: #e0e0e0;
 
   /* === Navbar & footer styling === */
-  --navbar-bg: rgba(41, 31, 4, 0.5);
   --navbar-shadow: var(--primary);
-  --glass-effect: blur(15px);
-  --glass-effect-scrolled: blur(50px);
-  --border-glow: rgba(241, 156, 99, 0.3);
   --transition-normal: 0.3s ease;
 
   /* === ESEA styling === */
   --card-bg: #1e1e1e;
   --card-bg-secondary: #2c2c2c;
   --card-bg-highlight: #333;
-  --border: #444;
   --accent: #888d91;
   --muted: #8a8a8a;
   --btn-bg: #555;

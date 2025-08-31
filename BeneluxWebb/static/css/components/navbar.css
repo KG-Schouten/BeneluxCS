@@ -11,19 +11,20 @@
   position: fixed;
   top: 0; left: 0; right: 0;
   height: var(--navbar-height);
-  background-color: var(--navbar-bg);
-  backdrop-filter: var(--glass-effect);
-  -webkit-backdrop-filter: var(--glass-effect);
-  border-bottom: 1px solid var(--border-glow);
+  border-bottom: 1px solid var(--static);
   z-index: 9999;
   
   display: flex;
   align-items: flex-start;
 
+  background-color: var(--background);
+  background-image: -webkit-linear-gradient(180deg, var(--background) 0%, var(--primary1) 100%);
+  background-image: -moz-linear-gradient(180deg, var(--background) 0%, var(--primary1) 100%);
+  background-image: linear-gradient(180deg, var(--background) 0%, var(--primary1) 100%);
+
   transition: background-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 .navbar-container.scrolled {
-  background-color: var(--navbar-bg);
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 

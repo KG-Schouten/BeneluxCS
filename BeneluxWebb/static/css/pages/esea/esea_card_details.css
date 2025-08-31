@@ -174,7 +174,7 @@
 }
 
 /* === Recent Matches ===  */
-.match-score {
+.match-info-team-wrapper .match-score {
   flex: 0 0 40px;
   justify-content: center;
 
@@ -194,25 +194,6 @@
   width: 100%;
   text-align: center;
 }
-
-/* === Upcoming matches === */
-.match-time {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  height: 100%;
-  width: 100%;
-  font-size: .8rem;
-  font-weight: bold;
-
-  overflow: visible;
-  flex-wrap: nowrap;
-}
-.match-time.upcoming {
-  width: var(--match-info-time-width);
-}
-
 
 /* === Team statistics === */
 .maps-box {

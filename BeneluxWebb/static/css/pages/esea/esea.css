@@ -1,8 +1,8 @@
 /* esea.css */
 :root {
   /* Main wrapper (ESEA wrapper) ratios */
-  --esea-wrapper-width: calc(100% - var(--sidebar-width) * 2);
-  --sidebar-width: 150px;
+  --esea-wrapper-width: calc(100% - var(--sidebar-width) * 2); /* 1000px is fine */
+  --sidebar-width: 160px;
 
   /* Spacing & sizing */
   --gap-small: 5px;

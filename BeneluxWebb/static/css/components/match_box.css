@@ -8,8 +8,10 @@
 }
 
 .sidebar-match-box .event-name {
+  display: flex;
   width: 100%;
   height: auto;
+  line-height: initial;
 }
 .sidebar-match-box .event-name span {
   font-size: 11px;
@@ -21,16 +23,36 @@
 
 .sidebar-match-box .match-content {
   display: grid;
-  grid-template-columns: 1fr 20px;
+  grid-template-columns: 1fr 30px;
   align-items: center;
 }
 
 .sidebar-match-box .match-content .match-content-left {
   width: 100%;
+  min-width: 0;
 }
 .sidebar-match-box .match-content .match-content-left .team-name {
   font-size: 12px;
   font-weight: bold;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.sidebar-match-box .match-content .match-content-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+.sidebar-match-box .match-content .match-content-right .match-time {
+  font-size: 12px;
 
   white-space: nowrap;
   text-overflow: ellipsis;

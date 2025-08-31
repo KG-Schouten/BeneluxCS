@@ -26,10 +26,12 @@
     align-items: center;
     flex-wrap: nowrap;
 
-    width: 100%;
+    width: 90%;
     height: auto;
 
     gap: 10px;
+
+    background-color: var(--card-bg-secondary);
 }
 
 .sidebar-header {
@@ -39,7 +41,8 @@
 
     width: 100%;
 
-    border-bottom: 1px solid var(--border);
+    /* border-bottom: 1px solid var(--border); */
+    background-color: var(--btn-bg);
 }
 
 .sidebar-body {
