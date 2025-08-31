@@ -1,7 +1,7 @@
 import sys
 import os
 import logging
-from logging.handlers import RotatingFileHandler
+from logging import FileHandler
 
 # Ensure repo root (BeneluxCS) is in sys.path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -25,10 +25,8 @@ if not api_logger.hasHandlers():
     api_console_handler = logging.StreamHandler()
     api_console_handler.setLevel(logging.CRITICAL)
     
-    api_file_handler = RotatingFileHandler(
-        os.path.join(LOG_DIR, "api.log"),
-        maxBytes=1024*1024,
-        backupCount=1
+    api_file_handler = FileHandler(
+        os.path.join(LOG_DIR, "api.log")
     )
     api_file_handler.setLevel(logging.INFO)
     
@@ -48,10 +46,8 @@ if not function_logger.hasHandlers():
     function_console_handler = logging.StreamHandler()
     function_console_handler.setLevel(logging.ERROR)
     
-    function_file_handler = RotatingFileHandler(
-        os.path.join(LOG_DIR, "functions.log"),
-        maxBytes=1024*1024,
-        backupCount=1
+    function_file_handler = FileHandler(
+        os.path.join(LOG_DIR, "functions.log")
     )
     function_file_handler.setLevel(logging.INFO)
     

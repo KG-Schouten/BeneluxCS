@@ -10,6 +10,7 @@ from psycopg2.extras import execute_values
 import datetime
 import pandas as pd
 import json
+import math
 
 from database.db_manage import start_database, close_database
 
@@ -52,10 +53,10 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
         
         ## Preparing the data as tuples with None for the missing keys in the database
         data = [
-            tuple(
+            clean_row(tuple(
                 json.dumps(val) if isinstance(val, (dict, list, tuple)) else val
                 for val in (d.get(col, None) for col in keys)
-            )
+            ))
             for d in df.to_dict(orient='records')
         ]
         
@@ -278,6 +279,13 @@ def safe_convert_to_datetime(last_match_time):
 
     else:
         raise ValueError(f"Invalid input type: {type(last_match_time).__name__}")
+
+def clean_row(row):
+    """ Cleans a row of the data by changing NaN values to None """
+    return tuple(
+        None if (isinstance(x, float) and math.isnan(x)) else x
+        for x in row
+    )
 
 if __name__ == "__main__":
     # Allow standalone execution
