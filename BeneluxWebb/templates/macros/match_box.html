@@ -30,7 +30,7 @@
             {% elif match.status == 'ONGOING' %}
                 <div class="match-score">
                     {% if match.score %}
-                        <span>LIVE: {{ match.score[match.team.team_id] | default(0) }} / {{ match.score[match.opponent.team_id] | default(0) }}</span>
+                        <span>{{ match.score[match.team.team_id] | default(0) }} / {{ match.score[match.opponent.team_id] | default(0) }}</span>
                     {% else %}
                         <span>{{ match.status }}</span>
                     {% endif %}
