@@ -99,9 +99,9 @@
         {% if has_todays_matches %}
           {% for division, matches in todays_matches.items() %}
             {% if matches %}
-              <div class="todays-matches-division">
+              <!-- <div class="todays-matches-division">
                 {{ division }}
-              </div>
+              </div> -->
               {% for match in matches %}
                 {{ match_box(division, match) }}
               {% endfor %}
