@@ -1206,12 +1206,12 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                                 'match_time': int(row.match_time)
                             })
 
-                    recent_matches.sort(key=lambda x: x['match_time'], reverse=True)
+                    recent_matches.sort(key=lambda x: x['match_time'])
                     upcoming_matches.sort(key=lambda x: x['match_time'])
 
-                    # Limit to top 3
+                    # Limit matches
                     match_limit = 4
-                    recent_matches = recent_matches[:match_limit]
+                    recent_matches = recent_matches[-match_limit:]
                     upcoming_matches = upcoming_matches[:match_limit]
 
                     # Create the player_stats dict
