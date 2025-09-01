@@ -10,7 +10,7 @@ def home_redirect():
 
 @views.route('/stats')
 def stats():
-    from database.db_down import gather_player_stats_esea, gather_esea_seasons_divisions
+    from database.db_down_website import gather_player_stats_esea, gather_esea_seasons_divisions
 
     try:
         # Gather seasons and divisions for ESEA
@@ -105,7 +105,7 @@ def stats():
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
         if is_ajax:
-            html = render_template("partials/_stats_table.html",
+            html = render_template("stats/_stats_table.html",
                 data=paginated_data,
                 stat_field_names=stat_field_names, # All stat field names (original name)
                 columns_perm=columns_perm, # Permanent columns (original name)
@@ -121,7 +121,7 @@ def stats():
 
         # Regular full page render
         return render_template(
-            "stats.html",
+            "stats/stats.html",
             data=paginated_data,
             stat_field_names=stat_field_names, # All stat field names (original name)
             columns_perm=columns_perm, # Permanent columns (original name)
@@ -153,7 +153,7 @@ def stats():
             return error_html
 
         return render_template(
-            "stats.html",
+            "stats/stats.html",
             data=[],
             stat_field_names=[],
             columns_perm=[],
@@ -176,7 +176,7 @@ def esea():
     from datetime import datetime
     current_time = int(datetime.now().timestamp())
     
-    from database.db_down import gather_esea_season_info, get_upcoming_matches
+    from database.db_down_website import gather_esea_season_info, get_upcoming_matches
     
     # Gathering and separating upcoming matches
     upcoming_matches, end_of_day = get_upcoming_matches()
@@ -205,7 +205,7 @@ def esea():
     season_info = gather_esea_season_info()
     
     return render_template(
-        'esea.html', 
+        'esea/esea.html', 
         season_info=season_info, 
         current_time=current_time, 
         benelux_matches=benelux_matches, 
@@ -216,12 +216,12 @@ def esea():
 
 @views.route('/esea/season/<int:season_number>')
 def esea_season_partial(season_number):
-    from database.db_down import gather_esea_teams_benelux
+    from database.db_down_website import gather_esea_teams_benelux
     esea_data = gather_esea_teams_benelux(szn_number=season_number)
     
     # Extract teams for the specified season
     divisions = esea_data.get(season_number, {})
-    return render_template('partials/_esea_season.html', divisions=divisions, season=season_number)
+    return render_template('esea/_esea_season.html', divisions=divisions, season=season_number)
 
 @views.route('/leaderboard')
 def leaderboard():
@@ -257,7 +257,7 @@ def leaderboard():
         per_page = max(10, min(per_page, 100))
             
         # Get data from the database
-        from database.db_down import gather_leaderboard
+        from database.db_down_website import gather_leaderboard
         data = gather_leaderboard(
             countries=countries,
             search=search,
@@ -287,7 +287,7 @@ def leaderboard():
         
         if is_ajax:
             return render_template(
-                "partials/_leaderboard_table.html",
+                "leaderboard/_leaderboard_table.html",
                 data=paginated_data,
                 sort=sort,
                 page=page,
@@ -297,7 +297,7 @@ def leaderboard():
             )
         
         return render_template(
-            "leaderboard.html",
+            "leaderboard/leaderboard.html",
             data=paginated_data,
             search=search,
             min_elo=min_elo,
@@ -323,7 +323,7 @@ def leaderboard():
             """
         
         return render_template(
-            "leaderboard.html", 
+            "leaderboard/leaderboard.html", 
             data=[],
             search='',
             min_elo=0,
