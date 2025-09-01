@@ -1,8 +1,24 @@
 {% macro match_box(division, match) %}
-<div class="sidebar-match-box {{ 'highlight-border' if match.team.is_benelux and match.opponent.is_benelux else '' }}">
-    
-    <div class="event-name">
-        <span class="text-muted">{{ division }}</span>
+<a class="sidebar-match-box {{ 'highlight-border' if match.team.is_benelux and match.opponent.is_benelux else '' }}"
+   href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" target="_blank" rel="noopener noreferrer">
+    <div class="match-top">
+        <div class="event-name">
+            <span class="text-muted">{{ division }}</span>
+        </div>
+
+        <div class="match-status">
+            {% if match.status == 'ONGOING' %}
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    <span class="live-text">LIVE</span>
+                </div>
+            {% elif match.status == 'FINISHED' %}
+            {% else %}
+                <div class="match-time">
+                    <span>{{ match.match_time | datetimeformat('%H:%M') }} </span>
+                </div>
+            {% endif %}
+        </div>
     </div>
 
     <div class="match-content">
@@ -16,29 +32,55 @@
         </div>
         <div class="match-content-right">
             {% if match.status == 'FINISHED' %}
-                <div class="match-score">
+                {% if match.live_score %}
                     {% if match.map_count > 1 %}
-                        <span>{{ match.team.map_wins }} - {{ match.opponent.map_wins }}</span>
+                        <div class="match-score {{ 'text-success' if match.team.map_wins > match.opponent.map_wins else 'text-danger' }}">
+                            {{ match.team.map_wins }}
+                        </div>
+                        <div class="match-score {{ 'text-success' if match.team.map_wins < match.opponent.map_wins else 'text-danger' }}">
+                            {{ match.opponent.map_wins }}
+                        </div>
+                    {% elif match.map_count == 1 %}
+                        <div class="match-score {{ 'text-success' if match.team.round_wins > match.opponent.round_wins else 'text-danger' }}">
+                            {{ match.team.round_wins }}
+                        </div>
+                        <div class="match-score {{ 'text-success' if match.team.round_wins < match.opponent.round_wins else 'text-danger' }}">
+                            {{ match.opponent.round_wins }}
+                        </div>
                     {% else %}
-                        <span>{{ match.team.round_wins }} - {{ match.opponent.round_wins }}</span>
+                        <div class="match-score {{ 'text-success' if match.live_score[match.team.team_id] | default(0) == 1 else 'text-danger' }}">
+                            {% if match.live_score[match.team.team_id] | default(0) == 1 %}
+                                FFW
+                            {% else %}
+                                - 
+                            {% endif %}
+                        </div>
+                        <div class="match-score {{ 'text-success' if match.live_score[match.opponent.team_id] | default(0) == 1 else 'text-danger' }}">
+                            {% if match.live_score[match.opponent.team_id] | default(0) == 1 %}
+                                FFW
+                            {% else %}
+                                - 
+                            {% endif %}
+                        </div>
                     {% endif %}
-                </div>
-            {% elif match.status == 'SCHEDULED' %}
-                <div class="match-time">
-                    <span>{{ match.match_time | datetimeformat('%H:%M') }}</span>
-                </div>
+                {% else %}
+                    -
+                {% endif %}
+
             {% elif match.status == 'ONGOING' %}
-                <div class="match-score">
-                    {% if match.score %}
-                        <span>{{ match.score[match.team.team_id] | default(0) }} / {{ match.score[match.opponent.team_id] | default(0) }}</span>
-                    {% else %}
-                        <span>{{ match.status }}</span>
-                    {% endif %}
-                </div>
+                {% if match.live_score %}
+                    <div class="match-score">
+                        {{ match.live_score[match.team.team_id] | default(0) }}
+                    </div>
+                    <div class="match-score">
+                        {{ match.live_score[match.opponent.team_id] | default(0) }}
+                    </div> 
+                {% else %}
+                    <span>{{ match.status }}</span>
+                {% endif %}
             {% else %}
-                <span>{{ match.status }}</span>
             {% endif %}
         </div>
     </div>
-</div>
+</a>
 {% endmacro %}

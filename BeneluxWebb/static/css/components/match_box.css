@@ -6,55 +6,115 @@
 
   border: 2px solid var(--border);
 }
+.sidebar-match-box:hover {
+  background-color: var(--secondary1);
+}
 
-.sidebar-match-box .event-name {
+.sidebar-match-box .match-top {
   display: flex;
+  flex-direction: row;
+
   width: 100%;
   height: auto;
-  line-height: initial;
+
+  gap: 10px;
+
+  font-size: 11px;
+}
+
+.sidebar-match-box .match-top .event-name {
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+
+  min-width: 0;
 }
 .sidebar-match-box .event-name span {
-  font-size: 11px;
-
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
+
+.sidebar-match-box .match-top .match-status {
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* === Live indicator === */
+.sidebar-match-box .match-top .match-status .live-indicator {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+
+  font-weight: bold;
+  color: red;
+}
+.sidebar-match-box .match-top .match-status .live-indicator .live-dot {
+  width: 8px;
+  height: 8px;
+
+  background-color: red;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 
 .sidebar-match-box .match-content {
   display: grid;
-  grid-template-columns: 1fr 30px;
+  grid-template-columns: 1fr auto;
   align-items: center;
-}
 
-.sidebar-match-box .match-content .match-content-left {
-  width: 100%;
-  min-width: 0;
-}
-.sidebar-match-box .match-content .match-content-left .team-name {
   font-size: 12px;
   font-weight: bold;
+}
+
+
+.sidebar-match-box .match-content .match-content-left {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+
+  padding-right: 5px;
+}
+.sidebar-match-box .match-content .match-content-left .team-name {
+  flex: 1;
 
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
+
 
 .sidebar-match-box .match-content .match-content-right {
   display: flex;
   flex-direction: column;
+
   align-items: center;
-  justify-content: center;
 
   width: 100%;
   min-width: 0;
-  height: 100%;
 }
 
-.sidebar-match-box .match-content .match-content-right .match-time {
-  font-size: 12px;
-
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
+.sidebar-match-box .match-content .match-content-right .match-score {
+  flex: 1;
+  min-width: 10px;
+  text-align: center;
 }
