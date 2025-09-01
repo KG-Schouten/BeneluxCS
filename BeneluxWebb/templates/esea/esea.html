@@ -72,24 +72,20 @@
     </div>
   </div>
   <div class="sidebar right">
-
+    {% if has_benelux_matches %}
     <div class="sidebar-content">
       <div class="sidebar-header">
         <span> Benelux Clashes </span>
       </div>
       <div class="sidebar-body">
-        {% if has_benelux_matches %}
-          {% for division, matches in benelux_matches.items() %}
-            {% for match in matches %}
-              {{ match_box(division, match) }}
-            {% endfor %}
+        {% for division, matches in benelux_matches.items() %}
+          {% for match in matches %}
+            {{ match_box(match.division_name, match) }}
           {% endfor %}
-        {% else %}
-          <div class="text-muted"> No upcoming Benelux clashes :( </div>
-        {% endif %}
-        
+        {% endfor %}
       </div>
     </div>
+    {% endif %}
 
     <div class="sidebar-content">
       <div class="sidebar-header">
@@ -99,11 +95,8 @@
         {% if has_todays_matches %}
           {% for division, matches in todays_matches.items() %}
             {% if matches %}
-              <!-- <div class="todays-matches-division">
-                {{ division }}
-              </div> -->
               {% for match in matches %}
-                {{ match_box(division, match) }}
+                {{ match_box(match.division_name, match) }}
               {% endfor %}
             {% endif %}
           {% endfor %}
