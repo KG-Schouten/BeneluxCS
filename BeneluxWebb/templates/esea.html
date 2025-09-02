@@ -76,9 +76,36 @@
                       <span>{{ match.match_time | datetimeformat('%H:%M') }}</span>
                     </div>
                   {% elif match.status == 'ONGOING' %}
-                    {% if match.score %}
+
+                    {% set ongoing_map = none %}
+                    {% set team_maps_won = 0 %}
+                    {% set opp_maps_won = 0 %}
+
+                    {% set ns = namespace(ongoing_map=None, team_maps_won=0, opp_maps_won=0) %}
+                    {% for score_map in match.score %}
+                      {% if score_map['ongoing'] %}
+                        {% set ns.ongoing_map = score_map %}
+                      {% else %}
+                        {% if score_map[match.team.team_id] > score_map[match.opponent.team_id] %}
+                          {% set ns.team_maps_won = ns.team_maps_won + 1 %}
+                        {% elif score_map[match.opponent.team_id] > score_map[match.team.team_id] %}
+                          {% set ns.opp_maps_won = ns.opp_maps_won + 1 %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+
+                    {% set ongoing_map = ns.ongoing_map %}
+                    {% set team_maps_won = ns.team_maps_won %}
+                    {% set opp_maps_won = ns.opp_maps_won %}
+                    {% if ongoing_map %}
                       <div class="match-time">
-                        <span>LIVE: {{ match.score[match.team.team_id] | default(0) }} / {{ match.score[match.opponent.team_id] | default(0) }}</span>
+                        <span>
+                          LIVE: 
+                          {{ ongoing_map[match.team.team_id] | default(0) }}
+                          {% if team_maps_won + opp_maps_won > 0 %}({{ team_maps_won }}){% endif %} /
+                          {{ ongoing_map[match.opponent.team_id] | default(0) }}
+                          {% if team_maps_won + opp_maps_won > 0 %}({{ opp_maps_won }}){% endif %}
+                        </span>
                       </div>
                     {% else %}
                       <div class="match_time">

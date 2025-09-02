@@ -1464,6 +1464,7 @@ def get_todays_matches():
         
         grouped_matches = defaultdict(list)
         for row in rows:
+            
             match = {
                 "match_id": row[0],
                 "match_time": row[1],
@@ -1507,6 +1508,8 @@ def get_todays_matches():
             division: grouped_matches[division]
             for division in sorted(grouped_matches.keys(), key=compute_division_rank)
         }
+        
+        print(sorted_grouped_matches)
         
         return sorted_grouped_matches
 
