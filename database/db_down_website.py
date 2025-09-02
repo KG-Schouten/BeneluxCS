@@ -493,6 +493,8 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         }
                         for stage in group_team['stage_name'].unique().tolist()
                     ]
+                    
+                    stages.sort(key=lambda x: (1 if 'regular' in x['stage_name'].lower() else 0, x['stage_name']))
 
                     def safe_load_json(value):
                         # Handle PostgreSQL jsonb format
