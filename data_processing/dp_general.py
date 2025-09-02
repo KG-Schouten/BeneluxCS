@@ -240,15 +240,32 @@ async def process_match_details(match_id: str, event_id, faceit_data: FaceitData
             winning_id = match_details['teams'].get(winning_fac, {}).get('faction_id', None)
         
         # Get score for match
-        score = {}
+        score = []
         if 'detailed_results' in match_details:
             detailed_results = match_details['detailed_results']
             if isinstance(detailed_results, list):
-                for faction, score_dict in detailed_results[0]['factions'].items():
-                    team_id = match_details['teams'].get(faction, {}).get('faction_id', None)
-                    team_score = score_dict.get('score', 0)
-                    score[team_id] = team_score
+                for map_result in detailed_results:
+                    map_dict = {}
+                    if 'winner' in map_result and map_result['winner']:
+                        map_dict['ongoing'] = False
+                    else:
+                        map_dict['ongoing'] = True
+                    
+                    for faction, score_dict in map_result['factions'].items():
+                        team_id = match_details['teams'].get(faction, {}).get('faction_id', None)
+                        team_score = score_dict.get('score', 0)
+                        map_dict[team_id] = team_score
+                    
+                    score.append(map_dict)
 
+        # Get match veto
+        map_veto = []
+        if 'voting' in match_details:
+            if 'map' in match_details['voting']:
+                if 'pick' in match_details['voting']['map']:
+                    map_veto = match_details['voting']['map']['pick']
+        
+        
         match_dict = {
             "match_id": match_id,
             "event_id": event_id,
@@ -264,6 +281,7 @@ async def process_match_details(match_id: str, event_id, faceit_data: FaceitData
             "group_id": match_details.get("group", None),
             "demo_url": match_details.get("demo_url", None),
             "score": score,
+            "map_veto": map_veto,
         }
         match_team_list = []
         for team in match_details['teams'].values():
