@@ -1,56 +1,32 @@
 :root {
+  /* Main wrapper width */
+  --stats-wrapper-width: calc(100% - var(--sidebar-width));
+  --sidebar-width: 160px;
+
   --stats-width-percent: 90vw;
   --filters-width: 260px;
   --gap-size: 2rem;
 }
 
-
-/* === General sizing and positioning === */
-.container-fluid#stats-wrapper {
+.stats-page-wrapper {
   display: flex;
+  flex-direction: row;
   justify-content: center;
-  align-items: flex-start;
+  width: 100%;
   min-height: 100vh;
 }
 
-.stats-layout {
-  display: grid;
-  grid-template-columns: var(--filters-width) 1fr;
-  gap: var(--gap-size);
-  width: var(--stats-width-percent);
-  max-width: 100vw;
+.stats-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: var(--stats-wrapper-width);
   margin: 0 auto;
-  box-sizing: border-box;
-}
-
-.column-left {
-  width: var(--filters-width);
-  min-width: var(--filters-width);
-  max-width: var(--filters-width);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.column-right {
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  padding-top: 0;
 }
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
-  .stats-layout {
-    grid-template-columns: 1fr;
-    padding: 1rem;
-  }
-  .column-left, .column-right {
-    max-width: 100%;
-    width: 100%;
-  }
   .filter-sticky {
     position: static;
     margin-bottom: 1.5rem;
@@ -163,6 +139,7 @@
   display: none;
 }
 
+
 /* Toggle checkbox shows content */
 /* Show content when checkbox is checked */
 .toggle-content {
@@ -255,137 +232,6 @@
   border-color: var(--primary);
   cursor: pointer;
 }
-
-/* === Filter panel (Left) === */
-.filter-sticky {
-  position: sticky;
-  top: 2rem;
-  z-index: 100;
-}
-
-.filter-accordion .accordion-item {
-  background-color: var(--card-bg);
-  border: 1px solid var(--border);
-  color: var(--form-text);
-  overflow: visible;
-}
-
-.filter-accordion .accordion-button {
-  background-color: var(--form-bg);
-  color: var(--form-text);
-  font-weight: 600;
-  border: none;
-  box-shadow: none;
-}
-
-.filter-accordion .accordion-button:not(.collapsed) {
-  background-color: var(--btn-hover-bg);
-  color: var(--form-text);
-}
-
-.filter-accordion .accordion-body {
-  background-color: var(--form-bg);
-  padding: 1rem;
-}
-
-
-/* === TomSelect dropdown styling === */
-.filter-select + .ts-wrapper {
-    width: 100%;
-}
-
-.ts-control {
-  min-height: 38px;
-  font-size: 14px;
-  background-color: var(--form-bg);
-  border: 1px solid var(--border);
-  box-shadow: 0 0 6px var(--primary);
-  border-radius: 6px;
-  padding: 6px 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px; /* spacing between tags */
-  cursor: text;
-}
-
-/* Each selected item (tag-style) */
-.filter-select + .ts-wrapper .ts-control .item {
-  background-color: var(--btn-bg);
-  border: 1px solid var(--border);
-  color: var(--btn-text);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  flex: 1 1 120px; /* Grow to 120px if space, shrink if needed */
-  min-width: 120px; /* Consistent base width */
-  max-width: 100%;
-  justify-content: space-between;
-}
-
-/* Placeholder text */
-.ts-control input::placeholder,
-.ts-control .ts-placeholder {
-  color: #999;
-  font-style: italic;
-}
-
-/* Dropdown menu */
-.ts-dropdown {
-  background-color: var(--form-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-top: 2px;
-  padding: 4px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  z-index: 9999 !important;
-  position: absolute;
-}
-
-/* Dropdown items */
-.ts-dropdown .option {
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--btn-text)
-}
-
-.ts-dropdown .option:hover,
-.ts-dropdown .option.active {
-  background-color: var(--btn-hover-bg);
-  color: var(--btn-text);
-}
-
-
-/* === Flag toggle ===  */
-.flag-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.375rem;
-  padding: 0.25rem;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.flag-toggle:hover {
-  background-color: var(--btn-hover-bg);
-  border-color: var(--primary);
-}
-
-.btn-check:checked + .flag-toggle {
-  border-color: var(--primary);
-}
-
-.flag-img {
-  width: 24px;
-  height: 16px;
-  object-fit: cover;
-  filter: var(--score-logo-filter); /* Use your existing theme filter */
-  border-radius: 2px;
-}
-
 
 /* === TEXT & HEADERS === */
 .text-muted {
