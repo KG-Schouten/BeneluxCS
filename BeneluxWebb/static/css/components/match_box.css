@@ -77,7 +77,7 @@
 
 .sidebar-match-box .match-content {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr minmax(10px, auto);
   align-items: center;
 
   font-size: 12px;
@@ -114,7 +114,8 @@
 }
 
 .sidebar-match-box .match-content .match-content-right .match-score {
+  display: flex;
+  flex-direction: row;
   flex: 1;
-  min-width: 10px;
-  text-align: center;
+  justify-content: end;
 }

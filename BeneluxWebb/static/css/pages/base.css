@@ -26,6 +26,13 @@ a {
   color: var(--primary) !important;
 }
 
+.text-success {
+    color: #09c100 !important;
+}
+.text-danger {
+    color: #FC1D1D !important;
+}
+
 .page-wrapper {
     display: flex;
     flex-direction: column;
