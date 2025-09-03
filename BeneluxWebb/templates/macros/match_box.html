@@ -1,4 +1,4 @@
-{% macro match_box(division, match) %}
+{% macro match_box(division, match, today=true) %}
 <a class="sidebar-match-box {{ 'highlight-border' if match.team.is_benelux and match.opponent.is_benelux else '' }}"
    href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" target="_blank" rel="noopener noreferrer">
     <div class="match-top">
@@ -7,15 +7,21 @@
         </div>
 
         <div class="match-status">
-            {% if match.status == 'ONGOING' %}
+            {% if match.status == 'FINISHED' %}
+            {% elif match.status == 'SCHEDULED' %}
+                {% if today == true %}
+                    <div class="match-time">
+                        <span>{{ match.match_time | datetimeformat('%H:%M') }} </span>
+                    </div>
+                {% else %}
+                    <div class="match-time">
+                        <span>{{ match.match_time | datetimeformat('%d-%m %H:%M') }} </span>
+                    </div>
+                {% endif %}
+            {% else %}
                 <div class="live-indicator">
                     <span class="live-dot"></span>
                     <span class="live-text">LIVE</span>
-                </div>
-            {% elif match.status == 'FINISHED' %}
-            {% else %}
-                <div class="match-time">
-                    <span>{{ match.match_time | datetimeformat('%H:%M') }} </span>
                 </div>
             {% endif %}
         </div>
@@ -67,16 +73,70 @@
                     -
                 {% endif %}
 
-            {% elif match.status == 'ONGOING' %}
-                {% if match.live_score %}
+            {% elif match.status == 'ONGOING' or match.status == 'READY' or match.status == 'VOTING' %}
+                        
+                {% set ongoing_map = none %} 
+                {% set team_maps_won = 0 %} 
+                {% set opp_maps_won = 0 %}
+
+                {% set ns = namespace(ongoing_map=None, team_maps_won=0, opp_maps_won=0) %}
+                {% for score_map in match.live_score %}
+                    
+                    {% if score_map['ongoing'] %}
+                        {% set ns.ongoing_map = score_map %}
+                    {% else %} 
+                        {% if score_map[match.team.team_id] > score_map[match.opponent.team_id] %} 
+                            {% set ns.team_maps_won = ns.team_maps_won + 1 %} 
+                        {% elif score_map[match.opponent.team_id] > score_map[match.team.team_id] %} 
+                            {% set ns.opp_maps_won = ns.opp_maps_won + 1 %} 
+                        {% endif %} 
+                    {% endif %} 
+                {% endfor %}
+                
+                {% set ongoing_map = ns.ongoing_map %} 
+                {% set team_maps_won = ns.team_maps_won %} 
+                {% set opp_maps_won = ns.opp_maps_won %}
+                
+                
+                {% if ongoing_map %}
                     <div class="match-score">
-                        {{ match.live_score[match.team.team_id] | default(0) }}
+                        {{ ongoing_map[match.team.team_id] | default(0) }}
+                        {% if team_maps_won + opp_maps_won > 0 %}
+                            (<div class="{% if team_maps_won > opp_maps_won %}text-success{% elif team_maps_won < opp_maps_won %}text-danger{% endif %}">
+                                {{ team_maps_won }}
+                            </div>)
+                        {% endif %}
                     </div>
                     <div class="match-score">
-                        {{ match.live_score[match.opponent.team_id] | default(0) }}
-                    </div> 
+                        {{ ongoing_map[match.opponent.team_id] | default(0) }}
+                        {% if team_maps_won + opp_maps_won > 0 %}
+                            (<div class="{% if team_maps_won < opp_maps_won %}text-success{% elif team_maps_won > opp_maps_won %}text-danger{% endif %}">
+                                {{ opp_maps_won }}
+                            </div>)
+                        {% endif %}
+                    </div>
+                {% elif team_maps_won + opp_maps_won > 0 %}
+                    <div class="match-score">
+                        {% if team_maps_won + opp_maps_won > 0 %}
+                            - (<span class="{% if team_maps_won > opp_maps_won %}text-success{% elif team_maps_won < opp_maps_won %}text-danger{% endif %}">
+                                {{ team_maps_won }}
+                            </span>)
+                        {% endif %}
+                    </div>
+                    <div class="match-score">
+                        {% if team_maps_won + opp_maps_won > 0 %}
+                            - (<span class="{% if team_maps_won < opp_maps_won %}text-success{% elif team_maps_won > opp_maps_won %}text-danger{% endif %}">
+                                {{ opp_maps_won }}
+                            </span>)
+                        {% endif %}
+                    </div>
                 {% else %}
-                    <span>{{ match.status }}</span>
+                    <div class="match_score">
+                        -
+                    </div>
+                    <div class="match_score">
+                        -
+                    </div>
                 {% endif %}
             {% else %}
             {% endif %}
