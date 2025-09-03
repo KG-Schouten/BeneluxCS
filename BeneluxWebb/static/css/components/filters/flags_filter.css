@@ -18,14 +18,13 @@
 .flag-toggle {
   display: inline-block;
   cursor: pointer;
-  border-radius: 6px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Flag image base style */
 .flag-img {
   width: 48px;
-  height: 32px;
+  aspect-ratio: 3 / 2;
   object-fit: cover;
   filter: grayscale(80%) brightness(0.8);
   border-radius: 6px;

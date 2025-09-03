@@ -1,0 +1,18 @@
+.date_filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  padding: 3px 5px;
+  gap: 5px;
+  width: 100%;
+
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--secondary1);
+
+  cursor: pointer;
+}
+.date_filter span {
+  flex-grow: 1;
+}

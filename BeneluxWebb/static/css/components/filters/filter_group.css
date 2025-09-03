@@ -1,0 +1,37 @@
+/* === Buttons === */
+.sidebar-body .checkbox__input {
+  display: none;
+}
+
+.sidebar-body .checkbox__label {
+  display: block;
+  text-align: center;
+
+  width: 100%;
+
+  padding: 6px 10px;
+
+  font-size: 14px;
+  font-family: sans-serif;
+
+  color: var(--text);
+  background: var(--secondary1);
+
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.sidebar-body .checkbox__label:not(:last-of-type) {
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-body .checkbox__input:checked + .checkbox__label {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-weight: 600;
+}
+.sidebar-body .checkbox__label:hover {
+  background: var(--secondary);
+  color: var(--btn-text);
+}
