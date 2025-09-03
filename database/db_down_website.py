@@ -285,7 +285,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
         
         # Batch load player stats data
         player_stats_data = {}
-        if all_team_ids and all_season_numbers and all_player_ids:  
+        if all_team_ids and all_season_numbers:  
             cursor.execute("""
                 CREATE TEMPORARY TABLE temp_season_teams_players (
                     season_number INTEGER,
@@ -303,8 +303,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 JOIN teams_matches tm ON tm.match_id = m.match_id
                 WHERE tm.team_id = ANY(%s) 
                 AND s.season_number = ANY(%s)
-                AND ps.player_id = ANY(%s)
-            """, (list(all_team_ids), list(all_season_numbers), list(all_player_ids)))
+            """, (list(all_team_ids), list(all_season_numbers)))
             
             cursor.execute("""
                 WITH player_match_stats AS (
@@ -598,9 +597,12 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                             })
                         
                     # Order players by hltv
-                    player_stats.sort(key=lambda x: x['hltv'], reverse=True)
-                            
-                    # print(f"{player_stats} \n\n")
+                    player_stats_main = sorted(player_stats, key=lambda p: p["maps_played"], reverse=True)[:5]
+                    player_stats_main.sort(key=lambda x: x['hltv'], reverse=True)
+                    player_stats_sub = [p for p in player_stats if p not in player_stats_main]
+                    player_stats_sub.sort(key=lambda x: x["hltv"], reverse=True)
+                    
+                    player_stats = player_stats_main + player_stats_sub
                     
                     team_dict = {
                         'team_id': team_id,
@@ -622,11 +624,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     }
 
                     esea_data[season_number][division_name].append(team_dict)
-
-        # # Sort teams by team_name within each division
-        # for season in esea_data:
-        #     for division in esea_data[season]:
-        #         esea_data[season][division].sort(key=lambda x: x['team_name'])
         
         # Sort teams by standing within each division
         for season in esea_data:
@@ -793,7 +790,7 @@ def get_upcoming_matches() -> tuple:
             with open("database/fake_data/fake_matches_upcoming.json", "r", encoding="utf-8") as f:
                 fake_data = json.load(f)
                 print("Using fake upcoming matches data")
-                return fake_data, end_of_day
+                return fake_data, 100
         
         query = """
             WITH match_teams AS (
@@ -805,7 +802,6 @@ def get_upcoming_matches() -> tuple:
                     s.division_name,
                     tm.team_id,
                     COALESCE(tb.team_name, tm.team_name) AS team_name,
-                    t.avatar,
                     CASE WHEN tb.team_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_benelux,
                     ROW_NUMBER() OVER (PARTITION BY m.match_id ORDER BY CASE WHEN tb.team_id IS NOT NULL THEN 0 ELSE 1 END) AS team_rank
                 FROM matches m
@@ -839,14 +835,12 @@ def get_upcoming_matches() -> tuple:
 
                 mt1.team_id AS team1_id,
                 mt1.team_name AS team1_name,
-                mt1.avatar AS team1_avatar,
                 mt1.is_benelux AS team1_is_benelux,
                 COALESCE(ts1.map_wins,0) AS team1_map_wins,
                 COALESCE(ts1.round_wins,0) AS team1_round_wins,
 
                 mt2.team_id AS team2_id,
                 mt2.team_name AS team2_name,
-                mt2.avatar AS team2_avatar,
                 mt2.is_benelux AS team2_is_benelux,
                 COALESCE(ts2.map_wins,0) AS team2_map_wins,
                 COALESCE(ts2.round_wins,0) AS team2_round_wins
@@ -872,7 +866,7 @@ def get_upcoming_matches() -> tuple:
                 return 4 + (100 - int(match.group(1))) if match else 999
             return 999
         
-        grouped_matches = defaultdict(list)
+        matches = []
         for row in rows:
             match = {
                 "match_id": row[0],
@@ -885,19 +879,17 @@ def get_upcoming_matches() -> tuple:
             team1 = {
                 "team_id": row[6],
                 "team_name": row[7],
-                "team_avatar": row[8],
-                "is_benelux": row[9],
-                "map_wins": row[10],
-                "round_wins": row[11]
+                "is_benelux": row[8],
+                "map_wins": row[9],
+                "round_wins": row[10]
             }
             
             team2 = {
-                "team_id": row[12],
-                "team_name": row[13],
-                "team_avatar": row[14],
-                "is_benelux": row[15],
-                "map_wins": row[16],
-                "round_wins": row[17]
+                "team_id": row[11],
+                "team_name": row[12],
+                "is_benelux": row[13],
+                "map_wins": row[14],
+                "round_wins": row[15]
             }
 
             # Determine which is the Benelux team
@@ -914,17 +906,16 @@ def get_upcoming_matches() -> tuple:
             else:
                 continue  # Skip matches where both teams are Benelux or neither is
             
-            # Add match to the appropriate division group
-            grouped_matches[match["division_name"]].append(match)
+            # Add match
+            matches.append(match)
 
         # Step 2: Sort the division groups
-        sorted_grouped_matches = {
-            division: grouped_matches[division]
-            for division in sorted(grouped_matches.keys(), key=compute_division_rank)
-        }
-
-        print(sorted_grouped_matches)
-        return sorted_grouped_matches, end_of_day
+        sorted_matches = sorted(
+            matches,
+            key=lambda m: (m["match_time"], compute_division_rank(m["division_name"]))
+        )
+        
+        return sorted_matches, end_of_day
 
     except Exception as e:
         function_logger.error(f"Error fetching today's matches: {e}")
