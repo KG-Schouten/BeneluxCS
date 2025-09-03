@@ -1,0 +1,63 @@
+{% macro dual_range_slider(minval, maxval, step) %}
+<div class="range-slider-container">
+    <div class="range-slider">
+        <span class="slider-track"></span>
+        <input type="range" name="min_val" class="min-val" min="{{ minval }}" max="{{ maxval }}" value="{{ minval }}" step="{{ step }}">
+        <input type="range" name="max_val" class="max-val" min="{{ minval }}" max="{{ maxval }}" value="{{ maxval }}" step="{{ step }}">
+    </div>
+    <div class="range-values">
+        <span class="min-range-value"></span>
+        <span>-</span>
+        <span class="max-range-value"></span>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Grab this slider container
+    const sliderContainer = document.currentScript.previousElementSibling;
+    const minVal = sliderContainer.querySelector('.min-val');
+    const maxVal = sliderContainer.querySelector('.max-val');
+    const minRangeValue = sliderContainer.querySelector('.min-range-value');
+    const maxRangeValue = sliderContainer.querySelector('.max-range-value');
+    const range = sliderContainer.querySelector('.slider-track');
+
+    const sliderMaxValue = parseInt(maxVal.max);
+
+    // Update min value
+    function slideMin() {
+        if (parseInt(minVal.value) > parseInt(maxVal.value)) {
+            minVal.value = maxVal.value;
+        }
+        minRangeValue.innerHTML = minVal.value;
+        setArea();
+    }
+
+    // Update max value
+    function slideMax() {
+        if (parseInt(maxVal.value) < parseInt(minVal.value)) {
+            maxVal.value = minVal.value;
+        }
+        maxRangeValue.innerHTML = maxVal.value;
+        setArea();
+    }
+
+    // Update track position
+    function setArea() {
+        const minPercent = (minVal.value / sliderMaxValue) * 100;
+        const maxPercent = (maxVal.value / sliderMaxValue) * 100;
+
+        range.style.left = minPercent + '%';
+        range.style.right = (100 - maxPercent) + '%';
+    }
+
+    // Initialize slider
+    slideMin();
+    slideMax();
+
+    // Attach event listeners
+    minVal.addEventListener('input', slideMin);
+    maxVal.addEventListener('input', slideMax);
+})();
+</script>
+{% endmacro %}

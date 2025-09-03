@@ -1,0 +1,26 @@
+{% macro countries_filter(countries)%}
+<div class="countries-filter">
+    {% for country in countries %}
+    <div class="country-filter-item">
+        <input 
+            type="checkbox" 
+            class="btn-check" 
+            id="filter{{ country }}"
+            name="countries" 
+            value="{{ country }}"
+            {% if selected and country in selected %}checked{% endif %}>
+
+        <label 
+            class="flag-toggle" 
+            for="filter{{ country }}" 
+            title="{{ country.upper() }}">
+            
+            <img 
+                src="{{ url_for('static', filename='img/flags/' + country + '.png') }}"
+                alt="{{ country }} flag" 
+                class="flag-img">
+        </label>
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}

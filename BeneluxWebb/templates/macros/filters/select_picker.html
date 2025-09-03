@@ -1,0 +1,17 @@
+{% macro select_picker_single(name, values) %}
+<select class="selectpicker" id="{{ name }}-select">
+
+    {% for val in values %}
+        <option>{{ val }}</option>
+    {% endfor %}
+</select>
+{% endmacro %}
+
+{% macro select_picker_multiple(name, values) %}
+<select class="selectpicker" id="{{ name }}-select" multiple>
+
+    {% for val in values %}
+        <option>{{ val }}</option>
+    {% endfor %}
+</select>
+{% endmacro %}
