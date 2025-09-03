@@ -72,33 +72,31 @@
     </div>
   </div>
   <div class="sidebar right">
-    {% if has_benelux_matches %}
+    {% if benelux_matches %}
     <div class="sidebar-content">
       <div class="sidebar-header">
         <span> Benelux Clashes </span>
       </div>
       <div class="sidebar-body">
-        {% for division, matches in benelux_matches.items() %}
-          {% for match in matches %}
-            {{ match_box(match.division_name, match) }}
-          {% endfor %}
+        {% for match in benelux_matches %}
+          {% if match.match_time < end_of_day %}
+            {{ match_box(match.division_name, match, today=true) }}
+          {% else %}
+            {{ match_box(match.division_name, match, today=false) }}
+          {% endif %}
         {% endfor %}
       </div>
     </div>
     {% endif %}
-
+    
     <div class="sidebar-content">
       <div class="sidebar-header">
         <span> Today's Matches </span>
       </div>
       <div class="sidebar-body">
-        {% if has_todays_matches %}
-          {% for division, matches in todays_matches.items() %}
-            {% if matches %}
-              {% for match in matches %}
-                {{ match_box(match.division_name, match) }}
-              {% endfor %}
-            {% endif %}
+        {% if todays_matches %}
+          {% for match in todays_matches %}
+            {{ match_box(match.division_name, match) }}
           {% endfor %}
         {% else %}
           <div class="text-muted"> No matches scheduled for today. </div>
