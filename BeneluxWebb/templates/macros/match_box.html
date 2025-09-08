@@ -38,8 +38,14 @@
         </div>
         <div class="match-content-right">
             {% if match.status == 'FINISHED' %}
-                {% if match.live_score %}
-                    {% if match.map_count > 1 %}
+                {% if match.score %}
+                    {% if match.map_count is none %}
+                        {% for t, o in [(match.team, match.opponent), (match.opponent, match.team)] %}
+                            <div class="match-score {{ 'text-success' if t.map_wins > o.map_wins else 'text-danger' }}">
+                                {{ 'FFW' if t.map_wins > o.map_wins else '-' }}
+                            </div>
+                        {% endfor %}
+                    {% elif match.map_count > 1 %}
                         <div class="match-score {{ 'text-success' if match.team.map_wins > match.opponent.map_wins else 'text-danger' }}">
                             {{ match.team.map_wins }}
                         </div>
@@ -47,27 +53,18 @@
                             {{ match.opponent.map_wins }}
                         </div>
                     {% elif match.map_count == 1 %}
-                        <div class="match-score {{ 'text-success' if match.team.round_wins > match.opponent.round_wins else 'text-danger' }}">
-                            {{ match.team.round_wins }}
+                        <div class="match-score {{ 'text-success' if match.team.maps[0].final_score > match.opponent.maps[0].final_score else 'text-danger' }}">
+                            {{ match.team.maps[0].final_score }}
                         </div>
-                        <div class="match-score {{ 'text-success' if match.team.round_wins < match.opponent.round_wins else 'text-danger' }}">
-                            {{ match.opponent.round_wins }}
+                        <div class="match-score {{ 'text-success' if match.team.maps[0].final_score < match.opponent.maps[0].final_score else 'text-danger' }}">
+                            {{ match.opponent.maps[0].final_score }}
                         </div>
                     {% else %}
-                        <div class="match-score {{ 'text-success' if match.live_score[match.team.team_id] | default(0) == 1 else 'text-danger' }}">
-                            {% if match.live_score[match.team.team_id] | default(0) == 1 %}
-                                FFW
-                            {% else %}
-                                - 
-                            {% endif %}
-                        </div>
-                        <div class="match-score {{ 'text-success' if match.live_score[match.opponent.team_id] | default(0) == 1 else 'text-danger' }}">
-                            {% if match.live_score[match.opponent.team_id] | default(0) == 1 %}
-                                FFW
-                            {% else %}
-                                - 
-                            {% endif %}
-                        </div>
+                        {% for t, o in [(match.team, match.opponent), (match.opponent, match.team)] %}
+                            <div class="match-score {{ 'text-success' if t.map_wins > o.map_wins else 'text-danger' }}">
+                                {{ 'FFW' if t.map_wins > o.map_wins else '-' }}
+                            </div>
+                        {% endfor %}
                     {% endif %}
                 {% else %}
                     -
@@ -80,7 +77,7 @@
                 {% set opp_maps_won = 0 %}
 
                 {% set ns = namespace(ongoing_map=None, team_maps_won=0, opp_maps_won=0) %}
-                {% for score_map in match.live_score %}
+                {% for score_map in match.score %}
                     
                     {% if score_map['ongoing'] %}
                         {% set ns.ongoing_map = score_map %}

@@ -7,12 +7,24 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import json
 import re
-from collections import defaultdict
 from dotenv import load_dotenv
+from psycopg2.extras import RealDictCursor
 
 from database.db_manage import start_database, close_database
 from database.db_down import fuzzy_search, get_player_aliases
 from data_processing.faceit_api.logging_config import function_logger
+
+# =============================
+#       General functions
+# =============================
+def compute_division_rank(division_name):
+    division_order = {"Advanced": 0, "Main": 1, "Intermediate": 2, "Entry": 3}
+    if division_name in division_order:
+        return division_order[division_name]
+    elif division_name and division_name.lower().startswith("open"):
+        match = re.search(r'(\d+)', division_name)
+        return 4 + (100 - int(match.group(1))) if match else 999
+    return 999
 
 # =============================
 #           ESEA Page
@@ -98,15 +110,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
             szn_info = {'season_number': 'ALL', 'event_start': 0, 'event_end': 0}
         
         esea_data = {}
-
-        division_order = {"Advanced": 0, "Main": 1, "Intermediate": 2, "Entry": 3}
-        def compute_division_rank(division_name):
-            if division_name in division_order:
-                return division_order[division_name]
-            elif division_name and division_name.lower().startswith("open"):
-                match = re.search(r'(\d+)', division_name)
-                return 4 + (100 - int(match.group(1))) if match else 999
-            return 999
 
         df_teams_benelux["division_sort_rank"] = df_teams_benelux["division_name"].apply(compute_division_rank)
 
@@ -779,7 +782,7 @@ def gather_esea_seasons_divisions() -> tuple:
 def get_upcoming_matches() -> tuple:
     db, cursor = start_database()
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now()
         start_of_day = int(datetime(now.year, now.month, now.day, tzinfo=timezone.utc).timestamp())
         end_of_day = int((datetime(now.year, now.month, now.day, tzinfo=timezone.utc) + timedelta(days=1)).timestamp())
 
@@ -801,95 +804,84 @@ def get_upcoming_matches() -> tuple:
                     m.score,
                     s.division_name,
                     tm.team_id,
-                    COALESCE(tb.team_name, tm.team_name) AS team_name,
+                    COALESCE(tb.team_name, t.team_name) AS team_name,
                     CASE WHEN tb.team_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_benelux,
-                    ROW_NUMBER() OVER (PARTITION BY m.match_id ORDER BY CASE WHEN tb.team_id IS NOT NULL THEN 0 ELSE 1 END) AS team_rank
+                    ROW_NUMBER() OVER (
+                        PARTITION BY m.match_id 
+                        ORDER BY CASE WHEN tb.team_id IS NOT NULL THEN 0 ELSE 1 END, tm.team_id
+                    ) AS team_rank,
+                    (
+                        SELECT json_agg(
+                                json_build_object(
+                                    'match_round', tmap.match_round,
+                                    'final_score', tmap.final_score,
+                                    'team_win', tmap.team_win
+                                ) ORDER BY tmap.match_round
+                            )
+                        FROM teams_maps tmap
+                        WHERE tmap.match_id = m.match_id
+                        AND tmap.team_id = tm.team_id
+                    ) AS maps
                 FROM matches m
                 JOIN seasons s ON m.event_id = s.event_id
                 JOIN teams_matches tm ON m.match_id = tm.match_id
                 LEFT JOIN teams t ON tm.team_id = t.team_id
-                LEFT JOIN teams_benelux tb ON tm.team_id = tb.team_id AND m.event_id = tb.event_id
+                LEFT JOIN teams_benelux tb 
+                    ON tm.team_id = tb.team_id 
+                    AND m.event_id = tb.event_id
                 WHERE m.match_time >= %s
-            ),
-            map_counts AS (
-                SELECT match_id, COUNT(DISTINCT match_round) AS map_count
-                FROM teams_maps
-                GROUP BY match_id
-            ),
-            team_scores AS (
-                SELECT
-                    tm.match_id,
-                    tm.team_id,
-                    SUM(COALESCE(tm.team_win, 0)) AS map_wins,
-                    SUM(COALESCE(tm.final_score, 0)) AS round_wins
-                FROM teams_maps tm
-                GROUP BY tm.match_id, tm.team_id
             )
             SELECT
                 mt1.match_id,
                 mt1.match_time,
                 mt1.status,
-                mt1.score AS live_score,
+                mt1.score,
                 mt1.division_name,
-                COALESCE(mc.map_count, 0) AS map_count,
 
                 mt1.team_id AS team1_id,
                 mt1.team_name AS team1_name,
                 mt1.is_benelux AS team1_is_benelux,
-                COALESCE(ts1.map_wins,0) AS team1_map_wins,
-                COALESCE(ts1.round_wins,0) AS team1_round_wins,
+                mt1.maps AS team1_maps,
 
                 mt2.team_id AS team2_id,
                 mt2.team_name AS team2_name,
                 mt2.is_benelux AS team2_is_benelux,
-                COALESCE(ts2.map_wins,0) AS team2_map_wins,
-                COALESCE(ts2.round_wins,0) AS team2_round_wins
-
+                mt2.maps AS team2_maps
             FROM match_teams mt1
-            JOIN match_teams mt2 ON mt1.match_id = mt2.match_id AND mt1.team_rank = 1 AND mt2.team_rank = 2
-            LEFT JOIN team_scores ts1 ON mt1.match_id = ts1.match_id AND mt1.team_id = ts1.team_id
-            LEFT JOIN team_scores ts2 ON mt2.match_id = ts2.match_id AND mt2.team_id = ts2.team_id
-            LEFT JOIN map_counts mc ON mt1.match_id = mc.match_id
-            ORDER BY mt1.match_time ASC
+            JOIN match_teams mt2 
+            ON mt1.match_id = mt2.match_id
+            AND mt1.team_rank = 1
+            AND mt2.team_rank = 2
+            ORDER BY mt1.match_time ASC;
         """
-
-        cursor.execute(query, (start_of_day, ))
-        rows = cursor.fetchall()
-
-        # Sort by division name
-        division_order = {"Advanced": 0, "Main": 1, "Intermediate": 2, "Entry": 3}
-        def compute_division_rank(division_name):
-            if division_name in division_order:
-                return division_order[division_name]
-            elif division_name and division_name.lower().startswith("open"):
-                match = re.search(r'(\d+)', division_name)
-                return 4 + (100 - int(match.group(1))) if match else 999
-            return 999
+        
+        with db.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(query, (start_of_day,))
+            data = cursor.fetchall()
         
         matches = []
-        for row in rows:
+        for row in data:
             match = {
-                "match_id": row[0],
-                "match_time": row[1],
-                "status": row[2],
-                "live_score": row[3],
-                "division_name": row[4],
-                "map_count": row[5],
+                "match_id": row["match_id"],
+                "match_time": row["match_time"],
+                "status": row["status"],
+                "score": row["score"],
+                "map_count": len(row["score"]) if (row["team1_maps"] is not None and row["team2_maps"] is not None) else None,
+                "division_name": row["division_name"],
             }
             team1 = {
-                "team_id": row[6],
-                "team_name": row[7],
-                "is_benelux": row[8],
-                "map_wins": row[9],
-                "round_wins": row[10]
+                "team_id": row["team1_id"],
+                "team_name": row["team1_name"],
+                "is_benelux": row["team1_is_benelux"],
+                "maps": row["team1_maps"],
+                "map_wins": sum(score.get(str(row["team1_id"]), 0) for score in row["score"] if row["score"] and isinstance(row["score"], list))
             }
-            
             team2 = {
-                "team_id": row[11],
-                "team_name": row[12],
-                "is_benelux": row[13],
-                "map_wins": row[14],
-                "round_wins": row[15]
+                "team_id": row["team2_id"],
+                "team_name": row["team2_name"],
+                "is_benelux": row["team2_is_benelux"],
+                "maps": row["team2_maps"],
+                "map_wins": sum(score.get(str(row["team2_id"]), 0) for score in row["score"] if row["score"] and isinstance(row["score"], list))
             }
 
             # Determine which is the Benelux team
@@ -915,10 +907,13 @@ def get_upcoming_matches() -> tuple:
             key=lambda m: (m["match_time"], compute_division_rank(m["division_name"]))
         )
         
+        for match in sorted_matches:
+            print(json.dumps(match, indent=2))
+        
         return sorted_matches, end_of_day
 
     except Exception as e:
-        function_logger.error(f"Error fetching today's matches: {e}")
+        function_logger.error(f"Error fetching today's matches: {e}", exc_info=True)
         return {}, 0
     finally:
         close_database(db)
