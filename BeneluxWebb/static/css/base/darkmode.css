@@ -10,6 +10,8 @@ body.dark-mode {
 
   --secondary: rgba(3, 173, 171, 1);
   --secondary1: rgba(3, 173, 171, .1);
+  --secondaryHeader: rgb(1, 38, 38, 1);
+  --secondaryBody: rgb(0, 51, 50, 1);
 
   --accent: rgba(24, 249, 205, 1);
   --accent1: rgba(24, 249, 205, .1);

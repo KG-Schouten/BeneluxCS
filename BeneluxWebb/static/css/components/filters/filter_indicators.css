@@ -1,0 +1,45 @@
+.filter-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-indicator {
+    background-color: var(--btn-bg);
+    color: var(--btn-text);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.clear-filter,
+.clear-all-filters {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 5px;
+}
+
+.clear-filter:hover,
+.clear-all-filters:hover {
+    color: var(--danger);
+}
+
+.clear-all-filters {
+    margin-left: auto;
+}
+
+.clear-all-filters:disabled {
+    color: var(--border);
+    cursor: not-allowed;
+}

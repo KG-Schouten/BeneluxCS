@@ -1,4 +1,8 @@
 /* === Buttons === */
+.sidebar-body .filter-group {
+  width: 100%;
+}
+
 .sidebar-body .checkbox__input {
   display: none;
 }

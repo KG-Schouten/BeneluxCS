@@ -1,5 +1,12 @@
 /* components/flags_filter.css */
 
+.countries-filter {
+  display: flex;
+  flex-direction: row;
+
+  background: var(--secondary1);
+}
+
 /* Hide the checkbox visually but keep it accessible */
 .btn-check {
   position: absolute;

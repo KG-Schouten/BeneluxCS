@@ -8,6 +8,7 @@
     width: var(--sidebar-width);
     
     padding-top: 10px;
+    padding-inline: 5px;
     gap: 10px;
 }
 .sidebar.left {
@@ -25,7 +26,7 @@
     align-items: center;
     flex-wrap: nowrap;
 
-    width: 90%;
+    width: 100%;
     height: auto;
 
     background-color: var(--secondary1);
@@ -33,10 +34,11 @@
 
 .sidebar-header {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
 
     width: 100%;
+    padding-inline: 10px;
 
     /* border-bottom: 1px solid var(--border); */
     background-color: var(--secondary);
@@ -56,27 +58,75 @@
     overflow: visible;
 }
 
+/* === Sidebar Filter styles === */
+.filter-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
 
-/* === Accordion-enabled sidebar content === */
-.sidebar-content.accordion-enabled .sidebar-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     cursor: pointer;
     user-select: none;
+    padding: 5px 10px;
+    width: 100%;
+    transition: background 0.2s ease;
+    background-color: var(--secondaryHeader);
 }
-.sidebar-content.accordion-enabled .sidebar-header:hover {
+.filter-header:hover {
     background-color: var(--btn-bg-hover);
 }
 
-.sidebar-content.accordion-enabled .sidebar-body {
-    display: none; /* collapsed by default */
-    /* overflow: ; */
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-    max-height: 0;
-    opacity: 0;
+.arrow {
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #6b7280;
+  transition: transform 0.2s ease;
+}
+.filter-container.open .arrow {
+  transform: rotate(90deg);
 }
 
-.sidebar-content.accordion-enabled.active .sidebar-body {
-    display: flex; /* restore flex layout */
-    max-height: 500px; /* adjust depending on expected height */
-    opacity: 1;
+.filter-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, padding 0.25s ease;
+  background-color: var(--secondaryBody)
+}
+.filter-container.open .filter-body {
+  max-height: 500px;
+  overflow: visible;
 }
 
+.apply-button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    border-top: 1px solid var(--border);
+    background-color: var(--secondary1);
+}
+.apply-button {
+    width: 100%;
+    background-color: var(--btn-bg, #4f46e5); /* fallback color if variable missing */
+    color: var(--btn-text, #fff);
+    font-size: 14px;
+    font-weight: bold;
+    padding: 8px 16px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+.apply-button:hover {
+    background-color: var(--btn-bg-hover, #4338ca);
+}
+.apply-button:active {
+    transform: scale(0.98);
+}
