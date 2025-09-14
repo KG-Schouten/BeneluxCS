@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 import re
 
 views = Blueprint('views', __name__, template_folder='../templates')
@@ -10,132 +10,17 @@ def home_redirect():
 
 @views.route('/stats')
 def stats():
-    from database.db_down_website import gather_player_stats_esea, gather_esea_seasons_divisions
+    from database.db_down_website import gather_filter_options
 
     try:
-        # Gather seasons and divisions for ESEA
-        seasons, divisions = gather_esea_seasons_divisions()
-        
-        # Country parameter handling
-        countries_str = request.args.get('countries')
-        countries = countries_str.split(',') if countries_str else []
-        if not countries:
-            countries = []
-            print("No countries provided, defaulting to all:", countries)
-        else:
-            print("Countries from request:", countries)
-        
-        # Season number handling
-        season_numbers_str = request.args.get('seasons')
-        season_numbers = season_numbers_str.split(',') if season_numbers_str else []
-        
-        # Division handling
-        divisions_str = request.args.get('divisions')
-        division_names = divisions_str.split(',') if divisions_str else []
-        
-        # Stage handling
-        stages_str = request.args.get('stages')
-        stage_names = stages_str.split(',') if stages_str else []
-        
-        search = request.args.get('search', '').strip()
-        page = max(1, request.args.get('page', type=int, default=1))
-        per_page = request.args.get('per_page', type=int, default=25)
-                        
-        data, stat_field_names = gather_player_stats_esea(
-            countries=countries,
-            seasons=season_numbers,
-            divisions=division_names,
-            stages=stage_names,
-            timestamp_start=0,
-            timestamp_end=0,
-            team_ids=[],
-            search_player_name=search
-        )
-            
-        # column handling
-        columns_perm = ['adr', 'k_r_ratio', 'k_d_ratio', 'headshots_percent', 'hltv']
-        columns_mapping = {
-            'adr':                  {'name': 'ADR',         'round': 0},
-            'k_r_ratio':            {'name': 'K/R',         'round': 2},
-            'k_d_ratio':            {'name': 'K/D',         'round': 2, 'good': 1.1, 'bad': 0.9},
-            'headshots_percent':    {'name': 'HS %',        'round': 0},
-            'hltv':                 {'name': 'HLTV 1.0',    'round': 2, 'good': 1.1, 'bad': 0.9},
-        }
-        for col in stat_field_names:
-            if col not in columns_mapping:
-                columns_mapping[col] = {'name': re.sub(r'^_', '', col).replace('_', ' ').title(), 'round': 2}
-        
-        columns_filter_str = request.args.get('columns')
-        columns_filter = columns_filter_str.split(',') if columns_filter_str else []
-        
-        unique_columns = set(stat_field_names)
-        columns_filter = [c for c in columns_filter if c in unique_columns and c not in columns_perm]
-        
-        # Sort parameter handling
-        sort = request.args.get('sort')
-        sort_key = None
-        sort_desc = False
-        if sort:
-            if sort.startswith('-'):
-                sort_desc = True
-                sort_key = sort[1:]
-            else:
-                sort_key = sort
-                
-        # Sort data
-        if sort_key:
-            if sort_key in stat_field_names:
-                try:
-                    data.sort(key=lambda x: x.get('avg_stats', {}).get(sort_key, 0), reverse=sort_desc)
-                except (KeyError, TypeError):
-                    pass  # If sorting fails, continue with unsorted data
-            else:
-                try:
-                    data.sort(key=lambda x: x.get(sort_key, 0), reverse=sort_desc)
-                except (KeyError, TypeError):
-                    pass
-            
-        # Pagination
-        total = len(data)
-        start = (page - 1) * per_page
-        end = start + per_page
-        paginated_data = data[start:end]
-        total_pages = ((total - 1) // per_page) + 1 if total > 0 else 1
+        # Gather seasons and divisions for filters
+        # Gather filter options
+        filter_options = gather_filter_options()          
 
-        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-
-        if is_ajax:
-            html = render_template("stats/_stats_table.html",
-                data=paginated_data,
-                stat_field_names=stat_field_names, # All stat field names (original name)
-                columns_perm=columns_perm, # Permanent columns (original name)
-                columns_filter=columns_filter, # Filtered columns (original name)
-                columns_mapping=columns_mapping, # Mapping for columns (original name to display name)
-                page=page,
-                per_page=per_page,
-                total=total,
-                total_pages=total_pages,
-                sort=sort
-            )
-            return html
-
-        # Regular full page render
+        # Full page render
         return render_template(
             "stats/stats.html",
-            data=paginated_data,
-            stat_field_names=stat_field_names, # All stat field names (original name)
-            columns_perm=columns_perm, # Permanent columns (original name)
-            columns_filter=columns_filter, # Filtered columns (original name)
-            columns_mapping=columns_mapping, # Mapping for columns (original name to display name)
-            search=search,
-            page=page,
-            total=total,
-            per_page=per_page,
-            total_pages=total_pages,
-            sort=sort,
-            
-            seasons=seasons,
-            divisions=divisions
+            filter_options=filter_options
         )
 
     except Exception as e:
@@ -154,21 +39,71 @@ def stats():
 
         return render_template(
             "stats/stats.html",
-            data=[],
-            stat_field_names=[],
-            columns_perm=[],
-            columns_filter=[],
-            columns_mapping=[],
-            search='',
-            page=1,
-            total=0,
-            per_page=20,
-            total_pages=1,
-            error=str(e),
-            
-            seasons=[],
-            divisions=[]
+            filter_options={},
+            error=str(e)
         )
+
+@views.route('/api/stats')
+def stats_data():
+    from database.db_down_website import gather_player_stats_esea
+    
+    try:
+        # --- Filter Parameter Handling ---
+        events = request.args.get('events', '').split(',') if request.args.get('events') else []
+        countries = request.args.get('countries', '').split(',') if request.args.get('countries') else []
+        season_numbers = request.args.get('seasons', '').split(',') if request.args.get('seasons') else []
+        division_names = request.args.get('divisions', '').split(',') if request.args.get('divisions') else []
+        stage_names = request.args.get('stages', '').split(',') if request.args.get('stages') else []
+        start_date = request.args.get('start_date') # YYYY-MM-DD
+        end_date = request.args.get('end_date')     # YYYY-MM-DD
+        min_maps = request.args.get('min_maps', type=int)
+        max_maps = request.args.get('max_maps', type=int)
+        
+        search = request.args.get('search', '').strip()
+        
+        data, stat_field_names = gather_player_stats_esea(
+            events=events,
+            countries=countries,
+            seasons=season_numbers,
+            divisions=division_names,
+            stages=stage_names,
+            start_date=start_date,
+            end_date=end_date,
+            min_maps=min_maps,
+            max_maps=max_maps,
+            search_player_name=search
+        )
+        
+        # column handling
+        columns_perm = ['adr', 'k_r_ratio', 'k_d_ratio', 'headshots_percent', 'hltv']
+        columns_mapping = {
+            'adr':                  {'name': 'ADR',         'round': 0},
+            'k_r_ratio':            {'name': 'K/R',         'round': 2},
+            'k_d_ratio':            {'name': 'K/D',         'round': 2, 'good': 1.1, 'bad': 0.9},
+            'headshots_percent':    {'name': 'HS %',        'round': 0},
+            'hltv':                 {'name': 'HLTV 1.0',    'round': 2, 'good': 1.1, 'bad': 0.9},
+        }
+        for col in stat_field_names:
+            if col not in columns_mapping:
+                columns_mapping[col] = {'name': re.sub(r'^_', '', col).replace('_', ' ').title(), 'round': 2}
+        
+        return jsonify({
+            "data": data,
+            "stat_field_names": stat_field_names,
+            "columns_perm": columns_perm,
+            "columns_mapping": columns_mapping
+        })
+        
+    except Exception as e:
+        print(f"ERROR in stats_data route: {e}")
+        return jsonify({
+            "data": [],
+            "stat_field_names": [],
+            "columns_perm": [],
+            "columns_mapping": {},
+            "error": str(e)
+        })
+        
 
 @views.route('/esea')
 def esea():
