@@ -1,19 +1,26 @@
 {% macro checkbox_filter(name, values) %}
 <div class="filter-group" data-filter-group="{{ name }}">
     {% for val in values %}
-        <input class="checkbox__input" type="checkbox" value="{{ val }}" name="{{ name }}" id="{{ name }}-{{ val }}">
+        <input  class="checkbox__input" 
+                type="checkbox" 
+                value="{{ val }}" 
+                name="{{ name }}" 
+                id="{{ name }}-{{ val }}">
         <label class="checkbox__label" for="{{ name }}-{{ val }}">{{ val }}</label>
     {% endfor %}
 </div>
 {% endmacro %}
 
-{% macro radio_filter(name, values) %}
+{% macro radio_filter(name, values, init_checked=None) %}
 <div class="filter-group" data-filter-group="{{ name }}">
-    <input class="radio__input" type="radio" value="All" name="{{ name }}" id="{{ name }}-all" checked>
-    <label class="radio__label" for="{{ name }}-all">All</label>
     {% for val in values %}
-        <input class="radio__input" type="radio" value="{{ val }}" name="{{ name }}" id="{{ name }}-{{ val }}">
-        <label class="radio__label" for="{{ name }}-{{ val }}">{{ val }}</label>
+        <input class="checkbox__input" 
+               type="radio" 
+               value="{{ val }}" 
+               name="{{ name }}" 
+               id="{{ name }}-{{ val }}"
+               {% if init_checked == val %}checked{% endif %}>
+        <label class="checkbox__label" for="{{ name }}-{{ val }}">{{ val }}</label>
     {% endfor %}
 </div>
 {% endmacro %}

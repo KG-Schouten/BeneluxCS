@@ -9,131 +9,142 @@
 {% block title %}Stats - BeneluxCS{% endblock %}
 
 {% block extra_css %}
-<!-- Sidebar -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/sidebar.css') }}">
-
-<!-- Filter CSS -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/flags_filter.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/range_slider.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/date_filter.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/filter_group.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/filter_indicators.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/flags_filter.css') }}">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/dist/css/bootstrap-select.min.css">
-
-<!-- Stats CSS styles -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats/stats.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats/stats_filters.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats/stats_table.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="stats-page-wrapper">
 
     <div class="sidebar left">
-        <!-- Filters -->
-        <div class="sidebar-content accordion-enabled active">
-            <div class="sidebar-header">
-                Country
-            </div>
-            <div class="sidebar-body">
-                {{ countries_filter.countries_filter(['nl', 'be', 'lu']) }}
-            </div>
-        </div>
 
-        <div class="sidebar-content accordion-enabled active">
+        <div class="sidebar-content">
             <div class="sidebar-header">
-                Season
+                <span>Filters</span>
+                <button class="clear-all-filters" disabled title="Clear all filters">&times;</button>
             </div>
-            <div class="sidebar-body">
-                {{ select_picker.select_picker_multiple("seasons", seasons) }}
-            </div>
-        </div>
 
-        <div class="sidebar-content accordion-enabled active">
-            <div class="sidebar-header">
-                Division
-            </div>
             <div class="sidebar-body">
-                {{ filter_group.checkbox_filter("divisions", divisions) }}
-            </div>
-        </div>
-
-        <div class="sidebar-content accordion-enabled active">
-            <div class="sidebar-header">
-                Stage
-            </div>
-            <div class="sidebar-body">
-                {{ filter_group.checkbox_filter("stages", ['Regular Season', 'Playoffs']) }}
-            </div>
-        </div>
-
-        <div class="sidebar-content accordion-enabled active">
-            <div class="sidebar-header">
-                Timestamp
-            </div>
-            <div class="sidebar-body">
-                <div class="date_filter" id="dateFilter">
-                    <i class="fa fa-calendar"></i>&nbsp;
-
-                    <div class="date_filter_label">
-                        Select date range
+                <div class="filter-container open" data-filter-name="events">
+                    <div class="filter-header">
+                        <span>Events</span>
+                        <span class="filter-indicator"></span>
+                        <span class="arrow"></span>
                     </div>
-
-                    <div class="date_filter_dates">
-                        <span class="date_filter_start">
-                        </span>
-
-                        <span class="date_filter_end">
-                        </span>
+                    <div class="filter-body">
+                        {{ filter_group.radio_filter("events", filter_options["events"], "esea") }}
                     </div>
-                    <span></span>
                 </div>
+
+                <div class="filter-container open" data-filter-name="countries">
+                    <div class="filter-header">
+                        <span>Countries</span>
+                        <span class="filter-indicator"></span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div class="filter-body">
+                        {{ countries_filter.countries_filter(['nl', 'be', 'lu']) }}
+                    </div>
+                </div>
+
+                <div class="filter-container" data-filter-name="seasons">
+                    <div class="filter-header">
+                        <span>Seasons</span>
+                        <span class="filter-indicator"></span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div class="filter-body">
+                        {{ select_picker.select_picker_multiple("seasons", filter_options["seasons"]) }}
+                    </div>
+                </div>
+
+                <div class="filter-container" data-filter-name="divisions">
+                    <div class="filter-header">
+                        <span>Divisions</span>
+                        <span class="filter-indicator"></span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div class="filter-body">
+                        {{ filter_group.checkbox_filter("divisions", filter_options["divisions"]) }}
+                    </div>
+                </div>
+
+                <div class="filter-container" data-filter-name="stages">
+                    <div class="filter-header">
+                        <span>Stages</span>
+                        <span class="filter-indicator"></span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div class="filter-body">
+                        {{ filter_group.checkbox_filter("stages", filter_options["stages"]) }}
+                    </div>
+                </div>
+
+                <div class="filter-container" data-filter-name="timestamp">
+                    <div class="filter-header">
+                        <span>Timestamp</span>
+                        <span class="filter-indicator"></span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div class="filter-body">
+                        <div class="date_filter" id="dateFilter">
+                            <i class="fa fa-calendar"></i>&nbsp;
+
+                            <div class="date_filter_label">
+                                Select date range
+                            </div>
+
+                            <div class="date_filter_dates">
+                                <span class="date_filter_start">
+                                </span>
+
+                                <span class="date_filter_end">
+                                </span>
+                            </div>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-container" data-filter-name="maps_played">
+                    <div class="filter-header">
+                        <span>Maps Played</span>
+                        <span class="filter-indicator"></span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div class="filter-body">
+                        {{ sliders.dual_range_slider(0, 50, 1) }}
+                    </div>
+                </div>
+
+                <div class="apply-button-container">
+                    <button class="apply-button">Apply Filters</button>
+                </div>
+
             </div>
+
         </div>
 
-        <div class="sidebar-content accordion-enabled active">
-            <div class="sidebar-header">
-                Team Name
-            </div>
-            <div class="sidebar-body">
-                <div class="team-search">
-                    <i class="bi bi-search"></i>
-                    <input class="search-input" type="search" id="teamNameInput" placeholder="Enter team name">
-                </div>
-            </div>
-        </div>
-
-        <div class="sidebar-content accordion-enabled active">
-            <div class="sidebar-header">
-                Matches Played
-            </div>
-            <div class="sidebar-body">
-                {{ sliders.dual_range_slider(0, 50, 1) }}
-            </div>
-        </div>
     </div>
 
     <div class="stats-wrapper">
-
+        <table id="stats-data-table">
+            <!-- DataTable will be initialized here -->
+        </table>
     </div>
 </div>
-
-
-
 {% endblock %}
 
 {% block javascript %}
 {{ super() }}
-<!-- No-UI slider -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
-
-<!-- Bootstrap-Select -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/dist/js/bootstrap-select.min.js"></script>
-
-<!-- Moment.js + Daterangepicker -->
-<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-
 <script>
 $(function() {
     var start = null;
@@ -183,16 +194,11 @@ $(function() {
             $('#dateFilter .date_filter_start').html(start.format('DD-MM-YYYY'));
             $('#dateFilter .date_filter_end').html(end.format('DD-MM-YYYY'));
         }
-
-        // Example: send to filtering function
-        // filterStats({
-        //     start: picker.chosenLabel === 'All Time' ? null : start.format('YYYY-MM-DD'),
-        //     end: picker.chosenLabel === 'All Time' ? null : end.format('YYYY-MM-DD')
-        // });
     });
 });
 </script>
 
 <!-- Stats.js -->
 <script src="{{ url_for('static', filename='js/stats.js') }}"></script>
+<script src="{{ url_for('static', filename='js/filter_ui.js') }}"></script>
 {% endblock %}
