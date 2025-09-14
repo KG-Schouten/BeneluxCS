@@ -18,6 +18,9 @@ from data_processing.faceit_api.logging_config import function_logger
 # dp imports
 from data_processing.dp_general import process_matches, modify_keys, gather_event_details
 
+# db imports
+from database.db_down import gather_event_players
+
 # Load api keys from .env file
 from dotenv import load_dotenv
 load_dotenv()
@@ -288,6 +291,47 @@ async def process_teams_benelux_esea(
         on=['team_id', 'season_number'],
         how='inner'
     )
+    
+    # Gather the players that have played matches for each team
+    try:
+        event_ids = df_teams_benelux['event_id'].tolist()
+        team_ids = df_teams_benelux['team_id'].tolist()
+        df_event_players = gather_event_players(event_ids=event_ids, team_ids=team_ids)
+        
+        # If the players_main list of a team in df_teams_benelux is smaller than the players in df_event_players, replace it and the sub lists
+        if not df_event_players.empty:
+            # Merge the dataframes on team_id and event_id
+            merged = df_teams_benelux.merge(df_event_players, on=["team_id", "event_id"], suffixes=("_df1", "_df2"), how="left")
+            
+            def choose_players(row):
+                try:
+                    list_main_1 = row["players_main_df1"]
+                    list_main_2 = row["players_main_df2"]
+                    list_sub_1 = row["players_sub_df1"]
+                    list_sub_2 = row["players_sub_df2"]
+                    if isinstance(list_main_1, list) and isinstance(list_main_2, list) and list_main_2:
+                        if not list_main_1:
+                            return (list_main_2, list_sub_2)
+                        if len(list_main_1) < len(list_main_2):    
+                            return (list_main_2, list_sub_2)
+                        else:
+                            return (list_main_1, list_sub_1)
+                    return (list_main_1, list_sub_1) if pd.notna(list_main_1) else (list_main_2, list_sub_2)
+                except Exception as e:
+                    function_logger.warning(f"Issue choosing players for team {row.get('team_name', 'Unknown')}: {e}")
+                    return (row.get("players_main_df1", []), row.get("players_sub_df1", []))
+
+            # Replace players_main where needed
+            merged[["players_main", "players_sub"]] = merged.apply(
+                lambda row: pd.Series(choose_players(row)), axis=1
+            )
+            
+            if not merged.empty:
+                df_teams_benelux = merged.drop(columns=[col for col in merged.columns if col.endswith('_df1') or col.endswith('_df2')])
+            
+    except Exception as e:
+        function_logger.warning(f"Issue gathering alternative event players: {e}")
+        pass
     
     df_teams_benelux = df_teams_benelux.drop('season_number', axis=1)
     
