@@ -907,194 +907,11 @@ def get_upcoming_matches() -> tuple:
             key=lambda m: (m["match_time"], compute_division_rank(m["division_name"]))
         )
         
-        for match in sorted_matches:
-            print(json.dumps(match, indent=2))
-        
         return sorted_matches, end_of_day
 
     except Exception as e:
         function_logger.error(f"Error fetching today's matches: {e}", exc_info=True)
         return {}, 0
-    finally:
-        close_database(db)
-  
-def gather_player_stats_esea(
-    countries=None,
-    seasons=None,
-    divisions=None,
-    stages=None,
-    timestamp_start=0,
-    timestamp_end=0,
-    team_ids=None,
-    search_player_name=""
-):
-    countries = countries or []
-    seasons = seasons or []
-    divisions = divisions or []
-    stages = stages or []
-    team_ids = team_ids or []
-
-    db, cursor = start_database()
-    try:
-        # Get valid (player_id, team_id, event_id) combos
-        cursor.execute("SELECT team_id, event_id, players_main, players_sub FROM teams_benelux")
-        valid_combos = set()
-        for team_id, event_id, main_json, sub_json in cursor.fetchall():
-            def safe_load_json_for_validation(value):
-                # Handle PostgreSQL jsonb format
-                if value is None:
-                    return []
-                if isinstance(value, (list, dict)):
-                    return value if isinstance(value, list) else []
-                if isinstance(value, str):
-                    try:
-                        parsed = json.loads(value)
-                        return parsed if isinstance(parsed, list) else []
-                    except (json.JSONDecodeError, TypeError):
-                        return []
-                return []
-            
-            main_players = safe_load_json_for_validation(main_json)
-            sub_players = safe_load_json_for_validation(sub_json)
-            
-            for player in main_players + sub_players:
-                if isinstance(player, dict):
-                    pid = player.get('player_id')
-                    if pid:
-                        valid_combos.add((pid, team_id, event_id))
-
-        # Get stat columns and build AVG expressions
-        non_stat_cols = {'player_id', 'player_name', 'team_id', 'match_id', 'match_round'}
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'players_stats'
-        """)
-        all_columns = [row[0] for row in cursor.fetchall()]
-        stat_columns = [col for col in all_columns if col not in non_stat_cols]
-        avg_expressions = [f'AVG(ps."{col}") AS "{col}"' for col in stat_columns]
-
-        # Build WHERE clause and parameters
-        conditions = []
-        params = []
-
-        if countries:
-            placeholders = ','.join(['%s'] * len(countries))
-            conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
-            params.extend(countries)
-            params.extend(countries)
-
-        if seasons:
-            placeholders = ','.join(['%s'] * len(seasons))
-            conditions.append(f"s.season_number IN ({placeholders})")
-            params.extend(seasons)
-
-        if divisions:
-            like_clauses = ' OR '.join(["s.division_name LIKE %s"] * len(divisions))
-            conditions.append(f"({like_clauses})")
-            params.extend([f"%{d}%" for d in divisions])
-
-        if stages:
-            like_clauses = ' OR '.join(["LOWER(s.stage_name) LIKE %s"] * len(stages))
-            conditions.append(f"({like_clauses})")
-            params.extend([f"%{stage.lower()}%" for stage in stages])
-
-        if timestamp_start > 0:
-            conditions.append("m.match_time >= %s")
-            params.append(timestamp_start)
-
-        if timestamp_end > 0:
-            conditions.append("m.match_time <= %s")
-            params.append(timestamp_end)
-
-        if team_ids:
-            placeholders = ','.join(['%s'] * len(team_ids))
-            conditions.append(f"ps.team_id IN ({placeholders})")
-            params.extend(team_ids)
-
-        if search_player_name:
-            conditions.append("p.player_name LIKE %s")
-            params.append(f"%{search_player_name}%")
-
-        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-
-        # Query player stats
-        query = f"""
-            SELECT 
-                ps.player_id,
-                COALESCE(pc.country, p.country) AS country,
-                p.avatar,
-                COUNT(DISTINCT ps.match_id || '-' || ps.match_round) AS maps_played,
-                ROUND(100.0 * SUM(tm.team_win) / COUNT(DISTINCT ps.match_id || '-' || ps.match_round), 1) AS map_win_pct,
-                ps.team_id, 
-                s.event_id, 
-                {', '.join(avg_expressions)}
-            FROM players_stats ps
-            LEFT JOIN teams_maps tm ON ps.match_id = tm.match_id AND ps.match_round = tm.match_round AND ps.team_id = tm.team_id
-            LEFT JOIN matches m ON ps.match_id = m.match_id
-            INNER JOIN seasons s ON m.event_id = s.event_id
-            LEFT JOIN players p ON ps.player_id = p.player_id
-            LEFT JOIN players_country pc ON p.player_id = pc.player_id
-            {where_clause}
-            GROUP BY 
-                ps.player_id,
-                COALESCE(pc.country, p.country),
-                p.avatar,
-                ps.team_id,
-                s.event_id
-        """
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        col_names = [desc[0] for desc in cursor.description]
-        stat_field_names = col_names[7:]
-
-        # Filter rows using whitelist
-        filtered_stats = {}
-        player_countries = {}
-        player_avatars = {}
-        player_maps_played = {}
-        player_map_win_pct = {}
-
-        for row in rows:
-            player_id, country, avatar, maps_played, map_win_pct, team_id, event_id = row[:7]
-            if (player_id, team_id, event_id) in valid_combos:
-                filtered_stats.setdefault(player_id, []).append(row[7:])
-                player_countries.setdefault(player_id, country)
-                player_avatars.setdefault(player_id, avatar)
-                player_maps_played.setdefault(player_id, maps_played)
-                player_map_win_pct.setdefault(player_id, map_win_pct)
-
-        from statistics import mean
-
-        avg_results = {}
-        for player_id, stat_lists in filtered_stats.items():
-            transposed = zip(*stat_lists)
-            avg_results[player_id] = [
-                mean(x for x in col if x is not None) if any(x is not None for x in col) else 0
-                for col in transposed
-            ]
-
-        # Use separate alias gathering function
-        official_names, aliases = get_player_aliases(cursor)
-
-        output = []
-        for player_id, stat_values in avg_results.items():
-            output.append({
-                "player_id": player_id,
-                "player_name": official_names.get(player_id),
-                "aliases": aliases.get(player_id) or [],
-                "avatar": player_avatars.get(player_id),
-                "country": player_countries.get(player_id),
-                "maps_played": player_maps_played.get(player_id, 0),
-                "map_win_pct": player_map_win_pct.get(player_id, 0.0),
-                "avg_stats": dict(zip(stat_field_names, stat_values))
-            })
-
-        return output, stat_field_names
-
-    except Exception as e:
-        function_logger.error(f"Error gathering player stats: {e}", exc_info=True)
-        return [], []
     finally:
         close_database(db)
 
@@ -1236,5 +1053,236 @@ def gather_leaderboard(**kwargs) -> list:
         function_logger.error(f"Error gathering players: {e}", exc_info=True)
         raise
 
+    finally:
+        close_database(db)
+
+# =============================
+#       Stats Page
+# =============================     
+def gather_filter_options():
+    db, cursor = start_database()
+    
+    try:
+        # Gather events
+        cursor.execute("""
+            SELECT event_type
+            FROM (
+                SELECT DISTINCT event_type
+                FROM events
+            ) t
+            ORDER BY LOWER(event_type), event_type;
+        """)
+        events = [row[0] for row in cursor.fetchall() if row[0]]
+        
+        # Gather seasons
+        cursor.execute("""
+            SELECT season_number
+            FROM (
+                SELECT DISTINCT season_number
+                FROM seasons
+                WHERE event_id IN (SELECT event_id FROM teams_benelux)
+            ) t
+            WHERE season_number IS NOT NULL
+            ORDER BY season_number DESC;
+        """)
+        seasons = [row[0] for row in cursor.fetchall()]
+
+        # Gather divisions (still needs Python sort because of custom rank)
+        cursor.execute("""
+            SELECT division_name
+            FROM (
+                SELECT DISTINCT division_name
+                FROM seasons
+                WHERE event_id IN (SELECT event_id FROM teams_benelux)
+            ) t
+            WHERE division_name IS NOT NULL;
+        """)
+        divisions = [row[0] for row in cursor.fetchall()]
+        divisions = sorted(divisions, key=lambda d: compute_division_rank(d))
+
+        # Gather stages
+        cursor.execute("""
+            SELECT stage_name
+            FROM (
+                SELECT DISTINCT stage_name
+                FROM seasons
+                WHERE event_id IN (SELECT event_id FROM teams_benelux)
+            ) t
+            WHERE stage_name IS NOT NULL
+            ORDER BY LOWER(stage_name), stage_name;
+        """)
+        stages = [row[0] for row in cursor.fetchall()]
+
+        return {
+            "events": events,
+            "seasons": seasons,
+            "divisions": divisions,
+            "stages": stages
+        }
+        
+    except Exception as e:
+        function_logger.error(f"Error gathering filter options: {e}", exc_info=True)
+        return {
+            "events": [],
+            "seasons": [],
+            "divisions": [],
+            "stages": []
+        }
+    finally:
+        close_database(db)
+
+def gather_player_stats_esea(
+    events=[],
+    countries=[],
+    seasons=[],
+    divisions=[],
+    stages=[],
+    start_date=None,
+    end_date=None,
+    min_maps=None,
+    max_maps=None,
+    search_player_name=""
+):
+    db, cursor = start_database()
+    
+    try:
+        # === Get valid (player_id, team_id, event_id) combos ===
+        valid_combos = set()
+        if events:
+            if 'hub' in events:
+                cursor.execute(""" 
+                    SELECT ps.player_id, ps.team_id, e.event_id
+                    FROM players_stats ps
+                    JOIN matches m ON ps.match_id = m.match_id
+                    JOIN events e ON m.event_id = e.event_id
+                    WHERE e.event_type = 'hub'
+                """)
+                valid_combos.update(cursor.fetchall())
+            elif 'esea' in events:
+                cursor.execute("""
+                    SELECT ps.player_id, ps.team_id, m.event_id
+                    FROM players_stats ps
+                    LEFT JOIN matches m ON ps.match_id = m.match_id
+                    WHERE (ps.team_id, m.event_id) IN (
+                        SELECT tb.team_id, tb.event_id
+                        FROM teams_benelux tb
+                    )
+                """)
+                valid_combos.update(cursor.fetchall())
+            
+        # Build WHERE clause and parameters
+        conditions = []
+        params = []
+        
+        if events:
+            if 'esea' in events and 'hub' in events:
+                # Both selected, so get all from both queries above
+                print("Filtering for ALL events")
+                pass
+            elif 'esea' in events:
+                print("Filtering for ESEA events")
+                conditions.append("(ps.team_id, m.event_id) IN (SELECT tb.team_id, tb.event_id FROM teams_benelux tb)")
+            elif 'hub' in events:
+                print("Filtering for HUB events")
+                conditions.append("e.event_type = 'hub'")
+        
+        if countries:
+            print(f"Filtering for countries: {countries}")
+            placeholders = ','.join(['%s'] * len(countries))
+            conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
+            params.extend(countries)
+            params.extend(countries)
+
+        if seasons:
+            placeholders = ','.join(['%s'] * len(seasons))
+            conditions.append(f"s.season_number IN ({placeholders})")
+            params.extend(seasons)
+
+        if divisions:
+            like_clauses = ' OR '.join(["s.division_name LIKE %s"] * len(divisions))
+            conditions.append(f"({like_clauses})")
+            params.extend([f"%{d}%" for d in divisions])
+
+        if stages:
+            like_clauses = ' OR '.join(["LOWER(s.stage_name) LIKE %s"] * len(stages))
+            conditions.append(f"({like_clauses})")
+            params.extend([f"%{stage.lower()}%" for stage in stages])
+
+        # if search_player_name:
+        #     conditions.append("p.player_name LIKE %s")
+        #     params.append(f"%{search_player_name}%")
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        
+        
+        # Get stat columns and build AVG expressions
+        non_stat_cols = {'player_id', 'player_name', 'team_id', 'match_id', 'match_round'}
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'players_stats'
+        """)
+        all_columns = [row[0] for row in cursor.fetchall()]
+        stat_columns = [col for col in all_columns if col not in non_stat_cols]
+        avg_expressions = [f'AVG(ps."{col}") AS "{col}"' for col in stat_columns]
+
+
+        query = f"""
+            SELECT
+               ps.player_id,
+               COALESCE(pc.country, p.country) AS country,
+               COUNT(DISTINCT ps.match_id || '-' || ps.match_round) AS maps_played,
+               ROUND(
+                    CASE 
+                        WHEN COUNT(DISTINCT ps.match_id || '-' || ps.match_round) > 0 
+                        THEN (SUM(tm.team_win) * 100.0 / COUNT(DISTINCT ps.match_id || '-' || ps.match_round))
+                        ELSE 0
+                    END, 1
+                ) AS map_win_pct,
+               {', '.join(avg_expressions)}
+            
+            FROM players_stats ps
+            
+            JOIN matches m ON ps.match_id = m.match_id
+            JOIN teams_maps tm ON ps.match_id = tm.match_id AND ps.match_round = tm.match_round AND ps.team_id = tm.team_id
+            JOIN events e ON m.event_id = e.event_id
+            LEFT JOIN seasons s ON m.event_id = s.event_id
+            
+            LEFT JOIN players p ON ps.player_id = p.player_id
+            LEFT JOIN players_country pc ON p.player_id = pc.player_id
+            
+            {where_clause}
+            
+            GROUP BY 
+                ps.player_id, 
+                COALESCE(pc.country, p.country)    
+        """
+        
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        results = [dict(zip(columns, row)) for row in rows]
+        
+        official_names, aliases = get_player_aliases(cursor)
+        
+        output = []
+        for row in results:
+            flat_stats = {col: float(row[col]) for col in stat_columns}
+            player_id = row["player_id"]
+            output.append({
+                "player_id": player_id,
+                "player_name": official_names.get(player_id),
+                "alias": aliases.get(player_id, ''),
+                "country": row["country"],
+                "maps_played": int(row["maps_played"]),
+                "map_win_pct": float(row["map_win_pct"]),
+                **flat_stats
+            })
+        
+        return output, stat_columns
+
+    except Exception as e:
+        function_logger.error(f"Error gathering player stats: {e}", exc_info=True)
+        return [], []
     finally:
         close_database(db)
