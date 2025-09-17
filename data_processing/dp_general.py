@@ -180,7 +180,10 @@ async def process_match_details_batch(
         for row in results or []
         if row and isinstance(row, (list, tuple)) and len(row) > 1 and row[0]
     ])
-    df_matches['match_time'] = df_matches['match_time'].astype('Int64', errors='ignore')  # Convert to nullable integer type
+    
+    if not df_matches.empty and 'match_time' in df_matches.columns:
+        df_matches['match_time'] = df_matches['match_time'].astype('Int64', errors='ignore')  # Convert to nullable integer type
+    
     df_teams_matches = pd.DataFrame([
         item
         for row in results or [] 
