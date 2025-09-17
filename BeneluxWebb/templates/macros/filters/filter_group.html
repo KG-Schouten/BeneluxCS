@@ -19,7 +19,7 @@
                value="{{ val }}" 
                name="{{ name }}" 
                id="{{ name }}-{{ val }}"
-               {% if init_checked == val %}checked{% endif %}>
+               {% if init_checked == val %}checked data-default="true"{% endif %}>
         <label class="checkbox__label" for="{{ name }}-{{ val }}">{{ val }}</label>
     {% endfor %}
 </div>
