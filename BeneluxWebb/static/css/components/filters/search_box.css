@@ -1,0 +1,103 @@
+:root {
+    --search-box-height: 25px;
+}
+
+.sidebar-body .search-box {
+    width: 100%;
+    height: var(--search-box-height);
+}
+
+.sidebar-body .search-box .search-box-wrapper {
+    position: relative;
+    transition: box-shadow 0.2s ease;
+    width: 100%;
+    z-index: 10;
+}
+.sidebar-body .search-box-wrapper:has(+ .result-box),
+.sidebar-body .search-box-wrapper:has(.result-box) {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.sidebar-body .search-box input {
+    display: inline-block;
+    width: 100%;
+    height: var(--search-box-height);
+    padding-left: 30px;
+    padding-block: 5px;
+
+    background-color: var(--secondaryBody);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 14px;
+}
+.sidebar-body .search-box input:focus {
+    outline: none;
+    border: 1px solid var(--primary);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+}
+.sidebar-body .search-box input:hover {
+    border: 1px solid var(--primary);
+}
+
+.sidebar-body .search-box i {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.sidebar-body .result-box {
+    position: relative;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: var(--secondaryBody);
+    box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.8);
+}
+.sidebar-body .result-box ul {
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    margin-bottom: 0;
+    width: 100%;
+}
+.sidebar-body .result-box ul li {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    border-radius: 3px;
+    cursor: pointer;
+
+    height: 50px;
+    padding-block: 10px;
+    padding-inline: 6px;
+}
+.sidebar-body .result-box ul li:not(:last-child) {
+    position: relative;
+}
+.sidebar-body .result-box ul li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 10px;   /* offset from left */
+    right: 10px;  /* offset from right */
+    height: 1px;  /* thickness of the line */
+    background-color: var(--border);
+}
+.sidebar-body .result-box ul li:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-body .result-box ul li img {
+    height: 100%;
+    width: auto;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.sidebar-body .result-box ul li span {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
