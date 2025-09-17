@@ -1,0 +1,14 @@
+{% macro search_box(name, placeholder='', filter_options=[]) %}
+<div class="search-box" id="search-box-{{ name }}" data-search-name="{{ name }}">
+    <div class="search-box-wrapper">
+        <i class="bi bi-search"></i>
+        <input  
+            type="text" 
+            id="input-box-{{ name }}" 
+            placeholder="{{ placeholder }}"
+            autocomplete="off">
+    </div>
+    <div class="result-box" id="result-box-{{ name }}" data-search-options='{{ filter_options|tojson }}'>
+    </div>
+</div>
+{% endmacro %}
