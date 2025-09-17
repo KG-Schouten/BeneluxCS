@@ -8,15 +8,15 @@ views = Blueprint('views', __name__, template_folder='../templates')
 def home_redirect():
     return redirect(url_for('views.esea'))
 
+
 @views.route('/stats')
 def stats():
     from database.db_down_website import gather_filter_options
 
     try:
-        # Gather seasons and divisions for filters
         # Gather filter options
         filter_options = gather_filter_options()          
-
+        
         # Full page render
         return render_template(
             "stats/stats.html",
@@ -43,8 +43,40 @@ def stats():
             error=str(e)
         )
 
-@views.route('/api/stats')
-def stats_data():
+@views.route('/api/stats/fields')
+def api_stats():
+    from database.db_down_website import gather_stat_table_columns
+    try:
+        stat_field_names = gather_stat_table_columns()
+        
+        columns_perm = ['adr', 'k_r_ratio', 'k_d_ratio', 'headshots_percent', 'hltv']
+        columns_mapping = {
+            'adr':                  {'name': 'ADR',         'round': 0},
+            'k_r_ratio':            {'name': 'K/R',         'round': 2},
+            'k_d_ratio':            {'name': 'K/D',         'round': 2, 'good': 1.05, 'bad': 0.95},
+            'headshots_percent':    {'name': 'HS %',        'round': 0},
+            'hltv':                 {'name': 'HLTV 1.0',    'round': 2, 'good': 1.05, 'bad': 0.95},
+        }
+        for col in stat_field_names:
+            if col not in columns_mapping:
+                columns_mapping[col] = {'name': re.sub(r'^_', '', col).replace('_', ' ').title(), 'round': 2}
+        
+        return jsonify({
+            "stat_field_names": stat_field_names,
+            "columns_perm": columns_perm,
+            "columns_mapping": columns_mapping
+        })
+    except Exception as e:
+        print(f"ERROR in api_stats route: {e}")
+        return jsonify({
+            "stat_field_names": [],
+            "columns_perm": [],
+            "columns_mapping": {},
+            "error": str(e)
+        })
+
+@views.route('/api/stats/data')
+def api_stats_data():
     from database.db_down_website import gather_player_stats_esea
     
     try:
@@ -58,10 +90,9 @@ def stats_data():
         end_date = request.args.get('end_date')     # YYYY-MM-DD
         min_maps = request.args.get('min_maps', type=int)
         max_maps = request.args.get('max_maps', type=int)
+        team_ids = request.args.get('team_ids', [])
         
-        search = request.args.get('search', '').strip()
-        
-        data, stat_field_names = gather_player_stats_esea(
+        data = gather_player_stats_esea(
             events=events,
             countries=countries,
             seasons=season_numbers,
@@ -71,39 +102,20 @@ def stats_data():
             end_date=end_date,
             min_maps=min_maps,
             max_maps=max_maps,
-            search_player_name=search
+            team_ids=team_ids
         )
         
-        # column handling
-        columns_perm = ['adr', 'k_r_ratio', 'k_d_ratio', 'headshots_percent', 'hltv']
-        columns_mapping = {
-            'adr':                  {'name': 'ADR',         'round': 0},
-            'k_r_ratio':            {'name': 'K/R',         'round': 2},
-            'k_d_ratio':            {'name': 'K/D',         'round': 2, 'good': 1.1, 'bad': 0.9},
-            'headshots_percent':    {'name': 'HS %',        'round': 0},
-            'hltv':                 {'name': 'HLTV 1.0',    'round': 2, 'good': 1.1, 'bad': 0.9},
-        }
-        for col in stat_field_names:
-            if col not in columns_mapping:
-                columns_mapping[col] = {'name': re.sub(r'^_', '', col).replace('_', ' ').title(), 'round': 2}
-        
         return jsonify({
-            "data": data,
-            "stat_field_names": stat_field_names,
-            "columns_perm": columns_perm,
-            "columns_mapping": columns_mapping
+            "data": data
         })
         
     except Exception as e:
-        print(f"ERROR in stats_data route: {e}")
+        print(f"ERROR in api_stats_data route: {e}")
         return jsonify({
             "data": [],
-            "stat_field_names": [],
-            "columns_perm": [],
-            "columns_mapping": {},
             "error": str(e)
         })
-        
+
 
 @views.route('/esea')
 def esea():
