@@ -1100,24 +1100,13 @@ def gather_filter_options():
         divisions = [row[0] for row in cursor.fetchall()]
         divisions = sorted(divisions, key=lambda d: compute_division_rank(d))
 
-        # Gather stages
-        cursor.execute("""
-            SELECT stage_name
-            FROM (
-                SELECT DISTINCT stage_name
-                FROM seasons
-                WHERE event_id IN (SELECT event_id FROM teams_benelux)
-            ) t
-            WHERE stage_name IS NOT NULL
-            ORDER BY LOWER(stage_name), stage_name;
-        """)
-        stages = [row[0] for row in cursor.fetchall()]
-
+        teams = gather_filter_teams()
+        
         return {
             "events": events,
             "seasons": seasons,
             "divisions": divisions,
-            "stages": stages
+            "teams": teams
         }
         
     except Exception as e:
@@ -1131,6 +1120,92 @@ def gather_filter_options():
     finally:
         close_database(db)
 
+def gather_filter_teams():
+    db, cursor = start_database()
+    
+    try:
+        cursor.execute("""
+            WITH ranked_teams AS (
+                SELECT
+                    t.team_name,
+                    t.team_id,
+                    t.event_id,
+                    t.avatar,
+                    e.event_start,
+                    ROW_NUMBER() OVER (PARTITION BY t.team_name ORDER BY e.event_start DESC) AS rn
+                FROM teams_benelux t
+                JOIN events e ON t.event_id = e.event_id
+            )
+            SELECT
+                team_name,
+                json_agg(ARRAY[team_id::text, event_id::text] ORDER BY event_start DESC) AS team_ids,
+                MAX(CASE WHEN rn = 1 THEN avatar END) AS avatar
+            FROM ranked_teams
+            GROUP BY team_name
+            ORDER BY team_name;
+        """)
+        
+        # cursor.execute("""
+        #     WITH latest_avatar AS (
+        #         SELECT DISTINCT ON (t.team_name)
+        #             t.team_name,
+        #             t.avatar
+        #         FROM teams_benelux t
+        #         JOIN events e ON t.event_id = e.event_id
+        #         ORDER BY t.team_name, e.event_start DESC
+        #     )
+
+        #     -- Step 2: Aggregate all (team_id, event_id) pairs per team
+        #     SELECT
+        #         t.team_name,
+        #         ARRAY_AGG((t.team_id, t.event_id) ORDER BY e.event_start DESC) AS team_events,
+        #         la.avatar
+        #     FROM teams_benelux t
+        #     JOIN events e ON t.event_id = e.event_id
+        #     JOIN latest_avatar la ON t.team_name = la.team_name
+        #     GROUP BY t.team_name, la.avatar
+        #     ORDER BY t.team_name;
+        # """)
+        
+        results = cursor.fetchall()
+        teams = [
+            {
+                "team_name": row[0],
+                "team_ids": row[1],
+                "avatar": row[2]
+            }
+            for row in results
+        ]
+        
+        return teams
+        
+    except Exception as e:
+        function_logger.error(f"Error gathering filter teams: {e}", exc_info=True)
+        return []
+    finally:
+        close_database(db)
+
+def gather_stat_table_columns():
+    db, cursor = start_database()
+    
+    try:
+        # Get stat columns and build AVG expressions
+        non_stat_cols = {'player_id', 'player_name', 'team_id', 'match_id', 'match_round'}
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'players_stats'
+        """)
+        all_columns = [row[0] for row in cursor.fetchall()]
+        stat_columns = [col for col in all_columns if col not in non_stat_cols]
+        
+        return stat_columns
+    except Exception as e:
+        function_logger.error(f"Error gathering stat table columns: {e}", exc_info=True)
+        return []
+    finally:
+        close_database(db)
+
 def gather_player_stats_esea(
     events=[],
     countries=[],
@@ -1141,10 +1216,9 @@ def gather_player_stats_esea(
     end_date=None,
     min_maps=None,
     max_maps=None,
-    search_player_name=""
+    team_ids=[]
 ):
     db, cursor = start_database()
-    
     try:
         # === Get valid (player_id, team_id, event_id) combos ===
         valid_combos = set()
@@ -1177,17 +1251,13 @@ def gather_player_stats_esea(
         if events:
             if 'esea' in events and 'hub' in events:
                 # Both selected, so get all from both queries above
-                print("Filtering for ALL events")
                 pass
             elif 'esea' in events:
-                print("Filtering for ESEA events")
                 conditions.append("(ps.team_id, m.event_id) IN (SELECT tb.team_id, tb.event_id FROM teams_benelux tb)")
             elif 'hub' in events:
-                print("Filtering for HUB events")
                 conditions.append("e.event_type = 'hub'")
         
         if countries:
-            print(f"Filtering for countries: {countries}")
             placeholders = ','.join(['%s'] * len(countries))
             conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
             params.extend(countries)
@@ -1207,23 +1277,25 @@ def gather_player_stats_esea(
             like_clauses = ' OR '.join(["LOWER(s.stage_name) LIKE %s"] * len(stages))
             conditions.append(f"({like_clauses})")
             params.extend([f"%{stage.lower()}%" for stage in stages])
-
-        # if search_player_name:
-        #     conditions.append("p.player_name LIKE %s")
-        #     params.append(f"%{search_player_name}%")
+            
+        if start_date:
+            conditions.append("m.match_time >= %s")
+            params.append(int(start_date))
+            
+        if end_date:
+            conditions.append("m.match_time <= %s")
+            params.append(int(end_date))
+            
+        if team_ids:
+            team_ids = json.loads(team_ids) if isinstance(team_ids, str) else team_ids
+            placeholders = ','.join(['(%s, %s)'] * len(team_ids))
+            
+            flat_params = [elem for tup in team_ids for elem in tup]
+            conditions.append(f"(ps.team_id, m.event_id) IN ({placeholders})")
+            params.extend(flat_params)
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-        
-        
-        # Get stat columns and build AVG expressions
-        non_stat_cols = {'player_id', 'player_name', 'team_id', 'match_id', 'match_round'}
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'players_stats'
-        """)
-        all_columns = [row[0] for row in cursor.fetchall()]
-        stat_columns = [col for col in all_columns if col not in non_stat_cols]
+        stat_columns = gather_stat_table_columns()
         avg_expressions = [f'AVG(ps."{col}") AS "{col}"' for col in stat_columns]
 
 
@@ -1267,6 +1339,11 @@ def gather_player_stats_esea(
         
         output = []
         for row in results:
+            if min_maps is not None and row["maps_played"] < min_maps:
+                continue
+            if max_maps is not None and row["maps_played"] > max_maps:
+                continue
+            
             flat_stats = {col: float(row[col]) for col in stat_columns}
             player_id = row["player_id"]
             output.append({
@@ -1279,7 +1356,7 @@ def gather_player_stats_esea(
                 **flat_stats
             })
         
-        return output, stat_columns
+        return output
 
     except Exception as e:
         function_logger.error(f"Error gathering player stats: {e}", exc_info=True)
