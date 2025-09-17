@@ -1,15 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize bootstrap-select dropdowns
-    $('.selectpicker').selectpicker();
-
-
     // Cache DOM references and variables
     const applyFiltersBtn = document.querySelector('.apply-button');
     let dataTable = null;         // will hold the DataTable instance
-    let stat_field_names = [];    // list of stat column keys from server
-    let columns_mapping = {};     // metadata for each column (title, decimals, etc.)
-    let columns_perm = [];        // columns always visible (permanent)
-
 
     // Helper function: gather all selected filters into an object
     function collectFilterData() {
@@ -22,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const countries = Array.from(document.querySelectorAll('input[name="countries"]:checked')).map(el => el.value);
         if (countries.length) filters.countries = countries.join(',');
 
-        // Collect multiple select (Bootstrap selectpicker)
         const seasons = $('#seasons-select').val() || [];
         if (seasons.length) filters.seasons = seasons.join(',');
 
@@ -32,11 +23,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stages = Array.from(document.querySelectorAll('input[name="stages"]:checked')).map(el => el.value);
         if (stages.length) filters.stages = stages.join(',');
 
-        // Date range filter (using daterangepicker plugin)
-        const datePicker = $('#dateFilter').data('daterangepicker');
-        if (datePicker && datePicker.chosenLabel !== 'All Time') {
-            filters.start_date = datePicker.startDate.format('YYYY-MM-DD');
-            filters.end_date = datePicker.endDate.format('YYYY-MM-DD');
+        // Handle timestamp → convert label into start/end dates
+        const timestampOption = document.querySelector('input[name="timestamp"]:checked');
+        if (timestampOption) {
+            const range = getDateRange(timestampOption.value);
+            if (range) {
+                filters.start_date = range.start;
+                filters.end_date = range.end;
+            }
         }
 
         // Min/max maps filter
@@ -45,6 +39,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (minVal && minVal.value !== minVal.min) filters.min_maps = minVal.value;
         if (maxVal && maxVal.value !== maxVal.max) filters.max_maps = maxVal.value;
 
+        // Team search
+        const teamBoxWrapper = document.querySelector('.search-box[data-search-name="teams"]');
+        if (teamBoxWrapper) {
+            const teamBox = teamBoxWrapper.querySelector('input[type="text"]');
+            if (teamBox && teamBox.value.trim() !== "") {
+                filters.team_name = teamBox.value.trim();
+
+                let teamIds = teamBox.teamIds;
+                if (!teamIds && teamBox.dataset.teamIds) {
+                    try {
+                        teamIds = JSON.parse(teamBox.dataset.teamIds);
+                    } catch(e) {
+                        console.error("Failed to parse teamIds from dataset", e);
+                    }
+                }
+
+                if (teamIds && Array.isArray(teamIds)) {
+                    filters.team_ids = JSON.stringify(teamIds);
+                }
+            }
+        }
         return filters;
     }
 
@@ -55,45 +70,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
 
-    // Initial metadata request to get available stat columns
+    // Gather variables from flask api
+    try {
+        const response = await fetch('/api/stats/fields');
+        const meta = await response.json();
+        var stat_field_names = meta.stat_field_names || [];
+        var columns_perm = meta.columns_perm || [];
+        var columns_mapping = meta.columns_mapping || {};
+    } catch (error) {
+        console.error("Error fetching stats metadata:", error);
+        var stat_field_names = [];
+        var columns_perm = [];
+        var columns_mapping = {};
+    }
+
+
+    // Initial page load
     const initialFilters = collectFilterData();
     const queryParams = new URLSearchParams(initialFilters);
-    const metaResp = await fetch(`/api/stats?${queryParams.toString()}`);
-    const metaJson = await metaResp.json();
-
-
-    // Store server-provided metadata
-    stat_field_names = metaJson.stat_field_names;
-    columns_mapping = metaJson.columns_mapping;
-    columns_perm = metaJson.columns_perm;
 
 
     // Define core columns that are always shown
     const metaCols = [
-        { 
-            data: "player_name", 
-            title: "Player", 
+        {
+            data: "player_name",
+            title: "Player",
             name: "player_name",
             render: function(data, type, row) {
-                if (type !== 'display') return data;
+                if (type === 'filter') {
+                    // Combine name + alias
+                    let text = `${data} ${row.alias || ''}`;
 
-                // Get country flag
-                let flagHtml = row.country 
-                    ? `<img src="static/img/flags/${row.country.toLowerCase()}.png" 
-                            alt="${row.country}" class="me-1" 
-                            style="width:16px; height:12px;">` 
-                    : '';
+                    // Make a version where 1 → i and i → 1
+                    const altText = text
+                        .replace(/1/g, 'i')    // convert 1 → i
 
-                // Add alias if exists
-                let aliasHtml = (row.alias && row.alias.trim() !== '') 
-                    ? ` <span class="text-muted">(${row.alias})</span>` 
-                    : '';
+                    // Include both in the filter string
+                    return `${text} ${altText}`;
+                }
 
-                return `${flagHtml}${data}${aliasHtml}`;
+                if (type === 'display') {
+                    let flagHtml = row.country 
+                        ? `<img src="static/img/flags/${row.country.toLowerCase()}.png" class="me-1" style="width:16px; height:12px;">`
+                        : '';
+                    let aliasHtml = row.alias ? ` <span class="text-muted">(${row.alias})</span>` : '';
+                    return `${flagHtml}${data}${aliasHtml}`;
+                }
+
+                if (type === 'sort') {
+                    // Remove dashes, underscores, spaces, etc.
+                    return data.replace(/[-_\s]/g, '').toLowerCase();
+                }
+
+                return data; // for filter/search
             }
         },
-        { data: "maps_played", title: "Maps", name: "maps_played" },
-        { data: "map_win_pct", title: "Win %", name: "map_win_pct" }
+        { data: "maps_played", title: "Maps", name: "maps_played", searchable: false},
+        { data: "map_win_pct", title: "Win %", name: "map_win_pct", searchable: false}
     ];
 
 
@@ -107,7 +140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // Sort alphabetically by display name
-    // permCols.sort((a, b) => getName(a).localeCompare(getName(b)));
     hiddenCols.sort((a, b) => getName(a).localeCompare(getName(b)));
 
 
@@ -117,12 +149,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         title: getName(col),
         name: col,
         visible: columns_perm.includes(col),
-        render: function(data, type) {
-            if (type === 'display' || type === 'filter') {
-                const round = columns_mapping[col]?.round ?? 2;
-                return (data === null || data === undefined) ? '' : parseFloat(data).toFixed(round);
+        searchable: false,
+        render: function(data, type, row) {
+            if (data === null || data === undefined) return '';
+
+            const mapping = columns_mapping[col] || {};
+            const round = mapping.round ?? 2;
+            const value = parseFloat(data).toFixed(round);
+
+            if (type === 'display') {
+                // Apply styling if thresholds exist
+                if (mapping.good !== undefined && mapping.bad !== undefined) {
+                    if (parseFloat(data) >= mapping.good) {
+                        return `<span class="text-success fw-bold">${value}</span>`;
+                    } else if (parseFloat(data) <= mapping.bad) {
+                        return `<span class="text-danger fw-bold">${value}</span>`;
+                    }
+                }
+                return value; // normal styling
             }
-            return data;
+
+            // For sort/filter use raw numeric value
+            return parseFloat(data);
         }
     }));
 
@@ -130,89 +178,92 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Combine fixed + dynamic columns
     const allColumns = [...metaCols, ...statsCols];
 
-
     // Initialize the DataTable
     dataTable = $('#stats-data-table').DataTable({
         ajax: {
-            url: `/api/stats?${queryParams.toString()}`, // initial data source
+            url: `/api/stats/data?${queryParams.toString()}`, // initial data source
             dataSrc: 'data'
         },
         columns: allColumns,
         paging: true,
         searching: true,
-        ordering: true,
+        search: {
+            smart: true,
+            regex: false,
+            caseInsensitive: true,
+        },
+        order: [[1, 'desc']], // default sort by Maps played
         info: true,
-        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        lengthMenu: [[25, 50, -1], [25, 50, "All"]],
         scrollX: true,
-        stateSave: true,
         processing: true,
         fixedColumns: {
             start: 1
+        },
+        columnControl: ['orderStatus', 'searchDropdown'],
+        columnDefs: [
+            {   
+                // Target all but first column
+                targets: 0,
+                orderSequence: ["asc", "desc", ""]
+            },
+            {   
+                targets: '_all',
+                orderSequence: ["desc", "asc", ""]
+            },
+            {
+                targets: [0,1],
+                columnControl: ['order']
+            }
+        ],
+        ordering: {
+            indicators: false,
+            handler: true, 
+        },
+        language: {
+            search: "",
+            searchPlaceholder: "Search players"
         }
     });
 
 
-    // Create Dropdown and move it next to the search bar
-    const targetDiv = document.querySelector(
-        '.dt-layout-end'
-    );
-    const dropdown = document.createElement('div');
-    dropdown.className = 'dropdown';
-    dropdown.innerHTML = `
-        <button class="btn btn-secondary dropdown-toggle bi bi-funnel-fill" type="button" id="columnsDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-        </button>
-        <ul class="dropdown-menu p-3" aria-labelledby="columnsDropdown" style="max-height: 500px; overflow-y: auto;">
-            <!-- JS will fill checkboxes here -->
-        </ul>
-    `;
-    targetDiv.appendChild(dropdown);
+    // Add search icon to search input
+    const searchContainer = $('#stats-data-table_wrapper > div:first-child .dt-search');
+    searchContainer.addClass('search-with-icon');
+    $('<i class="bi bi-search search-icon"></i>').prependTo(searchContainer);
 
 
-    // Once DataTable is initialized, build column toggle checkboxes
-    dataTable.on('init.dt', function() {
-        const dropdownMenu = document.querySelector('.dropdown-menu[aria-labelledby="columnsDropdown"]');
-        if (!dropdownMenu) return;
-
-        // Clear existing items
-        dropdownMenu.innerHTML = '';
-
-        // Only toggle columns that are NOT permanently visible
-        let toggleable_cols = stat_field_names.filter(col => !columns_perm.includes(col));
-
-        // Sort alphabetically by display name
-        toggleable_cols.sort((a, b) => getName(a).localeCompare(getName(b)));
-
-        toggleable_cols.forEach(colName => {
-            const isVisible = dataTable.column(`${colName}:name`).visible();
-
-            // Create list item with checkbox + label
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <div class="form-check">
-                    <input class="form-check-input column-toggle" type="checkbox" value="${colName}" id="col_${colName}" ${isVisible ? 'checked' : ''}>
-                    <label class="form-check-label" for="col_${colName}">
-                        ${columns_mapping[colName]?.name || colName}
-                    </label>
-                </div>
-            `;
-            dropdownMenu.appendChild(li);
-        });
-
-        // Wire up checkbox listeners to toggle column visibility
-        document.querySelectorAll('.column-toggle').forEach(cb => {
-            cb.addEventListener('change', e => {
-                const colName = e.target.value;
-                dataTable.column(`${colName}:name`).visible(e.target.checked);
-            });
-        });
+    // Create a Buttons instance
+    new DataTable.Buttons(dataTable, {
+        buttons: [
+            {
+                extend: 'csv',
+                text: "<i class='bi bi-file-earmark-spreadsheet-fill'></i><span class='csv-text'>Export CSV</span>",
+                className: 'csv-btn'
+            }, 
+            {
+                extend: 'colvis',
+                text: '<i class="bi bi-funnel-fill"></i>',
+                columns: ':not(:first-child):not(:nth-child(2))',
+                popoverTitle: 'Toggle column visibility',
+                postfixButtons: ['colvisRestore']
+            }
+        ]
     });
+    dataTable.buttons().container().appendTo('.stats-wrapper #stats-data-table_wrapper > div:first-child .dt-layout-end');
 
 
-    // Apply filters button reloads table data with new filters
-    applyFiltersBtn.addEventListener('click', () => {
+    // Function to apply filters and reload the table
+    function applyAndReloadTable() {
         const filters = collectFilterData();
         const qParams = new URLSearchParams(filters);
-        dataTable.ajax.url(`/api/stats?${qParams.toString()}`).load();
-    });
+        dataTable.ajax.url(`/api/stats/data?${qParams.toString()}`).load();
+    }
+
+    // Apply filters button now uses the reusable function
+    applyFiltersBtn.addEventListener('click', applyAndReloadTable);
+
+    // --- Listen for the custom event from filter_ui.js ---
+    document.addEventListener('filtersCleared', applyAndReloadTable);
 
 });
