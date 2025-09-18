@@ -21,9 +21,19 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  
   width: var(--esea-wrapper-width);
-  margin: 0 auto;
+  
+  margin: 10px auto;
   padding-top: 0;
+
+  border-radius: var(--border-radius);
+
+  background-color: var(--background-light);
+}
+
+#season-content {
+  padding-inline: 10px;
 }
 
 /* === ESEA Season navbar === */
@@ -32,6 +42,7 @@
   height: auto;
   max-height: 200px; 
   object-fit: cover;
+  border-radius: var(--border-radius);
 }
 
 .season-nav-box {
@@ -43,10 +54,10 @@
   bottom: 0;
   left: 0;
 
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--secondary30);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-block: 1px solid rgba(255, 255, 255, 0.2);
+  border-block: 1px solid var(--border);
 }
 
 .season-nav {
@@ -71,7 +82,7 @@
   height: 35px;
   width: max-content;
 
-  border-inline: 1px solid rgba(255, 255, 255, 0.2);
+  border-inline: 1px solid var(--border);
 }
 
 .nav-link {
@@ -86,16 +97,16 @@
 }
 
 .nav-link.active {
-  background-color: var(--primary);
-  color: var(--foreground);
+  background-color: var(--accent);
+  color: var(--text);
 }
 .nav-link.active:hover {
-  background-color: var(--primary);
-  color: var(--foreground);
+  background-color: var(--accent);
+  color: var(--text);
 }
 .nav-link:hover {
   background-color: var(--secondary);
-  color: var(--foreground);
+  color: var(--text);
 }
 
 .nav-link span {

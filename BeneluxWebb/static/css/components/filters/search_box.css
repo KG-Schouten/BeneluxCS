@@ -25,7 +25,7 @@
     padding-left: 30px;
     padding-block: 5px;
 
-    background-color: var(--secondaryBody);
+    background-color: transparent;
     color: var(--text);
     border: 1px solid var(--border);
     font-size: 14px;
@@ -52,7 +52,7 @@
     position: relative;
     max-height: 200px;
     overflow-y: auto;
-    background-color: var(--secondaryBody);
+    background-color: var(--secondary);
     box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.8);
 }
 .sidebar-body .result-box ul {

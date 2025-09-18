@@ -2,7 +2,7 @@
     background-color: var(--navbar-bg);
     backdrop-filter: var(--glass-effect);
     -webkit-backdrop-filter: var(--glass-effect);
-    border-top: 1px solid var(--border-glow);
+    border-top: 1px solid var(--border);
 }
 
 .footer-boxed {
@@ -13,12 +13,12 @@
 
 .footer-boxed a {
     text-decoration: none;
-    color: var(--form-text);
+    color: var(--text);
 }
 
 .footer-boxed a:hover {
     text-decoration: underline;
-    color: var(--primary);
+    color: var(--accent);
 }
 
 .footer-boxed i {
@@ -33,8 +33,7 @@
     height: 2.5rem;
     margin: 0 0.3rem;
     border-radius: 0.5rem;
-    background-color: var(--card-bg-secondary);
-    color: #fff;
+    background-color: var(--secondary);
     font-size: 1.3rem;
     text-decoration: none;
     vertical-align: middle;
@@ -42,10 +41,8 @@
     border: none;
 }
 
-.icon-box:hover {
-    background-color: var(--card-bg-highlight);
-    color: #fff;
-    text-decoration: none;
+.icon-box:hover > i {
+    color: var(--accent);
 }
 
 .icon-box i {
@@ -54,4 +51,11 @@
     margin: 0;
     padding: 0;
     text-align: center;
+}
+
+.contact-links {
+    cursor: default;
+}
+.contact-links span {
+    cursor: text;
 }

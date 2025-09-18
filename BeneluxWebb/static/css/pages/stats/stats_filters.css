@@ -13,54 +13,6 @@
   width: 38px !important;
 }
 
-
-/* === Bootstrap Select === */
-.sidebar-body .bootstrap-select {
-  width: 100% !important;
-}
-
-.sidebar-body .bootstrap-select .btn {
-  background-color: var(--secondary1);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  padding: 3px 5px;
-  width: 100%;
-  text-align: left;
-}
-
-.sidebar-body .bootstrap-select .btn:focus,
-.sidebar-body .bootstrap-select .btn:hover {
-  background-color: var(--btn-bg-hover);
-  border-color: var(--border-hover);
-  box-shadow: none;
-}
-
-/* Dropdown menu */
-.sidebar-body .bootstrap-select .dropdown-menu {
-  background-color: var(--secondary);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  border-radius: 0;
-}
-
-/* Dropdown items */
-.sidebar-body .bootstrap-select .dropdown-item {
-  color: var(--text);
-  padding: 3px 12px;
-}
-
-.sidebar-body .bootstrap-select .dropdown-item:hover {
-  background-color: var(--btn-bg-hover);
-  color: var(--text);
-}
-
-/* Selected item checkmark (if using show-tick) */
-.sidebar-body .bootstrap-select .dropdown-item.active,
-.sidebar-body .bootstrap-select .dropdown-item:active {
-  background-color: var(--btn-bg);
-  color: var(--text);
-}
-
 /* === Team Name Filter === */
 .sidebar-body .team-search {
   display: flex;

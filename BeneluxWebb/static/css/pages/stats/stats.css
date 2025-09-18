@@ -21,6 +21,10 @@
   flex-direction: column;
   justify-content: flex-start;
   width: var(--stats-wrapper-width);
-  margin: 0 auto;
-  padding-top: 10px;
+  margin: 10px auto;
+  
+  background-color: var(--background-light);
+  border-radius: var(--border-radius);
+
+  overflow: hidden;
 }

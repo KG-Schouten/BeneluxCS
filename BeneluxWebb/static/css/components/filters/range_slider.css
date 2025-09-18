@@ -12,7 +12,7 @@
 .range-slider .slider-track {
   height: 100%;
   position: absolute;
-  background-color: var(--btn-bg);
+  background-color: var(--accent);
 }
 .range-slider input {
   position: absolute;
@@ -28,8 +28,8 @@
 .range-slider input[type="range"]::-webkit-slider-thumb {
   width: 25px;
   height: 25px;
-  border: 2px solid var(--btn-text);
-  background-color: var(--btn-bg);
+  border: 2px solid var(--border);
+  background-color: var(--secondary);
   pointer-events: auto;
   cursor: pointer;
   box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.2);
@@ -38,8 +38,8 @@
 .range-slider input[type="range"]::-moz-range-thumb {
   width: 25px;
   height: 25px;
-  border: 2px solid var(--btn-text);
-  background-color: var(--btn-bg);
+  border: 2px solid var(--border);
+  background-color: var(--secondary);
   pointer-events: auto;
   cursor: pointer;
   box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.2);

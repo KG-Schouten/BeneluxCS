@@ -1,5 +1,7 @@
 :root {
     --max-width-content: 1320px;
+    --border-radius: 8px;
+    --border-radius-sm: 4px;
 }
 
 /* === General styling === */
@@ -20,10 +22,10 @@ a {
 }
 
 .highlight-border {
-  border: 2px solid var(--primary) !important;
+  border: 2px solid var(--bnlx) !important;
 }   
 .highlight-text {
-  color: var(--primary) !important;
+  color: var(--bnlx) !important;
 }
 
 .text-success {
@@ -37,6 +39,8 @@ a {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+
+    background-color: var(--background);
 }
 
 .container-fluid {
@@ -64,6 +68,4 @@ a {
 
     min-height: 100vh;
     padding-top: var(--navbar-height);
-
-    background-color: var(--content-bg);
 }

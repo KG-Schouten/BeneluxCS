@@ -272,7 +272,7 @@
                                         {{ map.map_name | replace('de_', '')}}
                                     </div>
                                     <span class="map-badge badge
-                                        {% if map.played == 0 %}bg-secondary{% elif map.winrate >= 50 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if map.played == 0 %}{% elif map.winrate >= 50 %}bg-success{% else %}bg-danger{% endif %}">
                                         {% if map.played == 0 %}
                                             -
                                         {% else %}

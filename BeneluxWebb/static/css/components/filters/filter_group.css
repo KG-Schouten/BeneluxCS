@@ -6,6 +6,13 @@
 .sidebar-body .checkbox__input {
   display: none;
 }
+.sidebar-body .checkbox__input:checked + .checkbox__label {
+  background: var(--secondary);
+  font-weight: 700;
+}
+.sidebar-body .checkbox__input:checked + .checkbox__label:hover {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.2) 0 0);
+}
 
 .sidebar-body .checkbox__label {
   display: block;
@@ -18,24 +25,13 @@
   font-size: 14px;
   font-family: sans-serif;
 
-  color: var(--text);
-  background: var(--secondary1);
-
   cursor: pointer;
   transition: background 0.1s;
   user-select: none;
 }
-
-.sidebar-body .checkbox__label:not(:last-of-type) {
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-body .checkbox__input:checked + .checkbox__label {
-  background: var(--btn-bg);
-  color: var(--btn-text);
-  font-weight: 600;
+.sidebar-body .checkbox__label:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 .sidebar-body .checkbox__label:hover {
-  background: var(--secondary);
-  color: var(--btn-text);
+  background: rgba(0,0,0,.5);
 }

@@ -1,43 +1,25 @@
 /* base/darkmode.css */
 body.dark-mode {
-  /* === General styling === */
   --text: #e0e0e0;
-  --background: #000000;
-  --content-bg: #121212;
+  --background: rgba(23, 28, 74, 1);
+  --background-light: rgba(255, 255, 255, .1);
 
-  --primary: rgba(243, 156, 18, 1);
-  --primary1: rgba(243, 156, 18, .1);
+  --primary: rgba(214, 248, 123, 1);
 
-  --secondary: rgba(3, 173, 171, 1);
-  --secondary1: rgba(3, 173, 171, .1);
-  --secondaryHeader: rgb(1, 38, 38, 1);
-  --secondaryBody: rgb(0, 51, 50, 1);
+  --secondary: rgba(32, 9, 165, 1);
+  --secondary1: rgba(32, 9, 165, .1);
+  --secondary30: rgba(32, 9, 165, .3);
+  --secondary4: rgba(32, 9, 165, .4);
 
-  --accent: rgba(24, 249, 205, 1);
-  --accent1: rgba(24, 249, 205, .1);
+  --accent: rgba(235, 30, 54, 1);
 
-  --border: #444;
-
-  --static: rgba(255, 255, 255, 0.2);
-
-  --foreground: #e0e0e0;
-
+  --bnlx: rgba(243, 156, 18, 1);
+  --border: rgba(255, 255, 255, 0.2);
+  
   /* === Navbar & footer styling === */
   --navbar-shadow: var(--primary);
   --transition-normal: 0.3s ease;
 
-  /* === ESEA styling === */
-  --card-bg: #1e1e1e;
-  --card-bg-secondary: #2c2c2c;
-  --card-bg-highlight: #333;
-  --accent: #888d91;
-  --muted: #8a8a8a;
-  --btn-bg: #555;
-  --btn-text: #ffffff;
-  --btn-hover-bg: #666;
-  --form-bg: #333;
-  --form-text: #ddd;
-  --form-border: #555;
   --logo-filter: invert(1) brightness(1.2) contrast(1.1);
 
   /* === Table styling === */

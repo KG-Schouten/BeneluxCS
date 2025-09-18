@@ -7,32 +7,33 @@
 .collapse-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
+  gap: 8px;
 
   width: 100%;
   height: auto;
 
-  border-top: 2px solid var(--secondary);
+  border-top: 2px solid var(--border);
   
   margin-left: 0;
   margin-right: 0;
-  margin-top: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
 }
 
 
 /* === Details box === */
 .details-box {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  overflow: hidden;
 
-    background-color: var(--card-bg-secondary);
+  background-color: rgba(255,255,255,0.1);
+  border-radius: var(--border-radius);
 
-    width: 100%;
-    max-width: 500px;
-    
-    padding: 5px;
+  width: 100%;
+  max-width: 500px;
 }
 
 .details-box-header {
@@ -42,13 +43,11 @@
   justify-content: center;
   align-items: center;
 
-  color: var(--form-text);
-  background-color: var(--card-bg-highlight);
+  background-color: rgba(0,0,0,0.5);
+  border-bottom: 2px solid var(--border);
+
   font-size: 1.2rem;
   font-weight: bold;
-
-  border-bottom: 2px solid var(--secondary);
-
 }
 
 /* === Match box general styling */
@@ -64,8 +63,6 @@
   padding: 5px;
   gap: 2px;
 
-  color: var(--form-text);
-  background-color: var(--card-bg-secondary);
   font-size: 1rem;
 }
 
@@ -76,18 +73,16 @@
   box-sizing: border-box;
 
   gap: 2px;
+  padding-inline: 8px;
 
-  border: 1px solid var(--foreground);  
-  border-radius: 2px;         
-  background-color: var(--btn-bg);
+  border: 1px solid var(--border);  
+  border-radius: var(--border-radius);         
+  background-color: var(--secondary30);
 
   text-decoration: none;
-  color: var(--btn-text);
 }
 .match-info-box:hover {
-  background-color: var(--btn-hover-bg);
-  color: var(--btn-text);
-
+  background-color: rgba(0,0,0,0.3);
   cursor: pointer;
 }
 
@@ -206,26 +201,23 @@
   height: auto;
 
   padding: 5px;
-  gap: 5px;
+  gap: 2px;
 
-  color: var(--form-text);
-  background-color: var(--card-bg-secondary);
   font-size: 1rem;
 }
 .map-stat-box {
-  padding: 2px;
+  padding: 5px;
 
   font-size: clamp(0.6rem, -0.3662rem + 1.5584vw, 0.9rem);
   gap: 2px;
 
   text-align: center;
 
-  border: 1px solid var(--foreground);  
-  border-radius: 2px;         
-  background-color: var(--btn-bg);
+  border: 1px solid var(--border);  
+  border-radius: var(--border-radius);         
+  background-color: var(--secondary30);
 
   text-decoration: none;
-  color: var(--btn-text);
 }
 .map-stat-box img {
   width: 80%;
@@ -244,6 +236,7 @@
 }
 .map-badge {
   width: 100%;
+  background-color: var(--secondary)
 }
 
 
