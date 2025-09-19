@@ -5,14 +5,16 @@
 }
 
 .sidebar-body .bootstrap-select .btn {
-    position: relative;
-    box-sizing: border-box;
-    background-color: transparent;
-    border: none;
-    border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
-    padding: 6px 10px;
-    width: 100%;
-    text-align: left;
+  position: relative;
+  box-sizing: border-box;
+  background-color: transparent;
+  color: var(--text);
+  font-size: 14px;
+  border: none;
+  border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
+  padding: 6px 10px;
+  width: 100%;
+  text-align: left;
 }
 
 .sidebar-body .bootstrap-select .btn:focus,
@@ -23,22 +25,30 @@
 }
 
 /* Dropdown menu */
-.sidebar-body .bootstrap-select .dropdown-menu {
-    position: relative;
-  background-color: var(--secondary);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  border-radius: 0;
+.sidebar-body .bootstrap-select .dropdown-menu.show {
+  background-color: var(--background);
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+  font-size: 14px;
+  transform: translate(0px,36px) !important;
+  border: unset;
+  border-radius: 0px 0px var(--border-radius) var(--border-radius);
 }
 
 /* Dropdown items */
-.sidebar-body .bootstrap-select .dropdown-item {
-  color: var(--text);
-  padding: 3px 12px;
+.dropdown-menu.inner.show {
+  border-top: 1px solid var(--border);
 }
 
-.sidebar-body .bootstrap-select .dropdown-item:hover {
-  background-color: var(--btn-bg-hover);
+.dropdown-menu.inner.show li .dropdown-item {
+  text-align: center;
   color: var(--text);
+  padding-block: 3px;
+}
+.dropdown-menu.inner.show li .dropdown-item .text {
+  margin-right: 0;
+}
+.dropdown-menu.inner.show li .dropdown-item:hover {
+  background-color: rgba(0,0,0,.2);
 }
 
 /* Selected item checkmark (if using show-tick) */
@@ -46,4 +56,29 @@
 .sidebar-body .bootstrap-select .dropdown-item:active {
   background-color: var(--btn-bg);
   color: var(--text);
+}
+
+/* Dropdown select/deselect all */
+.bs-actionsbox {
+  padding: 0
+}
+.btn-group.btn-group-sm {
+  display: flex;
+}
+
+.actions-btn.btn.btn-light {
+  border-radius: var(--border-radius-sm) !important;
+  padding: 4px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text);
+  margin: 4px;
+  background-color: rgba(255,255,255,.1);
+  text-wrap: nowrap;
+}
+.actions-btn.bs-select-all.btn.btn-light {
+  border: 1px solid var(--primary);
+}
+.actions-btn.bs-deselect-all.btn.btn-light {
+  border: 1px solid var(--accent);
 }

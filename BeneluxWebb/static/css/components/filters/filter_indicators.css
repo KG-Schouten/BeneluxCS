@@ -1,15 +1,16 @@
 .filter-indicator {
-    background-color: var(--btn-bg);
-    color: var(--btn-text);
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 12px;
-    font-weight: bold;
+    background-color: var(--accent);
+    color: var(--text); 
+    border-radius: 50%; 
+    width: 20px; 
+    height: 20px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    font-size: 12px; 
+    font-weight: bold; 
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
 }
 
 .clear-filter,

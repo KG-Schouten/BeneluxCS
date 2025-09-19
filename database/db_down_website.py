@@ -1130,11 +1130,12 @@ def gather_filter_teams():
                     t.team_name,
                     t.team_id,
                     t.event_id,
-                    t.avatar,
+                    tm.avatar,
                     e.event_start,
                     ROW_NUMBER() OVER (PARTITION BY t.team_name ORDER BY e.event_start DESC) AS rn
                 FROM teams_benelux t
                 JOIN events e ON t.event_id = e.event_id
+                JOIN teams tm ON t.team_id = tm.team_id
             )
             SELECT
                 team_name,

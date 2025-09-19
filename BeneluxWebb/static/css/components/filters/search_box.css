@@ -1,5 +1,5 @@
 :root {
-    --search-box-height: 25px;
+    --search-box-height: 33px;
 }
 
 .sidebar-body .search-box {
@@ -26,8 +26,8 @@
     padding-block: 5px;
 
     background-color: transparent;
+    border: none;
     color: var(--text);
-    border: 1px solid var(--border);
     font-size: 14px;
 }
 .sidebar-body .search-box input:focus {
@@ -36,7 +36,7 @@
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
 }
 .sidebar-body .search-box input:hover {
-    border: 1px solid var(--primary);
+    background-color: rgba(0,0,0,0.5);
 }
 
 .sidebar-body .search-box i {
@@ -48,12 +48,15 @@
     pointer-events: none;
 }
 
+
 .sidebar-body .result-box {
     position: relative;
     max-height: 200px;
     overflow-y: auto;
-    background-color: var(--secondary);
+    background-color: var(--background);
     box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.8);
+
+    font-size: 14px;
 }
 .sidebar-body .result-box ul {
     border-top: 1px solid var(--border);
