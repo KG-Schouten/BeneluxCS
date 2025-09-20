@@ -229,15 +229,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     // Page length select
-    // 1. Move the container to its new home inside the DataTables wrapper.
     $('.page-length-selector').appendTo(
         '#stats-data-table_wrapper .dt-layout-start'
     );
-
-    // 2. NOW initialize the bootstrap-select plugin on the element in its new location.
     $('#pageLengthSelect').selectpicker();
-
-    // 3. Attach the event listener.
     $('#pageLengthSelect').on('changed.bs.select', function () {
         const val = parseInt($(this).val(), 10);
         dataTable.page.len(val).draw();
