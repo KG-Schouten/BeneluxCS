@@ -14,17 +14,17 @@
   justify-content: center;
   width: 100%;
   min-height: 100vh;
+  flex-shrink: 0;
 }
 
 .stats-wrapper {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  flex-shrink: 0;
   width: var(--stats-wrapper-width);
   margin: 10px auto;
-  
   background-color: var(--background-light);
   border-radius: var(--border-radius);
-
   overflow: hidden;
 }

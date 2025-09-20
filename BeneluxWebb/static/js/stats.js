@@ -186,6 +186,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         columns: allColumns,
         paging: true,
+        lengthChange: false,
+        lengthMenu: [[25, 50, -1], [25, 50, "All"]],
+        pageLength: 25, 
         searching: true,
         search: {
             smart: true,
@@ -194,7 +197,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         order: [[1, 'desc']], // default sort by Maps played
         info: true,
-        lengthMenu: [[25, 50, -1], [25, 50, "All"]],
         scrollX: true,
         processing: true,
         fixedColumns: {
@@ -224,6 +226,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             search: "",
             searchPlaceholder: "Search players"
         }
+    });
+    
+    // Page length select
+    // 1. Move the container to its new home inside the DataTables wrapper.
+    $('.page-length-selector').appendTo(
+        '#stats-data-table_wrapper .dt-layout-start'
+    );
+
+    // 2. NOW initialize the bootstrap-select plugin on the element in its new location.
+    $('#pageLengthSelect').selectpicker();
+
+    // 3. Attach the event listener.
+    $('#pageLengthSelect').on('changed.bs.select', function () {
+        const val = parseInt($(this).val(), 10);
+        dataTable.page.len(val).draw();
     });
 
 

@@ -9,7 +9,6 @@
 #stats-data-table_wrapper {
   width: 100%;
   box-sizing: border-box;
-  padding-inline: 5px;
 }
 
 #stats-data-table_wrapper > .row {
@@ -17,17 +16,17 @@
 }
 #stats-data-table_wrapper > div {
   padding: 0 !important;
-  background-color: var(--secondary);
 }
 #stats-data-table_wrapper .dt-layout-table .dt-layout-full {
   padding-left: 0 !important;
   padding-right: 0 !important;
+  background-color: var(--secondary1);
 }
 
 /* === Top/Bottom Table Filter Container Styling === */
 #stats-data-table_wrapper .dt-layout-start,
 #stats-data-table_wrapper .dt-layout-end {
-  background-color: var(--secondary);
+  background-color: transparent;
   padding: 8px;
   border-radius: 4px;
 }
@@ -38,11 +37,16 @@
   width: 100% !important;
 }
 /* Header cells */
+.dt-scroll-head {
+  background-color: rgba(0,0,0,.5);
+}
+
 #stats-data-table_wrapper table.dataTable thead td {
-  background-color: var(--secondaryHeader);
+  background-color: transparent;
   color: var(--text) !important;
   border-bottom: 1px solid var(--border);
   font-weight: bold;
+  padding-inline: 8px;
 }
 #stats-data-table_wrapper table.dataTable thead td:first-child {
   text-align: left;
@@ -55,6 +59,8 @@
   outline-offset: -2px;
   cursor: pointer;
 }
+
+
 
 /* Body cells */
 #stats-data-table_wrapper table.dataTable tbody td {
@@ -71,13 +77,14 @@
   border-right: 1px solid var(--border) !important;
 }
 
+
 /* === Search Bar Styling === */
 #stats-data-table_wrapper .dt-search label {
   font-size: var(--button-font-size);
   color: var(--text);
 }
 #stats-data-table_wrapper .dt-search input {
-  background-color: var(--secondaryBody);
+  background-color: transparent;
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--button-border-radius);
@@ -105,6 +112,43 @@
   padding-left: 32px !important;
 }
 
+/* === Page entries styling === */
+.page-length-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-length-selector .bootstrap-select .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  background-color: var(--secondaryBody);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* Dropdown menu */
+.page-length-selector .dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  background-color: var(--background);
+}
+
+/* Items */
+.page-length-selector .dropdown-menu li a {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+/* Hover effect */
+.page-length-selector .dropdown-menu li a:hover {
+  background-color: var(--primary);
+  color: var(--text);
+}
+
+
 
 /* === Button styling === */
 #stats-data-table_wrapper .dt-buttons {
@@ -113,10 +157,10 @@
   margin-left: 8px !important;
 }
 #stats-data-table_wrapper .dt-buttons button {
-  background-color: var(--secondaryBody);
+  background-color: transparent;
   color: var(--text);
   border: none;
-  border-radius: var(--button-border-radius);
+  border-radius: var(--border-radius-sm);
   height: var(--button-height);
   width: auto;
   padding: var(--button-padding);
