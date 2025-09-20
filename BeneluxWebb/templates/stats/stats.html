@@ -139,7 +139,13 @@
     <div class="stats-wrapper">
         <!-- Page selector - moved outside the table -->
         <div class="page-length-selector">
-            <select id="pageLengthSelect" class="selectpicker" data-width="fit"></select>
+            <select id="pageLengthSelect"
+                    class="selectpicker"
+                    data-width="fit">
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="-1">All</option>
+            </select>
             <label for="pageLengthSelect" class="form-label me-2">entries per page</label>
         </div>
         

@@ -229,11 +229,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     // Page length select
-    $('.page-length-selector').appendTo(
-        '#stats-data-table_wrapper .dt-layout-start'
+    const pageLengthContainer = $('.page-length-selector');
+    const pageLengthSelect = $('#pageLengthSelect');
+    const lengthMenu = dataTable.settings()[0].aLengthMenu; // Get from DataTable settings
+
+    // Populate the select with options from DataTables config
+    lengthMenu[0].forEach((value, i) => {
+        const text = lengthMenu[1][i];
+        pageLengthSelect.append(new Option(text, value));
+    });
+
+    // Move the container and then initialize selectpicker
+    pageLengthContainer.appendTo(
+        $('#stats-data-table_wrapper > div:first-child .dt-layout-start').first()
     );
-    $('#pageLengthSelect').selectpicker();
-    $('#pageLengthSelect').on('changed.bs.select', function () {
+    pageLengthSelect.selectpicker();
+
+    // Event listener for when the value changes
+    pageLengthSelect.on('changed.bs.select', function () {
         const val = parseInt($(this).val(), 10);
         dataTable.page.len(val).draw();
     });

@@ -118,6 +118,9 @@
   align-items: center;
   gap: 8px;
 }
+.page-length-selector .form-label.me-2 {
+  margin: 0 !important;
+}
 
 .page-length-selector .bootstrap-select .btn {
   border-radius: 8px;
