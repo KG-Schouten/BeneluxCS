@@ -1,6 +1,12 @@
 document.addEventListener('DOMContentLoaded', function () {
     const filterContainers = document.querySelectorAll('.filter-container');
+    const applyFiltersBtn = document.querySelector('.apply-button');
     const clearAllButton = document.querySelector('.clear-all-filters');
+
+    // Enable accordion behavior for filter headers
+    document.querySelectorAll('.filter-header').forEach(header => {
+        header.addEventListener('click', () => header.parentElement.classList.toggle('open'));
+    });
 
     function getSelectedCount(container) {
         const name = container.dataset.filterName;

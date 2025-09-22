@@ -1,74 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Cache DOM references and variables
     const applyFiltersBtn = document.querySelector('.apply-button');
-    let dataTable = null;         // will hold the DataTable instance
-
-    // Helper function: gather all selected filters into an object
-    function collectFilterData() {
-        const filters = {};
-
-        // Collect checkbox groups
-        const events = Array.from(document.querySelectorAll('input[name="events"]:checked')).map(el => el.value);
-        if (events.length) filters.events = events.join(',');
-
-        const countries = Array.from(document.querySelectorAll('input[name="countries"]:checked')).map(el => el.value);
-        if (countries.length) filters.countries = countries.join(',');
-
-        const seasons = $('#seasons-select').val() || [];
-        if (seasons.length) filters.seasons = seasons.join(',');
-
-        const divisions = Array.from(document.querySelectorAll('input[name="divisions"]:checked')).map(el => el.value);
-        if (divisions.length) filters.divisions = divisions.join(',');
-
-        const stages = Array.from(document.querySelectorAll('input[name="stages"]:checked')).map(el => el.value);
-        if (stages.length) filters.stages = stages.join(',');
-
-        // Handle timestamp → convert label into start/end dates
-        const timestampOption = document.querySelector('input[name="timestamp"]:checked');
-        if (timestampOption) {
-            const range = getDateRange(timestampOption.value);
-            if (range) {
-                filters.start_date = range.start;
-                filters.end_date = range.end;
-            }
-        }
-
-        // Min/max maps filter
-        const minVal = document.querySelector('.min-val');
-        const maxVal = document.querySelector('.max-val');
-        if (minVal && minVal.value !== minVal.min) filters.min_maps = minVal.value;
-        if (maxVal && maxVal.value !== maxVal.max) filters.max_maps = maxVal.value;
-
-        // Team search
-        const teamBoxWrapper = document.querySelector('.search-box[data-search-name="teams"]');
-        if (teamBoxWrapper) {
-            const teamBox = teamBoxWrapper.querySelector('input[type="text"]');
-            if (teamBox && teamBox.value.trim() !== "") {
-                filters.team_name = teamBox.value.trim();
-
-                let teamIds = teamBox.teamIds;
-                if (!teamIds && teamBox.dataset.teamIds) {
-                    try {
-                        teamIds = JSON.parse(teamBox.dataset.teamIds);
-                    } catch(e) {
-                        console.error("Failed to parse teamIds from dataset", e);
-                    }
-                }
-
-                if (teamIds && Array.isArray(teamIds)) {
-                    filters.team_ids = JSON.stringify(teamIds);
-                }
-            }
-        }
-        return filters;
-    }
-
-
-    // Enable accordion behavior for filter headers
-    document.querySelectorAll('.filter-header').forEach(header => {
-        header.addEventListener('click', () => header.parentElement.classList.toggle('open'));
-    });
-
+    let dataTable = null; 
 
     // Gather variables from flask api
     try {
@@ -111,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (type === 'display') {
                     let flagHtml = row.country 
-                        ? `<img src="static/img/flags/${row.country.toLowerCase()}.png" class="me-1" style="width:16px; height:12px;">`
+                        ? `<img src="/static/img/flags/${row.country.toLowerCase()}.png" class="me-1" style="width:16px; height:12px;">`
                         : '';
                     let aliasHtml = row.alias ? ` <span class="text-muted">(${row.alias})</span>` : '';
                     return `${flagHtml}${data}${aliasHtml}`;
@@ -129,19 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         { data: "map_win_pct", title: "Win %", name: "map_win_pct", searchable: false}
     ];
 
-
     // Split stat fields into permanent + hidden groups
     const permCols = stat_field_names.filter(col => columns_perm.includes(col));
     const hiddenCols = stat_field_names.filter(col => !columns_perm.includes(col));
 
-
     // Helper: get display name or fallback to col
     const getName = col => columns_mapping[col]?.name || col;
-
-
     // Sort alphabetically by display name
     hiddenCols.sort((a, b) => getName(a).localeCompare(getName(b)));
-
 
     // Build column objects
     const statsCols = [...permCols, ...hiddenCols].map(col => ({
@@ -174,9 +101,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
 
-
     // Combine fixed + dynamic columns
     const allColumns = [...metaCols, ...statsCols];
+
 
     // Initialize the DataTable
     dataTable = $('#stats-data-table').DataTable({
@@ -227,7 +154,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchPlaceholder: "Search players"
         }
     });
-    
+
+
     // Page length select
     const pageLengthContainer = $('.page-length-selector');
     const pageLengthSelect = $('#pageLengthSelect');
@@ -285,10 +213,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         dataTable.ajax.url(`/api/stats/data?${qParams.toString()}`).load();
     }
 
-    // Apply filters button now uses the reusable function
     applyFiltersBtn.addEventListener('click', applyAndReloadTable);
 
     // --- Listen for the custom event from filter_ui.js ---
     document.addEventListener('filtersCleared', applyAndReloadTable);
 
-});
+})
