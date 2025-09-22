@@ -1,6 +1,7 @@
 /* base/darkmode.css */
 body.dark-mode {
   --text: #e0e0e0;
+  --text-muted: #a0a0a0;
   --background: rgba(23, 28, 74, 1);
   --background-light: rgba(255, 255, 255, .1);
 
