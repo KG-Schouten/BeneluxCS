@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+
+{% import "macros/filters/range_slider.html" as sliders %}
+{% import "macros/filters/filter_group.html" as filter_group %}
+{% import "macros/filters/select_picker.html" as select_picker %}
+{% import "macros/filters/countries_filter.html" as countries_filter %}
+{% import "macros/filters/search_box.html" as search_box %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/sidebar.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/range_slider.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/date_filter.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/filter_group.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/filter_indicators.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/flags_filter.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/search_box.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/select_picker.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats/stats.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats/stats_filters.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats/stats_table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="stats-page-wrapper">
+
+    <div class="sidebar left">
+        <div class="sidebar-content">
+            <div class="sidebar-header">
+                <span>Navigation</span>
+            </div>
+            <div class="sidebar-body">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/stats/player">Player Stats</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/stats/elo">Elo Leaderboard</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        {% block sidebar_extra %} {% endblock %}
+
+    </div>
+
+    <div class="stats-wrapper">
+        {% block stats_content %} {% endblock %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ super() }}
+
+<!-- Stats.js -->
+<script src="{{ url_for('static', filename='js/datetime.js') }}"></script>
+
+<script src="{{ url_for('static', filename='js/filters/filter_ui.js') }}"></script>
+<script src="{{ url_for('static', filename='js/filters/filter_utils.js') }}"></script>
+
+<script src="{{ url_for('static', filename='js/stats/stats_player.js') }}"></script>
+
+{% endblock %}

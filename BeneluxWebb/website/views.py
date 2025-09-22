@@ -8,9 +8,12 @@ views = Blueprint('views', __name__, template_folder='../templates')
 def home_redirect():
     return redirect(url_for('views.esea'))
 
-
 @views.route('/stats')
-def stats():
+def stats_redirect():
+    return redirect(url_for('views.stats_player'))
+
+@views.route('/stats/player')
+def stats_player():
     from database.db_down_website import gather_filter_options
 
     try:
@@ -19,7 +22,7 @@ def stats():
         
         # Full page render
         return render_template(
-            "stats/stats.html",
+            "stats/stats_player.html",
             filter_options=filter_options
         )
 
@@ -38,7 +41,7 @@ def stats():
             return error_html
 
         return render_template(
-            "stats/stats.html",
+            "stats/stats_player.html",
             filter_options={},
             error=str(e)
         )
@@ -88,9 +91,9 @@ def api_stats_data():
         stage_names = request.args.get('stages', '').split(',') if request.args.get('stages') else []
         start_date = request.args.get('start_date') # YYYY-MM-DD
         end_date = request.args.get('end_date')     # YYYY-MM-DD
-        min_maps = request.args.get('min_maps', type=int)
-        max_maps = request.args.get('max_maps', type=int)
-        team_ids = request.args.get('team_ids', [])
+        min_maps = request.args.get('min_maps_played', type=int)
+        max_maps = request.args.get('max_maps_played', type=int)
+        team_ids = request.args.get('teams_ids', [])
         
         data = gather_player_stats_esea(
             events=events,
@@ -115,6 +118,12 @@ def api_stats_data():
             "data": [],
             "error": str(e)
         })
+
+@views.route('/stats/elo')
+def stats_elo():
+    return render_template(
+        'stats/stats_elo.html'
+    )
 
 
 @views.route('/esea')
