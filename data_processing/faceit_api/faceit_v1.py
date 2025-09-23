@@ -53,6 +53,14 @@ class FaceitData_v1:
             return await check_response(response)
     
     
+    async def match_details_v2(self, match_id: str) -> dict | int:
+        """ Retrieve match details from Faceit """
+        
+        URL = f'{self.base_url}/match/v2/match/{match_id}'
+        
+        return await self.dispatcher.run(self._get, URL)
+    
+    
     async def league_details(self) -> dict | int:
         """ Retrieve league details from Faceit """
         
@@ -208,6 +216,14 @@ class FaceitData_v1:
         URL = f"https://www.faceit.com/api/team-leagues/v1/users/{player_id}/profile/leagues/info"
         
         return await self.dispatcher.run(self._get, URL)
+    
+    async def player_match_stats_history(self, player_id: str, page: int=0, return_items: int=20):
+        """ Retrieve match stats history for a player """
+        
+        URL = f"{self.base_url}/stats/v1/stats/time/users/{player_id}/games/cs2?page={page}&size={return_items}"
+        
+        return await self.dispatcher.run(self._get, URL)
+    
     
     async def championship_details(self, championship_id: str) -> dict | int:
         """
