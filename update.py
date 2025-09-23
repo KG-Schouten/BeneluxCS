@@ -495,6 +495,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    # asyncio.run(main())
-    asyncio.run(update_matches())
-    asyncio.run(update_esea_teams_benelux())
+    asyncio.run(main())
+    # asyncio.run(update_matches())
+    # asyncio.run(update_esea_teams_benelux())
