@@ -100,7 +100,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Get filter options from data attribute
         const options = JSON.parse(resultBox.dataset.searchOptions || "[]");
-        console.log("Options for", box.dataset.searchName, options);
 
         inputBox.addEventListener("keyup", () => {
             const input = inputBox.value.trim().toLowerCase();
