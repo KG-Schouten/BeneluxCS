@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from psycopg2.extras import RealDictCursor
 
 from database.db_manage import start_database, close_database
-from database.db_down import fuzzy_search, get_player_aliases
+from database.db_down import get_player_aliases
 from data_processing.faceit_api.logging_config import function_logger
 
 # =============================
@@ -916,149 +916,8 @@ def get_upcoming_matches() -> tuple:
         close_database(db)
 
 # =============================
-#       Leaderboard Page
+#   Stats Page
 # =============================
-def gather_leaderboard(**kwargs) -> list:
-    """ Gathers the leaderboard from the database with optional filtering and includes aliases """
-    countries = kwargs.get('countries', None)
-    search = kwargs.get('search', '').strip()
-    min_elo = kwargs.get('min_elo', 0)
-    max_elo = kwargs.get('max_elo', None)
-
-    db, cursor = start_database()
-    try:
-        # Build base query with all filters applied at database level for better performance
-        query = """
-            SELECT 
-                p.player_id, 
-                p.player_name,
-                COALESCE(pc.country, p.country) AS country,
-                p.avatar, 
-                p.faceit_elo, 
-                p.faceit_level,
-                ROW_NUMBER() OVER (ORDER BY p.faceit_elo DESC) as rank
-            FROM players p
-            LEFT JOIN players_country pc ON p.player_id = pc.player_id
-        """
-
-        conditions = []
-        params = []
-
-        if countries:
-            placeholders = ', '.join(['%s'] * len(countries))
-            conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
-            params.extend(countries)
-            params.extend(countries)
-            # Apply 2000 elo threshold only when countries filter is active
-            conditions.append("p.faceit_elo > %s")
-            params.append(2000)
-
-        # Apply min/max elo filters at database level
-        if min_elo is not None and min_elo > 0:
-            conditions.append("p.faceit_elo >= %s")
-            params.append(min_elo)
-
-        if max_elo is not None:
-            conditions.append("p.faceit_elo <= %s")
-            params.append(max_elo)
-
-        # Apply search filter at database level using PostgreSQL's ILIKE for case-insensitive search
-        if search:
-            conditions.append("p.player_name ILIKE %s")
-            params.append(f"%{search}%")
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-        
-        query += " ORDER BY p.faceit_elo DESC"
-
-        # Execute query directly with cursor for better control
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        
-        # Convert to list of dictionaries
-        columns = ['player_id', 'player_name', 'country', 'avatar', 'faceit_elo', 'faceit_level', 'rank']
-        players_list = []
-        
-        for i, row in enumerate(rows, 1):
-            player_dict = dict(zip(columns, row))
-            # Override rank with sequential numbering for filtered results
-            player_dict['index'] = i
-            players_list.append(player_dict)
-
-        # If we have a search term and didn't find exact matches, try fuzzy search
-        if search and not players_list:
-            # Fallback: get all players and do fuzzy search in Python
-            fallback_query = """
-                SELECT 
-                    p.player_id, 
-                    p.player_name,
-                    COALESCE(pc.country, p.country) AS country,
-                    p.avatar, 
-                    p.faceit_elo, 
-                    p.faceit_level
-                FROM players p
-                LEFT JOIN players_country pc ON p.player_id = pc.player_id
-            """
-            
-            fallback_conditions = []
-            fallback_params = []
-            
-            if countries:
-                placeholders = ', '.join(['%s'] * len(countries))
-                fallback_conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
-                fallback_params.extend(countries)
-                fallback_params.extend(countries)
-                fallback_conditions.append("p.faceit_elo > %s")
-                fallback_params.append(2000)
-
-            if min_elo is not None and min_elo > 0:
-                fallback_conditions.append("p.faceit_elo >= %s")
-                fallback_params.append(min_elo)
-
-            if max_elo is not None:
-                fallback_conditions.append("p.faceit_elo <= %s")
-                fallback_params.append(max_elo)
-
-            if fallback_conditions:
-                fallback_query += " WHERE " + " AND ".join(fallback_conditions)
-            
-            fallback_query += " ORDER BY p.faceit_elo DESC"
-            
-            cursor.execute(fallback_query, fallback_params)
-            fallback_rows = cursor.fetchall()
-            
-            # Apply fuzzy search
-            all_names = [row[1] for row in fallback_rows]  # player_name is at index 1
-            matched_names = fuzzy_search(search, all_names, limit=len(all_names), threshold=60)
-            
-            # Filter results
-            for i, row in enumerate(fallback_rows, 1):
-                if row[1] in matched_names:  # player_name
-                    player_dict = dict(zip(columns[:-1], row))  # exclude rank column
-                    player_dict['index'] = i
-                    players_list.append(player_dict)
-
-        # Fetch aliases only for the players in this leaderboard
-        if players_list:
-            player_ids = [p['player_id'] for p in players_list]
-            _, aliases = get_player_aliases(cursor, player_ids=player_ids)
-            # Add aliases to each player
-            for player in players_list:
-                player['aliases'] = aliases.get(player['player_id'], '')
-
-        return players_list
-
-    except Exception as e:
-        function_logger.error(f"Error gathering players: {e}", exc_info=True)
-        raise
-
-    finally:
-        close_database(db)
-
-# =============================
-#       Stats Page
-# =============================     
 def gather_filter_options():
     db, cursor = start_database()
     
@@ -1186,6 +1045,117 @@ def gather_filter_teams():
     finally:
         close_database(db)
 
+
+# =============================
+#    Stats ELO Leaderboard Page
+# =============================
+def gather_elo_ranges() -> list:
+    """ Gathers the ELO ranges from the database """
+    db, cursor = start_database()
+    try:
+        cursor.execute("""
+            SELECT DISTINCT faceit_elo
+            FROM players
+            WHERE faceit_elo IS NOT NULL
+            ORDER BY faceit_elo;
+        """)
+        rows = cursor.fetchall()
+        elo_range = [rows[0][0], rows[-1][0]] if rows else []
+        print(elo_range)
+        return elo_range
+    except Exception as e:
+        function_logger.error(f"Error gathering ELO ranges: {e}", exc_info=True)
+        return []
+    finally:
+        close_database(db)
+
+def gather_elo_leaderboard(
+    countries=None
+    ) -> list:
+    db, cursor = start_database()
+    
+    try:
+        params = []
+        conditions = []
+        if not countries:
+            countries = ['nl','be','lu']
+        
+        if countries:
+            placeholders = ','.join(['%s'] * len(countries))
+            conditions.append(f"(pc.country IN ({placeholders}) OR (pc.country IS NULL AND p.country IN ({placeholders})))")
+            params.extend(countries)
+            params.extend(countries)
+        
+        # Create the WHERE clause
+        where_clause = f"AND {' AND '.join(conditions)}" if conditions else ""
+        
+        query = f"""
+            SELECT
+                el.player_id,
+                el.faceit_elo,
+                el.date,
+                p.player_name,
+                p.avatar,
+                COALESCE(pc.country, p.country) AS country
+            FROM elo_leaderboard_daily el
+            JOIN players p ON el.player_id = p.player_id
+            LEFT JOIN players_country pc ON p.player_id = pc.player_id
+            WHERE el.date >= CURRENT_DATE - INTERVAL '7 days'
+            {where_clause}           
+        """
+        
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        df = pd.DataFrame(rows, columns=columns)
+        df = df.sort_values(["player_id", "date"])
+        
+        df["elo_change"] = df.groupby("player_id")["faceit_elo"].diff()
+        df["elo_change"] = df["elo_change"].fillna(0).astype(int)
+        
+        df["rank"] = df.groupby("date")["faceit_elo"].rank(method="first", ascending=False)
+        df["rank_change"] = df.groupby("player_id")["rank"].diff() * -1
+        df["rank_change"] = df["rank_change"].fillna(0).astype(int)
+        
+        official_names, aliases = get_player_aliases(cursor)
+        
+        output = []
+        for player_id, group in df.groupby("player_id"):
+            group = group.sort_values("date", ascending=False)
+            history = []
+            for _, row in group.iterrows():
+                history.append({
+                    "date": row["date"].isoformat() if isinstance(row["date"], (pd.Timestamp, datetime)) else str(row["date"]),
+                    "faceit_elo": int(row["faceit_elo"]),  # ensure native int
+                    "elo_change": int(row["elo_change"]) if pd.notna(row["elo_change"]) else 0,
+                    "rank": int(row["rank"]) if pd.notna(row["rank"]) else None,
+                    "rank_change": int(row["rank_change"]) if pd.notna(row["rank_change"]) else 0
+                })
+            
+            latest = group.iloc[0]
+            
+            output.append({
+                "player_id": str(player_id),  # ensure native int
+                "player_name": str(latest["player_name"]),
+                "avatar": str(latest["avatar"]) if latest["avatar"] else "",
+                "alias": str(aliases.get(player_id, '')),
+                "country": str(latest["country"]),
+                "faceit_elo": int(latest["faceit_elo"]),
+                "rank": int(latest["rank"]) if pd.notna(latest["rank"]) else None,
+                "history": history
+            })
+        
+        return output
+        
+    except Exception as e:
+        function_logger.error(f"Error gathering ELO leaderboard: {e}", exc_info=True)
+        return []
+    finally:
+        close_database(db)
+
+# =============================
+#       Stats Player Page
+# =============================     
 def gather_stat_table_columns():
     db, cursor = start_database()
     
