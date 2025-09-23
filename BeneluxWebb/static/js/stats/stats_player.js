@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Gather variables from flask api
     try {
-        const response = await fetch('/api/stats/fields');
+        const response = await fetch('/api/stats/player/fields');
         const meta = await response.json();
         var stat_field_names = meta.stat_field_names || [];
         var columns_perm = meta.columns_perm || [];
@@ -106,9 +106,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // Initialize the DataTable
-    dataTable = $('#stats-data-table').DataTable({
+    dataTable = $('#stats-player-data-table').DataTable({
         ajax: {
-            url: `/api/stats/data?${queryParams.toString()}`, // initial data source
+            url: `/api/stats/player/data?${queryParams.toString()}`, // initial data source
             dataSrc: 'data'
         },
         columns: allColumns,
@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Move the container and then initialize selectpicker
     pageLengthContainer.appendTo(
-        $('#stats-data-table_wrapper > div:first-child .dt-layout-start').first()
+        $('#stats-player-data-table_wrapper > div:first-child .dt-layout-start').first()
     );
     pageLengthSelect.selectpicker();
 
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // Add search icon to search input
-    const searchContainer = $('#stats-data-table_wrapper > div:first-child .dt-search');
+    const searchContainer = $('#stats-player-data-table_wrapper > div:first-child .dt-search');
     searchContainer.addClass('search-with-icon');
     $('<i class="bi bi-search search-icon"></i>').prependTo(searchContainer);
 
@@ -203,14 +203,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         ]
     });
-    dataTable.buttons().container().appendTo('.stats-wrapper #stats-data-table_wrapper > div:first-child .dt-layout-end');
+    dataTable.buttons().container().appendTo('.stats-wrapper #stats-player-data-table_wrapper > div:first-child .dt-layout-end');
 
 
     // Function to apply filters and reload the table
     function applyAndReloadTable() {
         const filters = collectFilterData();
         const qParams = new URLSearchParams(filters);
-        dataTable.ajax.url(`/api/stats/data?${qParams.toString()}`).load();
+        dataTable.ajax.url(`/api/stats/player/data?${qParams.toString()}`).load();
     }
 
     applyFiltersBtn.addEventListener('click', applyAndReloadTable);
