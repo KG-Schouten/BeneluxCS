@@ -15,11 +15,18 @@ def get_tqdm():
     return tqdm
 
 async def gather_with_progress(coros: list, desc="Processing", unit="tasks") -> list:
-    """
-    Gathers multiple coroutines with an optional progress bar (only shown if running in a terminal).
-    """
     tqdm = get_tqdm()
-    use_pbar = sys.stdout.isatty()  # Only show progress if running in a terminal
+
+    # Decide whether to show progress
+    try:
+        from IPython.core.getipython import get_ipython
+        shell = get_ipython()
+        in_jupyter = shell and shell.__class__.__name__ in ['ZMQInteractiveShell', 'Shell']
+    except Exception:
+        in_jupyter = False
+
+    # Also show bar in terminal (stdout is a TTY)
+    use_pbar = in_jupyter or sys.stdout.isatty()
 
     total = len(coros)
     pbar = tqdm(total=total, desc=desc, unit=unit, smoothing=0, disable=not use_pbar)
