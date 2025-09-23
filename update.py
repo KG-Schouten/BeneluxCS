@@ -44,6 +44,9 @@ async def update_matches():
             function_logger.error(f"Error while fetching match details: {e}")
             return 
         
+        if not isinstance(df_matches, pd.DataFrame) or df_matches.empty:
+            function_logger.info("No match details found for upcoming matches.")
+            return
         event_ids = df_matches['event_id'].unique().tolist()
         if event_ids and isinstance(event_ids, list):
             df_events = gather_internal_event_ids(event_ids=event_ids)
@@ -62,7 +65,7 @@ async def update_matches():
         upload_data("players", df_players)
         
     except Exception as e:
-        function_logger.error(f"An error occurred during the update matches process: {e}")
+        function_logger.error(f"An error occurred during the update matches process: {e}", exc_info=True)
         return
 
 async def update_esea_teams_benelux():
@@ -492,4 +495,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())
+    asyncio.run(update_matches())
+    asyncio.run(update_esea_teams_benelux())
