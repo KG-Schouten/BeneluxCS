@@ -1,6 +1,5 @@
 {% extends "stats/stats_layout.html" %}
 
-
 {% block sidebar_extra %}
     <div class="sidebar-content">
         <div class="sidebar-header">
@@ -54,7 +53,13 @@
         <label for="pageLengthSelect" class="form-label me-2">entries per page</label>
     </div>
     
-    <table id="stats-data-table-elo" class="table table-striped table-hover align-middle table-sm">
+    <table id="stats-elo-data-table" class="table custom-data-table custom-striped align-middle table-sm"></table>
         <!-- DataTable will be initialized here -->
     </table>
+{% endblock %}
+
+{% block javascript %}
+{{ super() }}
+
+<script src="{{ url_for('static', filename='js/stats/stats_elo.js') }}"></script>
 {% endblock %}

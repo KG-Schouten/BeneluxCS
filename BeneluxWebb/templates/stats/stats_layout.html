@@ -9,6 +9,11 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/sidebar.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/table/table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/table/colvis.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/table/page_entries.css') }}">
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/range_slider.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/date_filter.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/filters/filter_group.css') }}">
@@ -32,12 +37,8 @@
             </div>
             <div class="sidebar-body">
                 <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/stats/player">Player Stats</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/stats/elo">Elo Leaderboard</a>
-                    </li>
+                    <a class="nav-link" href="/stats/player">Player Stats</a>
+                    <a class="nav-link active" href="/stats/elo">Elo Leaderboard</a>
                 </ul>
             </div>
         </div>
@@ -61,7 +62,4 @@
 
 <script src="{{ url_for('static', filename='js/filters/filter_ui.js') }}"></script>
 <script src="{{ url_for('static', filename='js/filters/filter_utils.js') }}"></script>
-
-<script src="{{ url_for('static', filename='js/stats/stats_player.js') }}"></script>
-
 {% endblock %}
