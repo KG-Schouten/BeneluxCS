@@ -1,5 +1,5 @@
 ## Imports
-from database.db_down import gather_players, gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids
+from database.db_down import gather_players, gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot
 from database.db_up import upload_data
 from data_processing.faceit_api.sliding_window import RequestDispatcher
 from data_processing.faceit_api.faceit_v4 import FaceitData
@@ -12,6 +12,7 @@ from data_processing.dp_benelux import get_benelux_leaderboard_players
 import pandas as pd
 import sys
 import asyncio
+from datetime import date
 
 import os
 from dotenv import load_dotenv
@@ -406,7 +407,24 @@ async def update_new_matches_esea():
     except Exception as e:
         function_logger.error(f"Error updating ESEA matches: {e}")
 
-
+# === Daily update interval ===
+async def update_daily_elo_leaderboard():
+    """ Update the elo_leaderboard table with daily snapshots """
+    try:
+        df_elo = gather_elo_snapshot()
+        if df_elo.empty:
+            function_logger.warning("No elo snapshot data found. Skipping update.")
+            raise ValueError("Elo snapshot data is empty or not a DataFrame.")
+        
+        today = date.today()
+        df_elo['date'] = today
+        
+        upload_data('elo_leaderboard_daily', df_elo)
+        
+    except Exception as e:
+        function_logger.error(f"Error updating elo_leaderboard table: {e}", exc_info=True)
+        raise
+         
 # === Weekly update interval ===
 async def update_hub_events():
     hub_id = "801f7e0c-1064-4dd1-a960-b2f54f8b5193"  # Benelux Hub ID
@@ -464,7 +482,8 @@ async def main():
         await update_leaderboard(elo_cutoff=2000)
         await update_new_matches_hub()
         await update_new_matches_esea()
-    # elif task == "daily":
+    elif task == "daily":
+        await update_daily_elo_leaderboard()
     elif task == "weekly":
         await update_hub_events()
         await update_esea_seasons_events()

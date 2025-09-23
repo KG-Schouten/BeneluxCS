@@ -504,6 +504,26 @@ def gather_upcoming_matches() -> pd.DataFrame:
         close_database(db)
     
     return df_upcoming  
+
+def gather_elo_snapshot() -> pd.DataFrame:
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                player_id,
+                faceit_elo
+            FROM players
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_elo = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        return df_elo
+    except Exception as e:
+        function_logger.error(f"Error gathering elo snapshot: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
+
 ### ----------------------------
 ### Website functions
 ### ----------------------------
