@@ -192,7 +192,7 @@ async def update_leaderboard(elo_cutoff=2000):
         # Gather the leaderboard data from the API
         df_leaderboard = await get_benelux_leaderboard_players(elo_cutoff=elo_cutoff)
 
-        # Gather the df_players and df_players_country dataframes from the database
+        # Gather the df_players dataframe from the database
         df_players = gather_players(benelux=False)
         
         # Check if the dataframes are valid and not empty
@@ -329,6 +329,23 @@ async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
     # except Exception as e:
     #     function_logger.error(f"Error updating players_country table: {e}")
     #     raise
+
+async def update_elo_leaderboard():
+    """ Update the elo_leaderboard_daily table with daily snapshots """
+    try:
+        df_elo = gather_elo_snapshot()
+        if df_elo.empty:
+            function_logger.warning("No elo snapshot data found. Skipping update.")
+            raise ValueError("Elo snapshot data is empty or not a DataFrame.")
+        
+        today = date.today()
+        df_elo['date'] = today
+        
+        upload_data('elo_leaderboard_daily', df_elo)
+        
+    except Exception as e:
+        function_logger.error(f"Error updating elo_leaderboard table: {e}", exc_info=True)
+        raise
     
 async def update_new_matches_esea():
     """ Gathers and updates new matches from ESEA events """
@@ -406,24 +423,6 @@ async def update_new_matches_esea():
         
     except Exception as e:
         function_logger.error(f"Error updating ESEA matches: {e}")
-
-# === Daily update interval ===
-async def update_daily_elo_leaderboard():
-    """ Update the elo_leaderboard table with daily snapshots """
-    try:
-        df_elo = gather_elo_snapshot()
-        if df_elo.empty:
-            function_logger.warning("No elo snapshot data found. Skipping update.")
-            raise ValueError("Elo snapshot data is empty or not a DataFrame.")
-        
-        today = date.today()
-        df_elo['date'] = today
-        
-        upload_data('elo_leaderboard_daily', df_elo)
-        
-    except Exception as e:
-        function_logger.error(f"Error updating elo_leaderboard table: {e}", exc_info=True)
-        raise
          
 # === Weekly update interval ===
 async def update_hub_events():
@@ -480,10 +479,10 @@ async def main():
         await update_esea_teams_benelux()
     elif task == "hourly":
         await update_leaderboard(elo_cutoff=2000)
+        await update_elo_leaderboard()
         await update_new_matches_hub()
         await update_new_matches_esea()
-    elif task == "daily":
-        await update_daily_elo_leaderboard()
+    # elif task == "daily":
     elif task == "weekly":
         await update_hub_events()
         await update_esea_seasons_events()
