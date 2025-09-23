@@ -1,0 +1,53 @@
+/* === Page entries styling === */
+.page-length-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-length-selector .form-label.me-2 {
+  margin: 0 !important;
+}
+
+.page-length-selector .bootstrap-select .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  background-color: var(--background);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* Dropdown menu */
+.page-length-selector .dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  background-color: var(--background);
+}
+
+/* Items */
+.page-length-selector .dropdown-menu li a {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+/* Hover effect */
+.page-length-selector .dropdown-menu li a:hover {
+  background-color: var(--primary);
+  color: var(--text);
+}
+
+.csv-btn span span {
+  max-width: 0;
+  -webkit-transition: max-width .5s ease-in-out;
+  transition: max-width .5s ease-in-out;
+  display: inline-block;
+  vertical-align: top;
+  white-space: nowrap;
+  overflow: hidden;
+
+  margin-left: 6px;
+}
+.csv-btn:hover span span {
+  max-width: 5rem;
+}

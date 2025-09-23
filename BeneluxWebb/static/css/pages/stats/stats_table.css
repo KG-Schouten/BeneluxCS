@@ -1,287 +1,120 @@
-:root {
-  --button-height: 32px;
-  --button-padding: 0 12px;
-  --button-font-size: 14px;
-  --button-border-radius: 4px;
-}
-
-/* === DataTables general styling === */
-#stats-data-table_wrapper {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-#stats-data-table_wrapper > .row {
-  margin: 0 !important;
-}
-#stats-data-table_wrapper > div {
-  padding: 0 !important;
-}
-#stats-data-table_wrapper .dt-layout-table .dt-layout-full {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  background-color: var(--secondary1);
-}
-
-/* === Top/Bottom Table Filter Container Styling === */
-#stats-data-table_wrapper .dt-layout-start,
-#stats-data-table_wrapper .dt-layout-end {
-  background-color: transparent;
-  padding: 8px;
-  border-radius: 4px;
-}
-
-/* === Table Styling === */
-#stats-data-table_wrapper table.dataTable {
-  border-collapse: collapse;
-  width: 100% !important;
-}
-/* Header cells */
-.dt-scroll-head {
-  background-color: rgba(0,0,0,.5);
-}
-
-#stats-data-table_wrapper table.dataTable thead td {
-  background-color: transparent;
-  color: var(--text) !important;
-  border-bottom: 1px solid var(--border);
-  font-weight: bold;
-  padding-inline: 8px;
-}
-#stats-data-table_wrapper table.dataTable thead td:first-child {
+/* === Player table styling === */
+#stats-player-data-table_wrapper table.dataTable > thead > tr > td:first-child {
   text-align: left;
 }
-#stats-data-table_wrapper table.dataTable thead td .dtcc-button span {
-  color: var(--text) !important;
+
+
+/* === ELO Table Styling === */
+#stats-elo-data-table_wrapper {
+  width: 75%;
 }
-#stats-data-table_wrapper table.dataTable thead td:hover {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  cursor: pointer;
-}
+#stats-elo-data-table_wrapper table.dataTable > tbody > tr > td {
+  height: 48px;
 
-
-
-/* Body cells */
-#stats-data-table_wrapper table.dataTable tbody td {
-  padding: 0.5rem 0.75rem;
-  border: none !important;
-  border-top: 1px solid var(--border) !important;
-  background-color: var(--secondaryBody);
+  font-weight: bold;
+  font-size: 20px;
   color: var(--text);
 }
+#stats-elo-data-table_wrapper table.dataTable > thead > tr > td:first-child,
+#stats-elo-data-table_wrapper table.dataTable > tbody > tr > td:first-child {
+  border-right: none !important;
+}
 
-/* Vertical borders */
-#stats-data-table_wrapper table.dataTable thead td:not(:last-child),
-#stats-data-table_wrapper table.dataTable tbody td:not(:last-child) {
-  border-right: 1px solid var(--border) !important;
+#stats-elo-data-table_wrapper table.dataTable > tbody > tr > td {
+  border-top: none !important;
 }
 
 
-/* === Search Bar Styling === */
-#stats-data-table_wrapper .dt-search label {
-  font-size: var(--button-font-size);
-  color: var(--text);
-}
-#stats-data-table_wrapper .dt-search input {
-  background-color: transparent;
-  color: var(--text);
+/* Rank styling */
+.rank-badge {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  align-items: center;
+  justify-content: center;
+
+  white-space: nowrap;
+
+  height: 100%;
+
+  background-color: var(--background);
   border: 1px solid var(--border);
-  border-radius: var(--button-border-radius);
-  height: var(--button-height);
-  padding: var(--button-padding);
-  font-size: var(--button-font-size);
+  border-radius: var(--border-radius-sm);
   box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
 }
-#stats-data-table_wrapper .dt-search input::placeholder {
-  color: var(--text-muted);
+.rank-number {
+  text-align: right;
+}
+.rank-change-indicator {
+  font-size: 0.8em;
+  text-align: center;
 }
 
-#stats-data-table_wrapper .dt-search.search-with-icon {
-  position: relative;
-}
-#stats-data-table_wrapper .dt-search .search-icon {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  pointer-events: none;
-}
-#stats-data-table_wrapper .dt-search.search-with-icon input {
-  padding-left: 32px !important;
+/* Rank tooltip styling */
+.tippy-box {
+  background-color: var(--background);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
+
+  font-size: 0.9rem;
 }
 
-/* === Page entries styling === */
-.page-length-selector {
+.tippy-box .history-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.tippy-box .history-table thead th {
+  text-align: center;
+}  
+.tippy-box .history-table tbody td {
+  padding: 4px 8px;
+  text-align: center;
+}
+.tippy-box .history-table tbody td:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+
+/* Player cell styling */
+.player-cell {
   display: flex;
   align-items: center;
+  flex-direction: row;
+  height: 100%;
+
   gap: 8px;
-}
-.page-length-selector .form-label.me-2 {
-  margin: 0 !important;
-}
-
-.page-length-selector .bootstrap-select .btn {
-  border-radius: 8px;
-  font-weight: 500;
-  padding: 0.25rem 0.75rem;
-  background-color: var(--secondaryBody);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-/* Dropdown menu */
-.page-length-selector .dropdown-menu {
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  background-color: var(--background);
-}
-
-/* Items */
-.page-length-selector .dropdown-menu li a {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.9rem;
-  color: var(--text);
-}
-
-/* Hover effect */
-.page-length-selector .dropdown-menu li a:hover {
-  background-color: var(--primary);
-  color: var(--text);
-}
-
-
-/* === Button styling === */
-#stats-data-table_wrapper .dt-buttons {
-  display: flex;
-  gap: 8px;
-  margin-left: 8px !important;
-}
-#stats-data-table_wrapper .dt-buttons button {
-  background-color: transparent;
-  color: var(--text);
-  border: none;
-  border-radius: var(--border-radius-sm);
-  height: var(--button-height);
-  width: auto;
-  padding: var(--button-padding);
-  font-size: var(--button-font-size);
-  cursor: pointer;
-  box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
-}
-
-
-.csv-btn span span {
-  max-width: 0;
-  -webkit-transition: max-width .5s ease-in-out;
-  transition: max-width .5s ease-in-out;
-  display: inline-block;
-  vertical-align: top;
   white-space: nowrap;
   overflow: hidden;
-
-  margin-left: 6px;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
-.csv-btn:hover span span {
-  max-width: 5rem;
+.table-avatar {
+  width: auto;
+  height: 100%;
+  border-radius: var(--border-radius-sm);
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
 }
-
-
-/* === ColVis dropdown styling === */
-.btn-group .dt-button-collection {
-  background-color: #2a2a3d !important;
-  border-radius: 8px !important;
-
-  top: 40px !important;
-  right: 0 !important;
-  left: auto !important;
-  transform: none !important;
-
-  padding: 10px !important;
-  min-width: 200px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+.table-flag {
+  width: 24px;
+  height: 16px;
 }
 
-/* Dropdown title */
-.btn-group .dt-button-collection-title {
-    font-weight: bold;
-    color: #fff;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
+/* Elo cell styling */
+.elo-cell {
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  grid-template-columns: 5fr 3fr;
+  height: 100%;
+
+  gap: 5px;
 }
-
-/* List items */
-.btn-group .dt-button-collection ul.dropdown-menu {
-    background-color: transparent !important;  /* use parent bg */
-    padding: 0;
-    margin: 0;
-    list-style: none;
+.elo-value {
+  text-align: right;
 }
-
-/* Each item */
-.btn-group .dt-button-collection ul.dropdown-menu li a.dropdown-item {
-    color: #fff !important;
-    padding: 6px 10px !important;
-    font-size: 0.85rem;
-    border-radius: 4px;
-    display: block;
-}
-
-/* Hover effect */
-.btn-group .dt-button-collection ul.dropdown-menu li a.dropdown-item:hover {
-    background-color: #4a90e2 !important;
-    color: #fff !important;
-}
-
-
-/* === Pagination buttons styling === */
-#stats-data-table_wrapper .dt-paging-button {
-  background-color: transparent !important;
-  border: none;
-  margin: 0 2px;
-}
-
-/* Style the inner button (page-link) */
-#stats-data-table_wrapper .dt-paging-button .page-link {
-  color: var(--text) !important;
-  background-color: transparent !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--border-radius-sm) !important;
-  padding: 0.25rem 0.5rem !important;
-  font-weight: 500 !important;
-  transition: all 0.2s ease;
-}
-
-/* Hover effect */
-#stats-data-table_wrapper .dt-paging-button .page-link:hover:not(:disabled) {
-  background-color: rgba(0,0,0,.5) !important;
-  color: var(--text) !important;
-  border-color: var(--border);
-}
-
-/* Active page */
-#stats-data-table_wrapper .dt-paging-button.active .page-link {
-  background-color: rgba(0,0,0,.5) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-  font-weight: bold !important;
-}
-
-/* Disabled buttons */
-#stats-data-table_wrapper .dt-paging-button.disabled .page-link {
-  background-color: transparent !important;
-  color: var(--text-muted) !important;
-  cursor: not-allowed !important;
-  border-color: var(--border) !important;
-}
-
-/* Processing indicator */
-.dataTables_wrapper .dataTables_processing {
-  /* position: absolute; */
-  /* top: 50%; left: 50%; */
-  /* transform: translate(-50%, -50%); */
-  /* background-color: rgba(255,255,255,0.9); */
-  /* padding: 1rem; */
-  /* border-radius: 0.25rem; */
+.elo-change-value {
+  font-size: 0.8rem;
+  text-align: left;
 }

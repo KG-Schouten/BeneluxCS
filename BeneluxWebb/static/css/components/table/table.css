@@ -1,0 +1,189 @@
+/* Root variables */
+:root {
+  --table-row-height: 38px;
+  --button-height: 32px;
+  --button-padding: 0 12px;
+  --button-font-size: 14px;
+  --button-border-radius: 4px;
+}
+
+
+/* === DataTables general styling === */
+div[id$="_wrapper"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+div[id$="_wrapper"] > .row {
+  margin: 0 !important;
+}
+div[id$="_wrapper"] > div {
+  padding: 0 !important;
+}
+div[id$="_wrapper"] .dt-layout-table .dt-layout-full {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  background-color: var(--secondary1);
+}
+div[id$="_wrapper"] .dt-layout-start,
+div[id$="_wrapper"] .dt-layout-end {
+  background-color: transparent;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+
+/* === Table Styling === */
+div[id$="_wrapper"] table.dataTable {
+  border-collapse: collapse;
+  width: 100% !important;
+}
+div[id$="_wrapper"] table.dataTable > thead {
+  background-color: rgba(0,0,0,.5);
+}
+div[id$="_wrapper"] table.dataTable > thead > tr > td {
+  background-color: transparent;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--border);
+  font-weight: bold;
+  padding-inline: 8px;
+}
+div[id$="_wrapper"] table.dataTable > thead > tr > td .dtcc-button span {
+  color: var(--text) !important;
+}
+div[id$="_wrapper"] table.dataTable > thead > tr > td:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  cursor: pointer;
+}
+div[id$="_wrapper"] table.dataTable.custom-striped > tbody > tr:nth-of-type(odd) {
+  background-color: rgba(0,0,0,.1);
+}
+div[id$="_wrapper"] table.dataTable.custom-hover > tbody > tr:hover {
+  background-color: rgba(0,0,0,.3);
+}
+
+
+div[id$="_wrapper"] table.dataTable > tbody > tr > td {
+  padding: 0;
+  padding-inline: 8px;
+  padding-block: 5px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--text);
+
+  height: var(--table-row-height);
+  
+  vertical-align: middle;
+}
+div[id$="_wrapper"] table.dataTable > thead > tr > td:not(:last-child),
+div[id$="_wrapper"] table.dataTable > tbody > tr > td:not(:last-child) {
+  border-right: 1px solid var(--border) !important;
+}
+
+.table-flag {
+  display: inline-block;
+  margin-right: 8px;
+  width: 18px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
+}
+
+
+/* === Search Bar Styling === */
+div[id$="_wrapper"] .dt-search label {
+  font-size: var(--button-font-size);
+  color: var(--text);
+}
+div[id$="_wrapper"] .dt-search input {
+  background-color: var(--background);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--button-border-radius);
+  height: var(--button-height);
+  padding: var(--button-padding);
+  font-size: var(--button-font-size);
+}
+div[id$="_wrapper"] .dt-search input::placeholder {
+  color: var(--text-muted);
+}
+div[id$="_wrapper"] .dt-search.search-with-icon {
+  position: relative;
+}
+div[id$="_wrapper"] .dt-search .search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+div[id$="_wrapper"] .dt-search.search-with-icon input {
+  padding-left: 32px !important;
+}
+
+
+/* === Buttons === */
+div[id$="_wrapper"] .dt-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: 8px !important;
+}
+div[id$="_wrapper"] .dt-buttons button {
+  background-color: var(--background);
+  color: var(--text);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  height: var(--button-height);
+  width: auto;
+  padding: var(--button-padding);
+  font-size: var(--button-font-size);
+  cursor: pointer;
+  box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
+}
+
+
+/* === Pagination buttons === */
+div[id$="_wrapper"] .dt-paging-button {
+  background-color: var(--background) !important;
+  border: none;
+  margin: 0 2px;
+}
+div[id$="_wrapper"] .dt-paging-button .page-link {
+  color: var(--text) !important;
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--border-radius-sm) !important;
+  padding: 0.25rem 0.5rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease;
+}
+div[id$="_wrapper"] .dt-paging-button .page-link:hover:not(:disabled) {
+  background-color: rgba(0,0,0,.5) !important;
+  color: var(--text) !important;
+  border-color: var(--border);
+}
+div[id$="_wrapper"] .dt-paging-button.active .page-link {
+  background-color: rgba(0,0,0,.5) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+  font-weight: bold !important;
+}
+div[id$="_wrapper"] .dt-paging-button.disabled .page-link {
+  background-color: transparent !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed !important;
+  border-color: var(--border) !important;
+}
+
+/* Other table styling */
+.text-hover-table {
+  cursor: pointer;
+  text-decoration: none;
+}
+.text-hover-table:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}

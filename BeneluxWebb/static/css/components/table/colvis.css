@@ -1,0 +1,52 @@
+/* === ColVis dropdown styling === */
+.btn-group .dt-button-collection {
+  background-color: var(--background) !important;
+  border-radius: 8px !important;
+
+  top: 42px !important;
+  right: 0 !important;
+  left: auto !important;
+  transform: none !important;
+
+  padding: 8px !important;
+  min-width: 200px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Dropdown title */
+.btn-group .dt-button-collection-title {
+    font-weight: bold;
+    color: var(--text);
+    font-size: 0.9rem;
+    padding: 4px !important;
+    border-bottom: 1px solid var(--border);
+}
+
+/* List items */
+.btn-group .dt-button-collection ul.dropdown-menu {
+    background-color: transparent !important;  /* use parent bg */
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    max-height: 500px;
+    overflow-y: scroll;
+}
+.btn-group .dt-button-collection ul.dropdown-menu li:nth-of-type(odd) {
+    background-color: rgba(0,0,0,.1);
+}
+.btn-group .dt-button-collection ul.dropdown-menu li .dropdown-item:hover {
+    background-color: rgba(0,0,0,.3);
+}
+.btn-group .dt-button-collection ul.dropdown-menu li .dropdown-item:focus {
+    background-color: transparent;
+}
+
+/* Each item */
+.btn-group .dt-button-collection ul.dropdown-menu li a.dropdown-item {
+    color: var(--text) !important;
+    padding: 6px 10px !important;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    display: block;
+}

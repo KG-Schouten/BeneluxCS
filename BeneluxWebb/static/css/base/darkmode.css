@@ -67,7 +67,3 @@ body.dark-mode .form-control {
 body.dark-mode .score-logo {
   filter: var(--logo-filter);
 }
-
-body.dark-mode .text-muted {
-  color: var(--muted) !important;
-}

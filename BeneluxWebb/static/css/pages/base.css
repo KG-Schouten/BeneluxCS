@@ -34,6 +34,10 @@ a {
 .text-danger {
     color: #FC1D1D !important;
 }
+.text-muted {
+    color: var(--text-muted) !important;
+    font-size: 0.8em;
+}
 
 .page-wrapper {
     display: flex;

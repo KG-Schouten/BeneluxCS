@@ -141,3 +141,36 @@
 .apply-button:active {
     transform: scale(0.98);
 }
+
+
+/* == Sidebar Navigation == */
+.sidebar-body > ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+.sidebar-body > ul > a {
+    display: block;
+    text-align: center;
+    white-space: nowrap;
+    width: 100%;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    user-select: none;
+
+    text-decoration: none;
+    color: inherit;
+}
+.sidebar-body > ul > a:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+.sidebar-body > ul > a:hover {
+    background-color: rgba(0,0,0,0.3);
+    color: var(--text);
+}
+.sidebar-body > ul > a:active {
+    background-color: rgba(0,0,0,0.5);
+    color: var(--text);
+}
