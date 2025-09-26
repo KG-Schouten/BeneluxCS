@@ -72,6 +72,71 @@ function collectFilterData() {
     return filters;
 }
 
+function getSelectedCount(container) {
+    const name = container.dataset.filterName;
+    let count = 0;
+
+    if (name === 'countries' || name === 'divisions' || name === 'stages') {
+        count = container.querySelectorAll('input[type="checkbox"]:checked').length;
+    } else if (name === 'seasons') {
+        const select = $(`#${name}-select`);
+        if (select.length) {
+            const val = select.val();
+            if (Array.isArray(val)) {
+                count = val.length;
+            }
+        }
+    } else if (name === 'events' || name === 'timestamp') {
+        // Check if the selected radio is NOT the default one
+        const selectedRadio = container.querySelector(`input[name="${name}"]:checked`);
+        if (selectedRadio && !selectedRadio.hasAttribute('data-default')) {
+            count = 1;
+        }
+    } else if (name === 'maps_played') {
+        const minVal = container.querySelector('.min-val');
+        const maxVal = container.querySelector('.max-val');
+        if (minVal && maxVal && (minVal.value !== minVal.min || maxVal.value !== maxVal.max)) {
+            count = 1;
+        }
+    } else if (name === 'teams') {
+        const inputBox = container.querySelector('input[type="text"]');
+        if (inputBox && inputBox.value.trim() !== "") {
+            count = 1;
+        }
+    }
+    return count;
+}
+
+function updateIndicators() {
+    const filterContainers = document.querySelectorAll('.filter-container');
+    const clearAllButton = document.querySelector('.clear-all-filters');
+    if (!filterContainers.length) return;
+
+    let totalActiveFilters = 0;
+    filterContainers.forEach(container => {
+        const indicator = container.querySelector('.filter-indicator');
+        if (!indicator) return;
+
+        const count = getSelectedCount(container);
+
+        if (count > 0) {
+            indicator.textContent = count;
+            indicator.style.display = 'flex';
+            totalActiveFilters++;
+        } else {
+            indicator.style.display = 'none';
+        }
+    });
+
+    if (clearAllButton) {
+        if (totalActiveFilters > 0) {
+            clearAllButton.disabled = false;
+        } else {
+            clearAllButton.disabled = true;
+        }
+    }
+}
+
 function getParamsFromUrl() {
     // Fill with parameters from filters
     const filters = collectFilterData();
