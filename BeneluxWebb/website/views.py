@@ -92,8 +92,8 @@ def api_stats_player_data():
         stage_names = request.args.get('stages', '').split(',') if request.args.get('stages') else []
         start_date = request.args.get('start_date') # YYYY-MM-DD
         end_date = request.args.get('end_date')     # YYYY-MM-DD
-        min_maps = request.args.get('min_maps_played', type=int)
-        max_maps = request.args.get('max_maps_played', type=int)
+        min_maps_played = request.args.get('min_maps_played', type=int)
+        max_maps_played = request.args.get('max_maps_played', type=int)
         team_ids = request.args.get('teams_ids', [])
         
         data = gather_player_stats_esea(
@@ -104,8 +104,8 @@ def api_stats_player_data():
             stages=stage_names,
             start_date=start_date,
             end_date=end_date,
-            min_maps=min_maps,
-            max_maps=max_maps,
+            min_maps=min_maps_played,
+            max_maps=max_maps_played,
             team_ids=team_ids
         )
         
@@ -158,8 +158,10 @@ def api_stats_elo_data():
     
     try:
         countries = request.args.get('countries', '').split(',') if request.args.get('countries') else []
+        min_elo = request.args.get('min_elo', type=int)
+        max_elo = request.args.get('max_elo', type=int)
         
-        data = gather_elo_leaderboard(countries=countries)
+        data = gather_elo_leaderboard(countries=countries, min_elo=min_elo, max_elo=max_elo)
         
         return jsonify({
             "data": data
