@@ -29,9 +29,9 @@
   transition: background 0.1s;
   user-select: none;
 }
-.sidebar-body .checkbox__label:nth-of-type(odd) {
+/* .sidebar-body .checkbox__label:nth-of-type(odd) {
   background-color: rgba(0, 0, 0, 0.1);
 }
 .sidebar-body .checkbox__label:hover {
   background: rgba(0,0,0,.5);
-}
+} */

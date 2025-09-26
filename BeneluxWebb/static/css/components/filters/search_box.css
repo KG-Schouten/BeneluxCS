@@ -35,9 +35,9 @@
     border: 1px solid var(--primary);
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
 }
-.sidebar-body .search-box input:hover {
+/* .sidebar-body .search-box input:hover {
     background-color: rgba(0,0,0,0.5);
-}
+} */
 
 .sidebar-body .search-box i {
     position: absolute;

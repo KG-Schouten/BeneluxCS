@@ -12,30 +12,3 @@
 .flag-img {
   width: 38px !important;
 }
-
-/* === Team Name Filter === */
-.sidebar-body .team-search {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-
-  padding: 3px 5px;
-  gap: 5px;
-  width: 100%;
-
-  border: 1px solid var(--border);
-  color: var(--text);
-  background: var(--secondary1);
-}
-.sidebar-body .search-input {
-  flex-grow: 1;
-
-  min-width: 0;
-
-  border: none;
-  outline: none;
-  color: var(--text);
-  background: transparent;
-
-  transition: background 0.1s, border-color 0.1s;
-}

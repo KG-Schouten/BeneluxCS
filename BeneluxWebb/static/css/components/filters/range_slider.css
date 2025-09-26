@@ -11,7 +11,7 @@
   width: 90%;
   height: 8px;
   margin: 15px 0;
-  background-color: var(--background-light);
+  background-color: var(--border);
   border-radius: 4px;
 }
 .range-slider .slider-track {

@@ -12,6 +12,7 @@
 div[id$="_wrapper"] {
   width: 100%;
   box-sizing: border-box;
+  padding: 10px;
 }
 div[id$="_wrapper"] > .row {
   margin: 0 !important;
@@ -22,7 +23,6 @@ div[id$="_wrapper"] > div {
 div[id$="_wrapper"] .dt-layout-table .dt-layout-full {
   padding-left: 0 !important;
   padding-right: 0 !important;
-  background-color: var(--secondary1);
 }
 div[id$="_wrapper"] .dt-layout-start,
 div[id$="_wrapper"] .dt-layout-end {
@@ -34,11 +34,13 @@ div[id$="_wrapper"] .dt-layout-end {
 
 /* === Table Styling === */
 div[id$="_wrapper"] table.dataTable {
-  border-collapse: collapse;
+  border-collapse: separate;
   width: 100% !important;
+  border-spacing: 0 2px;
+  table-layout: fixed;
 }
-div[id$="_wrapper"] table.dataTable > thead {
-  background-color: rgba(0,0,0,.5);
+div.dt-scroll-head table.dataTable {
+  border-spacing: 0 !important;
 }
 div[id$="_wrapper"] table.dataTable > thead > tr > td {
   background-color: transparent;
@@ -46,6 +48,8 @@ div[id$="_wrapper"] table.dataTable > thead > tr > td {
   border-bottom: 1px solid var(--border);
   font-weight: bold;
   padding-inline: 8px;
+  background-color: var(--background-dark3);
+  white-space: nowrap;
 }
 div[id$="_wrapper"] table.dataTable > thead > tr > td .dtcc-button span {
   color: var(--text) !important;
@@ -55,11 +59,23 @@ div[id$="_wrapper"] table.dataTable > thead > tr > td:hover {
   outline-offset: -2px;
   cursor: pointer;
 }
-div[id$="_wrapper"] table.dataTable.custom-striped > tbody > tr:nth-of-type(odd) {
-  background-color: rgba(0,0,0,.1);
+div[id$="_wrapper"] table.dataTable.custom-striped > tbody > tr:nth-of-type(odd) > td {
+  background-color: var(--background-dark1);
 }
 div[id$="_wrapper"] table.dataTable.custom-hover > tbody > tr:hover {
-  background-color: rgba(0,0,0,.3);
+  background-image: linear-gradient(rgba(0, 0, 0, 0.1));
+}
+
+/* Cell border radius */
+div[id$="_wrapper"] table.dataTable > thead > tr > td:first-child,
+div[id$="_wrapper"] table.dataTable > tbody > tr > td:first-child {
+  border-top-left-radius: var(--border-radius);
+  border-bottom-left-radius: var(--border-radius);
+}
+div[id$="_wrapper"] table.dataTable > thead > tr > td:last-child,
+div[id$="_wrapper"] table.dataTable > tbody > tr > td:last-child {
+  border-top-right-radius: var(--border-radius);
+  border-bottom-right-radius: var(--border-radius);
 }
 
 
@@ -68,8 +84,7 @@ div[id$="_wrapper"] table.dataTable > tbody > tr > td {
   padding-inline: 8px;
   padding-block: 5px;
   border: none;
-  border-top: 1px solid var(--border);
-  background-color: transparent;
+  background-color: var(--background-secondary3);
   color: var(--text);
 
   height: var(--table-row-height);
@@ -98,7 +113,7 @@ div[id$="_wrapper"] .dt-search label {
   color: var(--text);
 }
 div[id$="_wrapper"] .dt-search input {
-  background-color: var(--background);
+  background-color: var(--secondary-light2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--button-border-radius);
@@ -132,7 +147,7 @@ div[id$="_wrapper"] .dt-buttons {
   margin-left: 8px !important;
 }
 div[id$="_wrapper"] .dt-buttons button {
-  background-color: var(--background);
+  background-color: var(--secondary-light2);
   color: var(--text);
   border: none;
   border-radius: var(--border-radius-sm);
@@ -147,13 +162,13 @@ div[id$="_wrapper"] .dt-buttons button {
 
 /* === Pagination buttons === */
 div[id$="_wrapper"] .dt-paging-button {
-  background-color: var(--background) !important;
+  background-color: var(--secondary-light2) !important;
   border: none;
   margin: 0 2px;
 }
 div[id$="_wrapper"] .dt-paging-button .page-link {
   color: var(--text) !important;
-  background-color: var(--background) !important;
+  background-color: var(--secondary-light2) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--border-radius-sm) !important;
   padding: 0.25rem 0.5rem !important;
@@ -186,4 +201,8 @@ div[id$="_wrapper"] .dt-paging-button.disabled .page-link {
 .text-hover-table:hover {
   text-decoration: underline;
   cursor: pointer;
+}
+
+div[id$="_wrapper"] table.dataTable > tbody > tr > td.highlight-cell {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.1));
 }

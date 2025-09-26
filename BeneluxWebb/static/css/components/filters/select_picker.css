@@ -19,7 +19,6 @@
 
 .sidebar-body .bootstrap-select .btn:focus,
 .sidebar-body .bootstrap-select .btn:hover {
-  background-color: rgba(0,0,0,0.5);
   box-shadow: none;
   border-radius: 0px;
 }

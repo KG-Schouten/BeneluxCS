@@ -5,12 +5,12 @@
 
 
 /* === ELO Table Styling === */
-#stats-elo-data-table_wrapper {
-  width: 75%;
+#stats-elo-data-table_wrapper table.dataTable {
+  border-spacing: 0 4px;
 }
+
 #stats-elo-data-table_wrapper table.dataTable > tbody > tr > td {
   height: 48px;
-
   font-weight: bold;
   font-size: 20px;
   color: var(--text);

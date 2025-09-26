@@ -2,18 +2,50 @@
 body.dark-mode {
   --text: #e0e0e0;
   --text-muted: #a0a0a0;
+
+
   --background: rgba(23, 28, 74, 1);
-  --background-light: rgba(255, 255, 255, .1);
+  --background-dark1: color-mix(in srgb, var(--background) 90%, black);
+  --background-dark2: color-mix(in srgb, var(--background) 80%, black);
+  --background-dark3: color-mix(in srgb, var(--background) 70%, black);
+  --background-dark4: color-mix(in srgb, var(--background) 60%, black);
+  --background-dark5: color-mix(in srgb, var(--background) 50%, black);
+  --background-dark6: color-mix(in srgb, var(--background) 40%, black);
+  --background-dark7: color-mix(in srgb, var(--background) 30%, black);
+  --background-dark8: color-mix(in srgb, var(--background) 20%, black);
+  --background-dark9: color-mix(in srgb, var(--background) 10%, black);
+
+  --background-secondary1: color-mix(in srgb, var(--background) 90%, var(--secondary));
+  --background-secondary2: color-mix(in srgb, var(--background) 80%, var(--secondary));
+  --background-secondary3: color-mix(in srgb, var(--background) 70%, var(--secondary));
+
+  --background-light1: color-mix(in srgb, var(--background) 90%, white);
+  --background-light2: color-mix(in srgb, var(--background) 80%, white);
+  --background-light3: color-mix(in srgb, var(--background) 70%, white);
+
 
   --primary: rgba(214, 248, 123, 1);
 
-  --secondary: rgba(32, 9, 165, 1);
-  --secondary1: rgba(32, 9, 165, .1);
-  --secondary30: rgba(32, 9, 165, .3);
-  --secondary4: rgba(32, 9, 165, .4);
+
+  --secondary: rgb(32, 9, 165);
+  --secondary-dark1: color-mix(in srgb, var(--secondary) 90%, black);
+  --secondary-dark2: color-mix(in srgb, var(--secondary) 80%, black);
+  --secondary-dark3: color-mix(in srgb, var(--secondary) 70%, black);
+  --secondary-dark4: color-mix(in srgb, var(--secondary) 60%, black);
+  --secondary-dark5: color-mix(in srgb, var(--secondary) 50%, black);
+  --secondary-dark6: color-mix(in srgb, var(--secondary) 40%, black);
+  --secondary-dark7: color-mix(in srgb, var(--secondary) 30%, black);
+  --secondary-dark8: color-mix(in srgb, var(--secondary) 20%, black);
+  --secondary-dark9: color-mix(in srgb, var(--secondary) 10%, black);
+
+  --secondary-light1: color-mix(in srgb, var(--secondary) 90%, white);
+  --secondary-light2: color-mix(in srgb, var(--secondary) 80%, white);
+  --secondary-light3: color-mix(in srgb, var(--secondary) 70%, white);
+
 
   --accent: rgba(235, 30, 54, 1);
 
+  
   --bnlx: rgba(243, 156, 18, 1);
   --border: rgba(255, 255, 255, 0.2);
   
@@ -22,14 +54,6 @@ body.dark-mode {
   --transition-normal: 0.3s ease;
 
   --logo-filter: invert(1) brightness(1.2) contrast(1.1);
-
-  /* === Table styling === */
-  --table-header-bg: #2c2c2c;
-  --table-header-border: #444;
-  --table-row-bg: #1e1e1e;
-  --table-row-bg-alternate: #252525;
-  --table-row-bg-hover: #333;
-  --table-row-border: #444;
 }
 
 body.dark-mode .btn-outline-secondary {
