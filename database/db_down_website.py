@@ -26,6 +26,19 @@ def compute_division_rank(division_name):
         return 4 + (100 - int(match.group(1))) if match else 999
     return 999
 
+def gather_columns_mapping():
+    columns_mapping = {
+        'adr':                  {'name': 'ADR',         'round': 0},
+        'k_r_ratio':            {'name': 'K/R',         'round': 2},
+        'k_d_ratio':            {'name': 'K/D',         'round': 2, 'good': 1.05, 'bad': 0.95},
+        'headshots_percent':    {'name': 'HS %',        'round': 0},
+        'hltv':                 {'name': 'HLTV',    'round': 2, 'good': 1.05, 'bad': 0.95},
+        'maps_played':          {'name': 'Maps Played', 'round': 0},
+    }
+    
+    return columns_mapping
+    
+
 # =============================
 #           ESEA Page
 # =============================
@@ -1024,28 +1037,6 @@ def gather_filter_teams():
             ORDER BY team_name;
         """)
         
-        # cursor.execute("""
-        #     WITH latest_avatar AS (
-        #         SELECT DISTINCT ON (t.team_name)
-        #             t.team_name,
-        #             t.avatar
-        #         FROM teams_benelux t
-        #         JOIN events e ON t.event_id = e.event_id
-        #         ORDER BY t.team_name, e.event_start DESC
-        #     )
-
-        #     -- Step 2: Aggregate all (team_id, event_id) pairs per team
-        #     SELECT
-        #         t.team_name,
-        #         ARRAY_AGG((t.team_id, t.event_id) ORDER BY e.event_start DESC) AS team_events,
-        #         la.avatar
-        #     FROM teams_benelux t
-        #     JOIN events e ON t.event_id = e.event_id
-        #     JOIN latest_avatar la ON t.team_name = la.team_name
-        #     GROUP BY t.team_name, la.avatar
-        #     ORDER BY t.team_name;
-        # """)
-        
         results = cursor.fetchall()
         teams = [
             {
@@ -1225,7 +1216,7 @@ def gather_player_stats_esea(
     end_date=None,
     min_maps=None,
     max_maps=None,
-    team_ids=[]
+    team_name=None
 ):
     db, cursor = start_database()
     try:
@@ -1288,20 +1279,18 @@ def gather_player_stats_esea(
             params.extend([f"%{stage.lower()}%" for stage in stages])
             
         if start_date:
+            print("start_date " + start_date)
             conditions.append("m.match_time >= %s")
             params.append(int(start_date))
             
         if end_date:
+            print("end_date " + end_date)
             conditions.append("m.match_time <= %s")
             params.append(int(end_date))
             
-        if team_ids:
-            team_ids = json.loads(team_ids) if isinstance(team_ids, str) else team_ids
-            placeholders = ','.join(['(%s, %s)'] * len(team_ids))
-            
-            flat_params = [elem for tup in team_ids for elem in tup]
-            conditions.append(f"(ps.team_id, m.event_id) IN ({placeholders})")
-            params.extend(flat_params)
+        if team_name:
+            conditions.append("tb.team_name = %s")
+            params.append(team_name)
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         stat_columns = gather_stat_table_columns()
@@ -1329,6 +1318,7 @@ def gather_player_stats_esea(
             JOIN events e ON m.event_id = e.event_id
             LEFT JOIN seasons s ON m.event_id = s.event_id
             
+            LEFT JOIN teams_benelux tb ON ps.team_id = tb.team_id AND m.event_id = tb.event_id
             LEFT JOIN players p ON ps.player_id = p.player_id
             LEFT JOIN players_country pc ON p.player_id = pc.player_id
             

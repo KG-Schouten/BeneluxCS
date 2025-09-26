@@ -49,18 +49,12 @@ def stats_player():
 
 @views.route('/api/stats/player/fields')
 def api_stats_player_fields():
-    from database.db_down_website import gather_stat_table_columns
+    from database.db_down_website import gather_stat_table_columns, gather_columns_mapping
     try:
         stat_field_names = gather_stat_table_columns()
+        columns_mapping = gather_columns_mapping()
         
         columns_perm = ['adr', 'k_r_ratio', 'k_d_ratio', 'headshots_percent', 'hltv']
-        columns_mapping = {
-            'adr':                  {'name': 'ADR',         'round': 0},
-            'k_r_ratio':            {'name': 'K/R',         'round': 2},
-            'k_d_ratio':            {'name': 'K/D',         'round': 2, 'good': 1.05, 'bad': 0.95},
-            'headshots_percent':    {'name': 'HS %',        'round': 0},
-            'hltv':                 {'name': 'HLTV 1.0',    'round': 2, 'good': 1.05, 'bad': 0.95},
-        }
         for col in stat_field_names:
             if col not in columns_mapping:
                 columns_mapping[col] = {'name': re.sub(r'^_', '', col).replace('_', ' ').title(), 'round': 2}
@@ -90,11 +84,11 @@ def api_stats_player_data():
         season_numbers = request.args.get('seasons', '').split(',') if request.args.get('seasons') else []
         division_names = request.args.get('divisions', '').split(',') if request.args.get('divisions') else []
         stage_names = request.args.get('stages', '').split(',') if request.args.get('stages') else []
-        start_date = request.args.get('start_date') # YYYY-MM-DD
-        end_date = request.args.get('end_date')     # YYYY-MM-DD
+        start_date = request.args.get('start_date', "") # UNIX timestamp as string
+        end_date = request.args.get('end_date', "") # UNIX timestamp as string
         min_maps_played = request.args.get('min_maps_played', type=int)
         max_maps_played = request.args.get('max_maps_played', type=int)
-        team_ids = request.args.get('teams_ids', [])
+        team_name = request.args.get('teams_name', [])
         
         data = gather_player_stats_esea(
             events=events,
@@ -106,7 +100,7 @@ def api_stats_player_data():
             end_date=end_date,
             min_maps=min_maps_played,
             max_maps=max_maps_played,
-            team_ids=team_ids
+            team_name=team_name
         )
         
         return jsonify({
@@ -207,6 +201,15 @@ def esea():
         benelux_matches=benelux_matches, 
         todays_matches=todays_matches
     )
+
+@views.route('/api/esea')
+def api_esea():
+    from database.db_down_website import gather_columns_mapping
+    columns_mapping = gather_columns_mapping()
+    return jsonify({
+        "columns_mapping": columns_mapping
+    })
+
 
 @views.route('/esea/season/<int:season_number>')
 def esea_season_partial(season_number):
