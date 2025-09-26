@@ -36,7 +36,7 @@
                 <span>Navigation</span>
             </div>
             <div class="sidebar-body">
-                <ul class="nav flex-column">
+                <ul class="nav nav-links-sidebar flex-column">
                     <a class="nav-link sidebar-button" href="/stats/player">
                         <i class="material-icons">area_chart</i>
                         Player Stats
@@ -73,6 +73,7 @@
 <!-- Stats.js -->
 <script src="{{ url_for('static', filename='js/filters/datetime.js') }}"></script>
 
+<script src="{{ url_for('static', filename='js/stats/stats.js') }}"></script>
 <script src="{{ url_for('static', filename='js/filters/filter_ui.js') }}"></script>
 <script src="{{ url_for('static', filename='js/filters/filter_utils.js') }}"></script>
 {% endblock %}
