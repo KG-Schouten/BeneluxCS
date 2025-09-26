@@ -1,17 +1,17 @@
 .sidebar-match-box {
   flex-direction: column;
-  width: 100%;
+  width: 95%;
 
   padding: 3px;
-  margin-top: 2px;
+  margin-block: 3px;
 
-  background-color: var(--secondary30);
+  background-color: var(--secondary-dark5);
   border-radius: var(--border-radius-sm);
 
   border: 1px solid var(--border);
 }
 .sidebar-match-box:hover {
-  background-color: rgba(0,0,0,0.3);
+  background-color: var(--secondary-light1);
 }
 
 .sidebar-match-box .match-top {

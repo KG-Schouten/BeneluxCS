@@ -66,10 +66,10 @@
 
 /* Sidebar buttons */
 .sidebar-button {
-    background-color: var(--secondary-light2)
+    background-color: var(--background-light2)
 }
 .sidebar-button.striped:nth-of-type(odd) {
-    background-color: var(--secondary-light3);
+    background-color: var(--background-light2);
 }
 .sidebar-button:hover {
     background-image: linear-gradient(rgba(0, 0, 0, 0.2));
