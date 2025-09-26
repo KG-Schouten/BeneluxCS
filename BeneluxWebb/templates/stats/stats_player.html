@@ -1,7 +1,8 @@
 {% extends "stats/stats_layout.html" %}
 
+{% block page_class %}stats-player{% endblock %}
 
-{% block sidebar_extra %}
+{% block sidebar_extra_left %}
     <div class="sidebar-content">
         <div class="sidebar-header">
             <span>Filters</span>
@@ -82,7 +83,7 @@
                     <span class="arrow"></span>
                 </div>
                 <div class="filter-body">
-                    {{ sliders.dual_range_slider(0, 50, 1) }}
+                    {{ sliders.dual_range_slider(0, filter_options["max_maps"], 1, "maps_played") }}
                 </div>
             </div>
 
@@ -121,7 +122,7 @@
         <label for="pageLengthSelect" class="form-label me-2">entries per page</label>
     </div>
     
-    <table id="stats-player-data-table" class="table custom-data-table custom-striped align-middle table-sm"></table>
+    <table id="stats-player-data-table" class="table custom-data-table custom-striped table-hover align-middle table-sm"></table>
         <!-- DataTable will be initialized here -->
     </table>
 {% endblock %}

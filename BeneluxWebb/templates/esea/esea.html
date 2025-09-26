@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/sidebar.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/match_box.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/table/table.css') }}">
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_sidebar.css') }}">
@@ -24,7 +25,8 @@
   <div class="esea-wrapper">
     <div class="position-relative text-center">
       <!-- Banner Image -->
-      <img id="seasonBanner" src="{{ season_info[0].event_banner }}" alt="Season Banner" class="img-fluid"/>
+      <!-- <img id="seasonBanner" src="{{ season_info[0].event_banner }}" alt="Season Banner" class="img-fluid"/> -->
+      <img id="seasonBanner" src="{{ url_for('static', filename='img/esea/ESEA_Banner_bg.png') }}" alt="Season Banner" class="img-fluid"/>
 
       <!-- Season nav container -->
       <div class="season-nav-box">
@@ -110,5 +112,5 @@
 
 {% block javascript %}
   {{ super() }}
-  <script src="{{ url_for('static', filename='js/esea.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/esea/esea.js') }}"></script>
 {% endblock %}

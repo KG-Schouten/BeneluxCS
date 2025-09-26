@@ -1,6 +1,8 @@
 {% extends "stats/stats_layout.html" %}
 
-{% block sidebar_extra %}
+{% block page_class %}stats-elo{% endblock %}
+
+{% block sidebar_extra_left %}
     <div class="sidebar-content">
         <div class="sidebar-header">
             <span>Filters</span>
@@ -26,7 +28,7 @@
                     <span class="arrow"></span>
                 </div>
                 <div class="filter-body">
-                    {{ sliders.dual_range_slider(0, 4000, 50) }}
+                    {{ sliders.dual_range_slider(elo_range[0], elo_range[1], 50, "elo") }}
                 </div>
             </div>
 
