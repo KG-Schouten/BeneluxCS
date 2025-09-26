@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             data: "player_name",
             title: "Player",
             name: "player_name",
+            width: "250px",
             render: function(data, type, row) {
                 if (type === 'filter') {
                     // Combine name + alias
@@ -46,7 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `<img src="/static/img/flags/${row.country.toLowerCase()}.png" class="me-1" style="width:16px; height:12px;">`
                         : '';
                     let aliasHtml = row.alias ? ` <span class="text-muted">(${row.alias})</span>` : '';
-                    return `${flagHtml}${data}${aliasHtml}`;
+                    return `
+                        <a class='player-cell text-hover-table' href="https://www.faceit.com/en/players/${row.player_name}" target="_blank" rel="noopener noreferrer">        
+                            ${flagHtml}${data}${aliasHtml}
+                        </a>`;
                 }
 
                 if (type === 'sort') {
@@ -71,12 +75,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     hiddenCols.sort((a, b) => getName(a).localeCompare(getName(b)));
 
     // Build column objects
+    const highlightCols = ['hltv', 'k_d_ratio']
     const statsCols = [...permCols, ...hiddenCols].map(col => ({
         data: col,
         title: getName(col),
         name: col,
         visible: columns_perm.includes(col),
         searchable: false,
+        className: highlightCols.includes(col) ? "highlight-cell" : "",
         render: function(data, type, row) {
             if (data === null || data === undefined) return '';
 
@@ -210,6 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function applyAndReloadTable() {
         const filters = collectFilterData();
         const qParams = new URLSearchParams(filters);
+        console.log("Applying filters:", filters);
         dataTable.ajax.url(`/api/stats/player/data?${qParams.toString()}`).load();
     }
 
