@@ -83,7 +83,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const inputBox = container.querySelector('input[type="text"]');
             if (inputBox) {
                 inputBox.value = "";
-                delete inputBox.dataset.teamId; // remove stored id
             }
             const resultBox = container.querySelector('.result-box');
             if (resultBox) resultBox.innerHTML = "";
@@ -122,10 +121,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const content = result.map(opt => {
-                const teamIdsJson = JSON.stringify(opt.team_ids);  // must be array of arrays
+                const teamNames = JSON.stringify(opt.team_name);
                 const avatar = opt.avatar || '/static/img/faceit/team_avatar_placeholder.jpg';
                 return `
-                    <li data-team-ids='${teamIdsJson}'>
+                    <li data-team-ids='${teamNames}'>
                         <img src="${avatar}" 
                             alt="Team Avatar"
                             onerror="this.onerror=null;this.src='/static/img/faceit/team_avatar_placeholder.jpg';">
@@ -137,7 +136,6 @@ document.addEventListener('DOMContentLoaded', function () {
             resultBox.querySelectorAll("li").forEach(li => {
                 li.addEventListener("click", () => {
                     inputBox.value = li.querySelector("span").textContent;
-                    inputBox.teamIds = JSON.parse(li.dataset.teamIds); // store selected team IDs
                     resultBox.innerHTML = "";
                 });
             });
@@ -149,6 +147,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // Listen for changes within the filter body
         const body = container.querySelector('.filter-body');
         body.addEventListener('change', updateIndicators);
+
+        // Special listener for search box input
+        const searchInput = container.querySelector('.search-box input[type="text"]');
+        if (searchInput) {
+            searchInput.addEventListener('input', updateIndicators);
+        }
     });
     
 
@@ -169,4 +173,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initial check
     updateIndicators();
+
+
+    // Apply filters from URL on page load
+    applyFiltersFromUrl();
 });

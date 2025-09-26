@@ -55,20 +55,6 @@ function collectFilterData() {
 
             if (input && input.value.trim() !== "") {
                 filters[`${name}_name`] = input.value.trim();
-
-                let ids = input.teamIds;
-
-                if (!ids && input.dataset.teamIds) {
-                    try {
-                        ids = JSON.parse(input.dataset.teamIds);
-                    } catch (e) {
-                        console.error(`[${name}] Failed to parse teamIds from dataset`, e);
-                    }
-                }
-
-                if (ids && Array.isArray(ids)) {
-                    filters[`${name}_ids`] = JSON.stringify(ids);
-                }
             }
         } 
     });
@@ -82,6 +68,93 @@ function collectFilterData() {
             delete filters.timestamp; // remove raw value if not needed
         }
     }
-
+    // console.log("Collected filters:", filters);
     return filters;
+}
+
+function getParamsFromUrl() {
+    // Fill with parameters from filters
+    const filters = collectFilterData();
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (!urlParams.has(key) || urlParams.get(key) === "") {
+            // only fill if missing or empty
+            if (value !== null && value !== undefined) {
+                urlParams.set(key, value);
+            }
+        }
+    });
+
+    return urlParams;
+}
+
+function updateURL(qParams) {
+    const newUrl = `${window.location.pathname}?${qParams.toString()}`;
+    window.history.pushState({path: newUrl}, '', newUrl);
+}
+
+function applyFiltersFromUrl() {
+    const params = getParamsFromUrl();
+
+    updateURL(params); // Ensure URL is in sync
+
+    if (params.toString() === '') return;
+
+    document.querySelectorAll('.filter-container').forEach(container => {
+        const name = container.dataset.filterName;
+        if (!name) return;
+
+        // --- Checkboxes / Radios ---
+        if (params.has(name)) {
+            const values = params.get(name).split(',');
+            container.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(input => {
+                input.checked = values.includes(input.value);
+            });
+        }
+
+        // --- Selectpicker ---
+        const select = container.querySelector('select');
+        if (params.has(name) && select) {
+            const values = params.get(name).split(',');
+            $(`#${select.id}`).selectpicker('val', values);
+            $(`#${select.id}`).selectpicker('refresh'); // Make sure styling updates
+        }
+
+        // --- Sliders ---
+        container.querySelectorAll('.range-slider-container').forEach(sliderContainer => {
+            const sliderKey = sliderContainer.dataset.sliderName;
+            if (!sliderKey) return;
+
+            const minKey = `min_${sliderKey}`;
+            const maxKey = `max_${sliderKey}`;
+
+            const minVal = sliderContainer.querySelector('.min-val');
+            const maxVal = sliderContainer.querySelector('.max-val');
+
+            if (params.has(minKey)) {
+                minVal.value = params.get(minKey);
+                minVal.dispatchEvent(new Event('input')); // triggers UI update
+            }
+
+            if (params.has(maxKey)) {
+                maxVal.value = params.get(maxKey);
+                maxVal.dispatchEvent(new Event('input'));
+            }
+        });
+
+        // --- Search box ---
+        if (params.has(`${name}_name`)) {
+            const input = container.querySelector('.search-box input[type="text"]');
+            if (input) {
+                input.value = params.get(`${name}_name`);
+                const event = new Event('input'); 
+                input.dispatchEvent(event); // trigger live search highlight if any
+            }
+        }
+    });
+
+    // --- Update filter indicators / styling ---
+    updateIndicators();  // updates counts, visibility, Clear All button
 }

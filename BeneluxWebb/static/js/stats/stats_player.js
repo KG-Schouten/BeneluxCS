@@ -16,11 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         var columns_mapping = {};
     }
 
-
     // Initial page load
-    const initialFilters = collectFilterData();
-    const queryParams = new URLSearchParams(initialFilters);
-
+    const queryParams = getParamsFromUrl();
+    applyFiltersFromUrl();
 
     // Define core columns that are always shown
     const metaCols = [
@@ -211,12 +209,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     dataTable.buttons().container().appendTo('.stats-wrapper #stats-player-data-table_wrapper > div:first-child .dt-layout-end');
 
-
     // Function to apply filters and reload the table
     function applyAndReloadTable() {
         const filters = collectFilterData();
         const qParams = new URLSearchParams(filters);
         console.log("Applying filters:", filters);
+
+        // Update URL
+        updateURL(qParams);
+
         dataTable.ajax.url(`/api/stats/player/data?${qParams.toString()}`).load();
     }
 

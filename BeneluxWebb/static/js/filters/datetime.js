@@ -16,7 +16,7 @@ function getDateRange(option) {
 
     switch (option) {
         case "All Time":
-            return { start: 0, end: toUnix(now) };
+            return { start: "", end: "" };
 
         case "This Week": {
             const monday = startOfDay(new Date(now));

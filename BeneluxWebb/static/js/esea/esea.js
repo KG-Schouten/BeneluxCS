@@ -1,7 +1,16 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
 
   // --- INITIALIZATION ---
-  
+  // Gather variables from flask api
+  try {
+    const response = await fetch('/api/esea');
+    const meta = await response.json();
+    var columns_mapping = meta.columns_mapping || {};
+  } catch (error) {
+    console.error("Error fetching ESEA metadata:", error);
+    var columns_mapping = {};
+  }
+
   // Initialize components on page load
   initTooltips();
   setupEseaTabs();
@@ -86,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           data: "player_name",
           title: "Player",
-          width: "100px",
+          width: "140px",
           render: function (data, type, row) {
             if (type === 'display') {
               const flagHtml = row.country ? `<img src="/static/img/flags/${row.country.toLowerCase()}.png" class="table-flag me-1">` : '';
@@ -101,7 +110,27 @@ document.addEventListener('DOMContentLoaded', function () {
         { data: "maps_played", title: "Maps" },
         { data: "headshots_percent", title: "HS%", render: data => data ? parseFloat(data).toFixed(0) : '0' },
         { data: "k_d_ratio", title: "K/D", render: data => data ? parseFloat(data).toFixed(2) : '0.00' },
-        { data: "hltv", title: "HLTV", render: data => data ? parseFloat(data).toFixed(2) : '0.00' }
+        { 
+          data: "hltv", 
+          title: "HLTV", 
+          render: function(data, type) {
+            const mapping = columns_mapping['hltv'] || {};
+            const round = mapping.round ?? 2;
+            const value = parseFloat(data).toFixed(round);
+
+            if (type === 'display') {
+              if (mapping.good !== undefined && mapping.bad !== undefined) {
+                if (parseFloat(data) >= mapping.good) {
+                  return `<span class="text-success fw-bold">${value}</span>`;
+                } else if (parseFloat(data) <= mapping.bad) {
+                  return `<span class="text-danger fw-bold">${value}</span>`;
+                }
+              }
+              return value;
+            }
+            return parseFloat(data);
+          }
+        }
       ];
 
       $(tableId).DataTable({
@@ -124,7 +153,18 @@ document.addEventListener('DOMContentLoaded', function () {
             orderable: true,
             orderSequence: ['desc', 'asc', '']
           }
-        ]
+        ],
+        createdRow: function(row, data, dataIndex) {
+          if (dataIndex < 5) {
+            // First 5 rows
+            $(row).addClass('.main-player-row'); // <-- your custom class
+            $('td', row).addClass('main-player-cell');
+          } else {
+            // Remaining rows
+            $(row).addClass('sub-player-row');
+            $('td', row).addClass('sub-player-cell');
+          }
+        }
       });
     });
   }

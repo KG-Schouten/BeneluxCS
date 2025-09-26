@@ -2,8 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const applyFiltersBtn = document.querySelector('.apply-button');
     let dataTable = null; 
 
-    const initialFilters = collectFilterData();
-    const queryParams = new URLSearchParams(initialFilters);
+    const queryParams = getParamsFromUrl();
 
     // Define core columns that are always shown
     const Cols = [
@@ -234,7 +233,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     function applyAndReloadTable() {
         const filters = collectFilterData();
         const qParams = new URLSearchParams(filters);
-        console.log("Applying filters:", filters);
+
+        // Update URL
+        const newUrl = `${window.location.pathname}?${qParams.toString()}`;
+        window.history.pushState({path: newUrl}, '', newUrl);
+
         dataTable.ajax.url(`/api/stats/elo/data?${qParams.toString()}`).load();
     }
 
