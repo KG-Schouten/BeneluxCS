@@ -12,17 +12,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             title: "#", 
             name: "rank", 
             className: "text-center", 
-            width: "90px",
+            width: "120px",
             render: function(data, type, row) {
                 if (type === 'display') {
 
+                    const rankChangeWeek = row.history?.[row.history.length - 1]?.rank - row.history?.[0]?.rank;
+
                     // Determine rank change
-                    const rankChange = row.history?.[0]?.rank_change;
                     let rankChangeHtml = '';
-                    if (rankChange > 0) {
-                        rankChangeHtml = `<span class="text-success"><i class="bi bi-chevron-double-up"></i> +${rankChange}</span>`;
-                    } else if (rankChange < 0) {
-                        rankChangeHtml = `<span class="text-danger"><i class="bi bi-chevron-double-down"></i> ${rankChange}</span>`;
+                    if (rankChangeWeek > 0) {
+                        rankChangeHtml = `<span class="text-success"><i class="bi bi-chevron-double-up"></i> +${rankChangeWeek}</span>`;
+                    } else if (rankChangeWeek < 0) {
+                        rankChangeHtml = `<span class="text-danger"><i class="bi bi-chevron-double-down"></i> ${rankChangeWeek}</span>`;
                     } else {
                         rankChangeHtml = `<span class="text-muted"><i class="bi bi-dash-lg"></i></span>`;
                     }
@@ -130,14 +131,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             title: "Elo", 
             name: "faceit_elo", 
             width: "150px",
+            className: "highlight-cell",
             render: function(data, type, row) {
                 if (type === 'display') {
-                    const eloChange = row.history?.[0]?.elo_change;
+                    const eloChangeWeek = (row.history?.[row.history.length - 1]?.faceit_elo - row.history?.[0]?.faceit_elo) * -1;
                     let changeHtml = '';
-                    if (eloChange > 0) {
-                        changeHtml = `<span class="elo-change-value text-success">+${eloChange}</span>`;
-                    } else if (eloChange < 0) {
-                        changeHtml = `<span class="elo-change-value text-danger">${eloChange}</span>`;
+                    if (eloChangeWeek > 0) {
+                        changeHtml = `<span class="elo-change-value text-success">+${eloChangeWeek}</span>`;
+                    } else if (eloChangeWeek < 0) {
+                        changeHtml = `<span class="elo-change-value text-danger">${eloChangeWeek}</span>`;
                     }
 
                     return `
@@ -232,6 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function applyAndReloadTable() {
         const filters = collectFilterData();
         const qParams = new URLSearchParams(filters);
+        console.log("Applying filters:", filters);
         dataTable.ajax.url(`/api/stats/elo/data?${qParams.toString()}`).load();
     }
 
