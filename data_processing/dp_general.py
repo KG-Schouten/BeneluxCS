@@ -181,9 +181,12 @@ async def process_match_details_batch(
         if row and isinstance(row, (list, tuple)) and len(row) > 1 and row[0]
     ])
     
-    if not df_matches.empty and 'match_time' in df_matches.columns:
-        df_matches['match_time'] = df_matches['match_time'].astype('Int64', errors='ignore')  # Convert to nullable integer type
-    
+    if 'match_time' in df_matches.columns:
+        df_matches['match_time'] = df_matches['match_time'].astype('Int64', errors='ignore')
+    else:
+        df_matches['match_time'] = pd.NA  # or a default value
+        df_matches['match_time'] = df_matches['match_time'].astype('Int64')
+        
     df_teams_matches = pd.DataFrame([
         item
         for row in results or [] 
