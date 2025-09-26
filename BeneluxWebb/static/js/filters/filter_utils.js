@@ -26,22 +26,26 @@ function collectFilterData() {
             }
         }
 
-        // Sliders (assuming dual range)
-        const minVal = container.querySelector('.min-val');
-        const maxVal = container.querySelector('.max-val');
+        // Sliders (multiple per container)
+        container.querySelectorAll('.range-slider-container').forEach((sliderContainer, idx) => {
+            const minVal = sliderContainer.querySelector('.min-val');
+            const maxVal = sliderContainer.querySelector('.max-val');
 
+            if (minVal && maxVal) {
+                const minAttr = parseFloat(minVal.min ?? "");
+                const maxAttr = parseFloat(maxVal.max ?? "");
 
-        if (minVal && maxVal) {
-            const minAttr = parseFloat(minVal.min ?? "");
-            const maxAttr = parseFloat(maxVal.max ?? "");
+                // Use an index or slider name to differentiate sliders in the same container
+                const sliderKey = sliderContainer.dataset.sliderName || idx;
 
-            if (parseFloat(minVal.value) !== minAttr) {
-                filters[`min_${name}`] = minVal.value;
+                if (parseFloat(minVal.value) !== minAttr) {
+                    filters[`min_${sliderKey}`] = minVal.value;
+                }
+                if (parseFloat(maxVal.value) !== maxAttr) {
+                    filters[`max_${sliderKey}`] = maxVal.value;
+                }
             }
-            if (parseFloat(maxVal.value) !== maxAttr) {
-                filters[`max_${name}`] = maxVal.value;
-            }
-        }
+        });
 
         // Search box
         const searchWrapper = container.querySelector('.search-box');

@@ -1,5 +1,5 @@
-{% macro dual_range_slider(minval, maxval, step) %}
-<div class="range-slider-container">
+{% macro dual_range_slider(minval, maxval, step, slider_name) %}
+<div class="range-slider-container sidebar-button" data-slider-name="{{ slider_name }}">
     <div class="range-slider">
         <span class="slider-track"></span>
         <input type="range" name="min_val" class="min-val" min="{{ minval }}" max="{{ maxval }}" value="{{ minval }}" step="{{ step }}">
@@ -14,50 +14,46 @@
 
 <script>
 (function() {
-    // Grab this slider container
-    const sliderContainer = document.currentScript.previousElementSibling;
-    const minVal = sliderContainer.querySelector('.min-val');
-    const maxVal = sliderContainer.querySelector('.max-val');
-    const minRangeValue = sliderContainer.querySelector('.min-range-value');
-    const maxRangeValue = sliderContainer.querySelector('.max-range-value');
-    const range = sliderContainer.querySelector('.slider-track');
+    document.querySelectorAll('.range-slider-container').forEach(sliderContainer => {
+        const minVal = sliderContainer.querySelector('.min-val');
+        const maxVal = sliderContainer.querySelector('.max-val');
+        const minRangeValue = sliderContainer.querySelector('.min-range-value');
+        const maxRangeValue = sliderContainer.querySelector('.max-range-value');
+        const range = sliderContainer.querySelector('.slider-track');
 
-    const sliderMaxValue = parseInt(maxVal.max);
+        const sliderMaxValue = parseFloat(maxVal.max);
 
-    // Update min value
-    function slideMin() {
-        if (parseInt(minVal.value) > parseInt(maxVal.value)) {
-            minVal.value = maxVal.value;
+        function slideMin() {
+            if (parseFloat(minVal.value) > parseFloat(maxVal.value)) {
+                minVal.value = maxVal.value;
+            }
+            minRangeValue.textContent = minVal.value;
+            setArea();
         }
-        minRangeValue.innerHTML = minVal.value;
-        setArea();
-    }
 
-    // Update max value
-    function slideMax() {
-        if (parseInt(maxVal.value) < parseInt(minVal.value)) {
-            maxVal.value = minVal.value;
+        function slideMax() {
+            if (parseFloat(maxVal.value) < parseFloat(minVal.value)) {
+                maxVal.value = minVal.value;
+            }
+            maxRangeValue.textContent = maxVal.value;
+            setArea();
         }
-        maxRangeValue.innerHTML = maxVal.value;
-        setArea();
-    }
 
-    // Update track position
-    function setArea() {
-        const minPercent = (minVal.value / sliderMaxValue) * 100;
-        const maxPercent = (maxVal.value / sliderMaxValue) * 100;
+        function setArea() {
+            const minPercent = (minVal.value / sliderMaxValue) * 100;
+            const maxPercent = (maxVal.value / sliderMaxValue) * 100;
+            range.style.left = minPercent + '%';
+            range.style.right = (100 - maxPercent) + '%';
+        }
 
-        range.style.left = minPercent + '%';
-        range.style.right = (100 - maxPercent) + '%';
-    }
+        // Initialize slider
+        slideMin();
+        slideMax();
 
-    // Initialize slider
-    slideMin();
-    slideMax();
-
-    // Attach event listeners
-    minVal.addEventListener('input', slideMin);
-    maxVal.addEventListener('input', slideMax);
+        // Attach event listeners
+        minVal.addEventListener('input', slideMin);
+        maxVal.addEventListener('input', slideMax);
+    });
 })();
 </script>
 {% endmacro %}
