@@ -4,6 +4,7 @@
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_card_details.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_card_details_table.css') }}">
 {% endblock %}
 
 {% block extra_js %}
@@ -13,7 +14,7 @@
     {% if loop.first %}
         <div class="division-separator justify-content-between">
             <h3 class="text-left">{{ division_name }}</h3>
-            <button id="expandAllBtn" class="btn btn-primary btn-sm mb-2">Expand All</button>
+            <button id="expandAllBtn" class="btn btn-custom">Expand All</button>
         </div>
         <!-- Skip printing division title here, already printed above -->
     {% else %}
@@ -295,57 +296,11 @@
 
                     {% if team.player_stats %}
                         <div class="player-stats-box">
-                            <table class="table-custom">
-                                <thead>
-                                    <tr>
-                                        <th class="ellipsis">Player</th>
-                                        <th class="numeric-cell">Maps</th>
-                                        <th class="numeric-cell">HS%</th>
-                                        <th class="numeric-cell">K/D</th>
-                                        <th class="numeric-cell">HLTV</th>
-                                    </tr>
-                                </thead>
-                                
-                                <tbody>
-                                    {% for player in team.player_stats %}
-                                        <tr>
-                                            <td class="ellipsis">
-                                                <a class="player-link" href="https://www.faceit.com/en/players/{{ player['player_name'] }}" target="_blank">
-                                                    <img
-                                                        src="{{ url_for('static', filename='img/flags/' ~ (player['country']|lower if player['country'] else 'xx') ~ '.png') }}"
-                                                        alt="{{ player['country'] if player['country'] else 'N/A' }}" width="20"
-                                                        class="me-2"
-                                                    >
-                                                    <span>{{ player['player_name'] if player['player_name'] else 'Unknown' }}</span>
-                                                </a>
-                                            </td>
-
-                                            <td class="numeric-cell">
-                                                {{ player['maps_played'] if player['maps_played'] is not none else '-' }}
-                                            </td>
-
-                                            <td class="numeric-cell">
-                                                {{ player['headshots_percent']|default(None)|round(0) if player['headshots_percent'] is not none else '-' }}
-                                            </td>
-
-                                            <td class="numeric-cell">
-                                                {{ '%.2f' % player['k_d_ratio'] if player['k_d_ratio'] is not none else '-' }}
-                                            </td>
-
-                                            <td class="numeric-cell
-                                                {% set value = player['hltv'] %}
-                                                {% if value is not none %}
-                                                    {% if value >= 1.05 %}
-                                                        good-value
-                                                    {% elif value <= 0.95 %}
-                                                        bad-value
-                                                    {% endif %}
-                                                {% endif %}">
-                                                {{ '%.2f' % player['hltv'] if player['hltv'] is not none else '-' }}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
+                            <input type="hidden"
+                                id="player_stats_data_{{team['team_id']}}"
+                                data-stats='{{ team.player_stats | tojson | safe }}'>
+                            <table id="player_stats_table_{{team['team_id']}}" class="table custom-data-table custom-striped align-middle table-sm">
+                                <!-- DataTable will be initialized here -->
                             </table>
                         </div>
                     {% else %}
