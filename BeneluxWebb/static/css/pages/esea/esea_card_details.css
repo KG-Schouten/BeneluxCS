@@ -48,6 +48,8 @@
 
   font-size: 1.2rem;
   font-weight: bold;
+
+  position: relative;
 }
 
 /* === Match box general styling */
@@ -264,6 +266,13 @@
 }
 .table-custom .ellipsis {
   max-width: 200px;
+}
+
+/* === View all styling === */
+.details-refer.btn.btn-custom {
+  position: absolute;
+  right: 3px;
+  height: 75%;
 }
 
 

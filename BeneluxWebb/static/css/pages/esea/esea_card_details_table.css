@@ -2,21 +2,31 @@ div[id^="player_stats_table_"][id$="_wrapper"] {
     padding: 0px;
 }
 
-.player-cell {
+div[id^="player_stats_table_"][id$="_wrapper"] .player-cell {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   min-width: 0;
 }
 
-.player-cell img {
+div[id^="player_stats_table_"][id$="_wrapper"] .player-cell img {
   flex-shrink: 0;
 }
 
-.player-cell .player-name {
+div[id^="player_stats_table_"][id$="_wrapper"] .player-cell .player-name {
   display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+/* Player type styling */
+div[id^="player_stats_table_"][id$="_wrapper"] .main-player-cell {
+  font-weight: bold;
+}
+div[id^="player_stats_table_"][id$="_wrapper"] .sub-player-cell {
+  background-color: var(--background-dark1);
+  color: gray;
+  font-size: 0.9em;
 }
