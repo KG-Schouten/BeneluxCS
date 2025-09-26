@@ -14,7 +14,6 @@ import pandas as pd
 import sys
 import asyncio
 from datetime import date
-from datetime import date
 
 import os
 from dotenv import load_dotenv
@@ -335,23 +334,6 @@ async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
     # except Exception as e:
     #     function_logger.error(f"Error updating players_country table: {e}")
     #     raise
-
-async def update_elo_leaderboard():
-    """ Update the elo_leaderboard_daily table with daily snapshots """
-    try:
-        df_elo = gather_elo_snapshot()
-        if df_elo.empty:
-            function_logger.warning("No elo snapshot data found. Skipping update.")
-            raise ValueError("Elo snapshot data is empty or not a DataFrame.")
-        
-        today = date.today()
-        df_elo['date'] = today
-        
-        upload_data('elo_leaderboard_daily', df_elo)
-        
-    except Exception as e:
-        function_logger.error(f"Error updating elo_leaderboard table: {e}", exc_info=True)
-        raise
 
 async def update_elo_leaderboard():
     """ Update the elo_leaderboard_daily table with daily snapshots """
