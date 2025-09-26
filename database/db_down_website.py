@@ -959,12 +959,31 @@ def gather_filter_options():
         divisions = [row[0] for row in cursor.fetchall()]
         divisions = sorted(divisions, key=lambda d: compute_division_rank(d))
 
+        # Gather maps_played range
+        cursor.execute("""
+            SELECT
+                COUNT(DISTINCT ps.match_id || '-' || ps.match_round) AS maps_played
+            FROM players_stats ps 
+            GROUP BY ps.player_id
+            ORDER BY maps_played DESC          
+        """)
+        players_maps = cursor.fetchall()
+        max_maps = players_maps[0][0]
+        
+        # Move up int to next multiple of n
+        if max_maps:
+            n = 5
+            max_maps = ((max_maps + (n-1)) // n) * n if max_maps % n != 0 else max_maps
+        else:
+            max_maps = 50
+        # Gather teams
         teams = gather_filter_teams()
         
         return {
             "events": events,
             "seasons": seasons,
             "divisions": divisions,
+            "max_maps": max_maps,
             "teams": teams
         }
         
@@ -1061,7 +1080,12 @@ def gather_elo_ranges() -> list:
         """)
         rows = cursor.fetchall()
         elo_range = [rows[0][0], rows[-1][0]] if rows else []
-        print(elo_range)
+        
+        n = 100
+        if elo_range and (elo_range[1] - elo_range[0]) % n != 0:
+            elo_range[1] = ((elo_range[1] + (n-1)) // n) * n
+            elo_range[0] = (elo_range[0] // n) * n
+        
         return elo_range
     except Exception as e:
         function_logger.error(f"Error gathering ELO ranges: {e}", exc_info=True)
@@ -1070,7 +1094,9 @@ def gather_elo_ranges() -> list:
         close_database(db)
 
 def gather_elo_leaderboard(
-    countries=None
+    countries=None,
+    min_elo=None,
+    max_elo=None
     ) -> list:
     db, cursor = start_database()
     
@@ -1101,6 +1127,7 @@ def gather_elo_leaderboard(
             JOIN players p ON el.player_id = p.player_id
             LEFT JOIN players_country pc ON p.player_id = pc.player_id
             WHERE el.date >= CURRENT_DATE - INTERVAL '7 days'
+            AND p.faceit_elo > 2000
             {where_clause}           
         """
         
@@ -1119,10 +1146,23 @@ def gather_elo_leaderboard(
         
         official_names, aliases = get_player_aliases(cursor)
         
+        if isinstance(min_elo, str) and min_elo.isdigit():
+            min_elo = int(min_elo)
+        if isinstance(max_elo, str) and max_elo.isdigit():
+            max_elo = int(max_elo)
+        
         output = []
         for player_id, group in df.groupby("player_id"):
             group = group.sort_values("date", ascending=False)
             history = []
+
+            latest = group.iloc[0]
+            
+            if min_elo and latest["faceit_elo"] < min_elo:
+                continue
+            if max_elo and latest["faceit_elo"] > max_elo:
+                continue
+            
             for _, row in group.iterrows():
                 history.append({
                     "date": row["date"].isoformat() if isinstance(row["date"], (pd.Timestamp, datetime)) else str(row["date"]),
@@ -1131,9 +1171,7 @@ def gather_elo_leaderboard(
                     "rank": int(row["rank"]) if pd.notna(row["rank"]) else None,
                     "rank_change": int(row["rank_change"]) if pd.notna(row["rank_change"]) else 0
                 })
-            
-            latest = group.iloc[0]
-            
+                       
             output.append({
                 "player_id": str(player_id),  # ensure native int
                 "player_name": str(latest["player_name"]),
