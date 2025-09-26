@@ -292,6 +292,10 @@
                     <!-- Player statistics -->
                     <div class="details-box-header">
                         Player Statistics
+                        <a class="details-refer btn btn-custom"
+                            href="/stats/player?events=esea&seasons={{ team.season_number }}&divisions={{ team.division_name }}&teams_name={{ team.team_name }}">
+                            View All Stats
+                        </a>
                     </div>
 
                     {% if team.player_stats %}
@@ -299,7 +303,7 @@
                             <input type="hidden"
                                 id="player_stats_data_{{team['team_id']}}"
                                 data-stats='{{ team.player_stats | tojson | safe }}'>
-                            <table id="player_stats_table_{{team['team_id']}}" class="table custom-data-table custom-striped align-middle table-sm">
+                            <table id="player_stats_table_{{team['team_id']}}" class="table custom-data-table align-middle table-sm">
                                 <!-- DataTable will be initialized here -->
                             </table>
                         </div>
