@@ -28,7 +28,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="stats-page-wrapper">
+<div class="stats-page-wrapper {% block page_class %}{% endblock %}">
 
     <div class="sidebar left">
         <div class="sidebar-content">
@@ -37,18 +37,31 @@
             </div>
             <div class="sidebar-body">
                 <ul class="nav flex-column">
-                    <a class="nav-link" href="/stats/player">Player Stats</a>
-                    <a class="nav-link active" href="/stats/elo">Elo Leaderboard</a>
+                    <a class="nav-link sidebar-button" href="/stats/player">
+                        <i class="material-icons">area_chart</i>
+                        Player Stats
+                    </a>
+                    <a class="nav-link sidebar-button" href="/stats/elo">
+                        <i class="material-icons">leaderboard</i>
+                        Elo Leaderboard
+                    </a>
                 </ul>
             </div>
         </div>
         
-        {% block sidebar_extra %} {% endblock %}
+        {% block sidebar_extra_left %} {% endblock %}
 
     </div>
 
     <div class="stats-wrapper">
         {% block stats_content %} {% endblock %}
+    </div>
+
+    
+    <div class="sidebar right">
+        <div class="sidebar-content">
+            {% block sidebar_extra_right %}{% endblock %}
+        </div>
     </div>
 
 </div>
@@ -58,7 +71,7 @@
 {{ super() }}
 
 <!-- Stats.js -->
-<script src="{{ url_for('static', filename='js/datetime.js') }}"></script>
+<script src="{{ url_for('static', filename='js/filters/datetime.js') }}"></script>
 
 <script src="{{ url_for('static', filename='js/filters/filter_ui.js') }}"></script>
 <script src="{{ url_for('static', filename='js/filters/filter_utils.js') }}"></script>
