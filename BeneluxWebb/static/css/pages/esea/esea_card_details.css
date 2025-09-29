@@ -18,6 +18,8 @@
   margin-right: 0;
   margin-top: 8px;
   padding-top: 8px;
+
+  font-size: .9rem;
 }
 
 
@@ -46,7 +48,7 @@
   background-color: var(--secondary-dark3);
   border-bottom: 2px solid var(--border);
 
-  font-size: 1.2rem;
+  font-size: 1.2em;
   font-weight: bold;
 
   position: relative;
@@ -65,7 +67,7 @@
   padding: 5px;
   gap: 2px;
 
-  font-size: 1rem;
+  font-size: 1em;
 }
 
 .match-info-box {
@@ -99,7 +101,7 @@
 
   flex: 0 0 40px;
 
-  font-size: .8rem;
+  font-size: .9em;
 }
 .match-info-time.upcoming {
   flex: 0 0 80px;
@@ -171,7 +173,7 @@
   text-overflow: ellipsis;
   overflow: hidden;
 
-  font-size: 1rem;
+  font-size: 1em;
   font-weight: bold;
 }
 
@@ -180,7 +182,7 @@
   flex: 0 0 40px;
   justify-content: center;
 
-  font-size: .8rem;
+  font-size: 1em;
   font-weight: bold;
 
   overflow: visible;
@@ -208,12 +210,12 @@
   padding: 5px;
   gap: 2px;
 
-  font-size: 1rem;
+  font-size: 1em;
 }
 .map-stat-box {
   padding: 5px;
 
-  font-size: clamp(0.6rem, -0.3662rem + 1.5584vw, 0.9rem);
+  font-size: clamp(0.6em, -0.3662em + 1.5584vw, 0.9em);
   gap: 2px;
 
   text-align: center;
@@ -262,7 +264,7 @@
   width: 100%;
   height: auto;
 
-  font-size: clamp(0.8rem, -0.3662rem + 1.5584vw, 1rem);
+  font-size: clamp(0.8em, -0.3662em + 1.5584vw, 1em);
 }
 .table-custom .ellipsis {
   max-width: 200px;
@@ -273,6 +275,8 @@
   position: absolute;
   right: 3px;
   height: 75%;
+
+  font-size: .7em;
 }
 
 
@@ -290,7 +294,7 @@
   }
 
   .map-stat-box {
-    font-size: 0.7rem;
+    font-size: 0.7em;
   }
 
   .table-custom .ellipsis {

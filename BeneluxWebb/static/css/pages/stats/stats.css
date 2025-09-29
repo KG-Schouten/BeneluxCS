@@ -1,10 +1,6 @@
 :root {
   /* Main wrapper width */
   --sidebar-width: 160px;
-
-  --stats-width-percent: 90vw;
-  --filters-width: 260px;
-  --gap-size: 2rem;
 }
 
 .stats-page-wrapper {
@@ -14,9 +10,10 @@
   width: 100%;
   min-height: 100vh;
   flex-shrink: 0;
+  position: relative;
 }
 .stats-page-wrapper.stats-player .sidebar.right {
-  display: none !important;
+  display: none;
 }
 .stats-page-wrapper.stats-elo .sidebar.right {
   display: block;
@@ -33,5 +30,40 @@
   border-radius: var(--border-radius);
   overflow: hidden;
   min-width: 0;
+}
+
+
+@media screen and (max-width: 992px) {
+  .stats-page-wrapper.stats-player .sidebar.right {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .sidebar-collapser {
+      display: flex;
+  }
+
+  .stats-page-wrapper .sidebar.left {
+      position: absolute;
+      left: -160px; /* hidden offscreen */
+      top: 0;
+      z-index: 1000;
+      height: 100%;
+      margin: 0;
+      background-color: var(--background-dark6);
+      box-shadow: 10px 0 8px rgba(0,0,0,.5);
+      transition: left 0.3s ease;
+  }
+
+  /* Slide in when active */
+  .stats-page-wrapper .sidebar.left.active {
+      left: 0;
+  }
+  
+  .stats-wrapper {
+    border-radius: var(--border-radius-sm);
+    overflow-x: auto;
+  }
 }
 

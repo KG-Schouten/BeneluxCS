@@ -28,7 +28,7 @@
   height: 32px;
   width: auto;
   padding: 0 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   cursor: pointer;
   box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
 }
@@ -65,6 +65,9 @@
 
   border: var(--border) 1px solid;
   border-radius: var(--border-radius);
+  box-shadow: 0 .125rem .5625rem -0.125rem rgba(0,0,0,.6);
+
+  font-size: 1rem;
 }
 
 .team-card-visible {
@@ -326,7 +329,7 @@
   text-overflow: ellipsis;
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 .sub-player img {
   width: clamp(14px, 2vw, 18px);

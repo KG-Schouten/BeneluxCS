@@ -2,18 +2,12 @@
 .sidebar {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    flex-shrink: 0;
-    
     width: var(--sidebar-width);
-    
     margin: 10px;
-
     border-radius: var(--border-radius);
-
     background-color: var(--background-light1);
-
+    position: relative;
+    transition: all 0.3s ease;
 }
 
 /* === Sidebar content styling === */
@@ -66,7 +60,7 @@
 
 /* Sidebar buttons */
 .sidebar-button {
-    background-color: var(--background-light2)
+    background-color: var(--background-light1)
 }
 .sidebar-button.striped:nth-of-type(odd) {
     background-color: var(--background-light2);
@@ -189,4 +183,30 @@
 }
 .sidebar-body > ul > a:hover {
     color: var(--text);
+}
+
+/* Sidebar collapse button styling */
+.sidebar-collapser {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--accent);
+    box-shadow: 5px 5px 13px rgba(0,0,0,.4);
+    position: absolute;
+    left: 100%;
+    top: 5px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+/* Hover transform depends on sidebar state */
+.sidebar.active .sidebar-collapser:hover {
+    transform: scale(1.1);
+}
+.sidebar:not(.active) .sidebar-collapser:hover {
+    transform: translateX(5%) scale(1.1);
 }

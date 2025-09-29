@@ -118,3 +118,15 @@
   font-size: 0.8rem;
   text-align: left;
 }
+
+@media screen and (max-width: 768px) {
+  div[id$="_wrapper"] .row:first-child {
+    flex-direction: column;
+    white-space: nowrap;
+  }
+
+  div[id$="_wrapper"] .row:first-child > .dt-layout-start,
+  div[id$="_wrapper"] .row:first-child > .dt-layout-end {
+    justify-content: center !important;
+  }
+}

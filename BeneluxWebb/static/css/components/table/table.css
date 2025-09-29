@@ -17,12 +17,32 @@ div[id$="_wrapper"] {
 div[id$="_wrapper"] > .row {
   margin: 0 !important;
 }
+
+div[id$="_wrapper"] .row:first-child > * {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
 div[id$="_wrapper"] > div {
   padding: 0 !important;
 }
 div[id$="_wrapper"] .dt-layout-table .dt-layout-full {
   padding-left: 0 !important;
   padding-right: 0 !important;
+}
+
+div[id$="_wrapper"] .row:first-child {
+  flex-direction: row;
+  white-space: nowrap;
+}
+div[id$="_wrapper"] .row:last-child {
+  flex-direction: column;
+}
+
+div[id$="_wrapper"] .row:first-child > .dt-layout-start,
+div[id$="_wrapper"] .row:first-child > .dt-layout-end {
+  display: flex;
+  flex-direction: row;
+  width: auto;
 }
 div[id$="_wrapper"] .dt-layout-start,
 div[id$="_wrapper"] .dt-layout-end {
@@ -37,7 +57,7 @@ div[id$="_wrapper"] table.dataTable {
   border-collapse: separate;
   width: 100% !important;
   border-spacing: 0 2px;
-  table-layout: fixed;
+  table-layout: auto;
 }
 div.dt-scroll-head table.dataTable {
   border-spacing: 0 !important;
@@ -90,6 +110,7 @@ div[id$="_wrapper"] table.dataTable > tbody > tr > td {
   height: var(--table-row-height);
   
   vertical-align: middle;
+  white-space: nowrap;
 }
 div[id$="_wrapper"] table.dataTable > thead > tr > td:not(:last-child),
 div[id$="_wrapper"] table.dataTable > tbody > tr > td:not(:last-child) {
@@ -137,6 +158,7 @@ div[id$="_wrapper"] .dt-search .search-icon {
 }
 div[id$="_wrapper"] .dt-search.search-with-icon input {
   padding-left: 32px !important;
+  width: 160px
 }
 
 
@@ -145,6 +167,8 @@ div[id$="_wrapper"] .dt-buttons {
   display: flex;
   gap: 8px;
   margin-left: 8px !important;
+  margin-bottom: 0 !important;
+  width: auto;
 }
 div[id$="_wrapper"] .dt-buttons button {
   background-color: var(--secondary-light2);
@@ -206,3 +230,4 @@ div[id$="_wrapper"] .dt-paging-button.disabled .page-link {
 div[id$="_wrapper"] table.dataTable > tbody > tr > td.highlight-cell {
   background-image: linear-gradient(rgba(0, 0, 0, 0.1));
 }
+  

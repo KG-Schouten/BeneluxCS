@@ -18,9 +18,6 @@
   align-items: flex-start;
 
   background-color: var(--background);
-  /* background-image: -webkit-linear-gradient(180deg, var(--background) 0%, var(--primary1) 100%);
-  background-image: -moz-linear-gradient(180deg, var(--background) 0%, var(--primary1) 100%);
-  background-image: linear-gradient(180deg, var(--background) 0%, var(--primary1) 100%); */
 
   transition: background-color var(--transition-normal), box-shadow var(--transition-normal);
 }
@@ -187,13 +184,12 @@
 /* Styling for small screens */
 @media screen and (max-width: 768px) {
   .navbar-container {
-    height: auto !important;
     max-height: var(--navbar-height);
     max-width: 100% !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    height: var(--navbar-height);
+    height: auto;
     overflow: hidden;
     transition: max-height 0.5s ease;
   }
@@ -202,6 +198,7 @@
   }
 
   .container-boxed.navbar-boxed {
+    display: flex;
     flex-direction: column;
     align-items: flex-start !important;
     width: 100% !important;

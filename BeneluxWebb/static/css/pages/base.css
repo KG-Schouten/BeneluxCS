@@ -9,11 +9,15 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+
+    font-size: 16px;
 }
 
 body {
     background-color: var(--background);
     color: var(--text);
+
+    font-size: 1rem;
 }
 
 a {
@@ -36,7 +40,7 @@ a {
 }
 .text-muted {
     color: var(--text-muted) !important;
-    font-size: 0.8em;
+    font-size: 0.875rem;
 }
 
 .page-wrapper {
