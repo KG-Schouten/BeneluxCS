@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             data: "player_name",
             title: "Player",
             name: "player_name",
-            width: "250px",
+            width: "120px",
             render: function(data, type, row) {
                 if (type === 'filter') {
                     // Combine name + alias

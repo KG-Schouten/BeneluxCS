@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Re-run autocollapse on resize
   window.addEventListener('resize', () => {
     autocollapse('#eseaTabs', 40);
+    // Adjust all visible DataTables on resize so headers/body stay aligned
+    if ($.fn.dataTable) {
+      $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+    }
   });
 
   // --- ESEA TABS LOGIC ---
@@ -95,7 +99,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         {
           data: "player_name",
           title: "Player",
-          width: "140px",
           render: function (data, type, row) {
             if (type === 'display') {
               const flagHtml = row.country ? `<img src="/static/img/flags/${row.country.toLowerCase()}.png" class="table-flag me-1">` : '';
@@ -107,9 +110,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             return data;
           }
         },
-        { data: "maps_played", title: "Maps" },
-        { data: "headshots_percent", title: "HS%", render: data => data ? parseFloat(data).toFixed(0) : '0' },
-        { data: "k_d_ratio", title: "K/D", render: data => data ? parseFloat(data).toFixed(2) : '0.00' },
+        { data: "maps_played", title: "Maps"},
+        { data: "headshots_percent", title: "HS%", render: data => data ? parseFloat(data).toFixed(0) : '0'},
+        { data: "k_d_ratio", title: "K/D", render: data => data ? parseFloat(data).toFixed(2) : '0.00'},
         { 
           data: "hltv", 
           title: "HLTV", 
@@ -141,6 +144,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         info: false,
         processing: true,
         dom: 't', 
+        fixedColumns: true,
+        scrollX: true,
+        scrollCollapse: true,
+        autoWidth: true,
         order: [],
         columnControl: ['orderStatus'],
         columnDefs: [
@@ -149,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             orderSequence: ['asc', 'desc', '']
           },
           {
-            target: '_all',
+            targets: '_all',
             orderable: true,
             orderSequence: ['desc', 'asc', '']
           }
@@ -157,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         createdRow: function(row, data, dataIndex) {
           if (dataIndex < 5) {
             // First 5 rows
-            $(row).addClass('.main-player-row'); // <-- your custom class
+            $(row).addClass('main-player-row'); // <-- your custom class
             $('td', row).addClass('main-player-cell');
           } else {
             // Remaining rows
@@ -172,6 +179,12 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Initialize Bootstrap collapse functionality
   function initBootstrapCollapse() {
     document.querySelectorAll('.team-card .collapse').forEach(collapse => {
+      collapse.addEventListener('shown.bs.collapse', function () {
+        const table = this.querySelector('table');
+        if (table && $.fn.dataTable.isDataTable(table)) {
+          $(table).DataTable().columns.adjust();
+        }
+      });
       collapse.removeEventListener('show.bs.collapse', updateIconOnShow);
       collapse.removeEventListener('hide.bs.collapse', updateIconOnHide);
       collapse.addEventListener('show.bs.collapse', updateIconOnShow);
