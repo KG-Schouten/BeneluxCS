@@ -81,6 +81,14 @@
     flex-direction: column;
     width: 100%;
 }
+.filter-container.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+.filter-container.disabled .filter-header {
+    background-color: var(--background-dark5);
+}
 
 .filter-header {
     display: flex;
@@ -209,4 +217,17 @@
 }
 .sidebar:not(.active) .sidebar-collapser:hover {
     transform: translateX(5%) scale(1.1);
+}
+
+/* Sidebar Backdrop for scrolling on mobile */
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: none;
+    z-index: 999;
+}
+
+.sidebar-backdrop.active {
+    display: block;
 }

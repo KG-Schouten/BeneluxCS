@@ -122,6 +122,8 @@
 @media screen and (max-width: 992px) {
   .esea-wrapper {
     width: calc(100% - var(--sidebar-width));
+    margin: 0;
+    border-radius: 0;
   }
 }
 

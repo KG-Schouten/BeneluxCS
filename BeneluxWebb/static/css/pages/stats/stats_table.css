@@ -7,17 +7,23 @@
 /* === ELO Table Styling === */
 #stats-elo-data-table_wrapper table.dataTable {
   border-spacing: 0 4px;
+
+  font-size: 1em;
 }
 
 #stats-elo-data-table_wrapper table.dataTable > tbody > tr > td {
   height: 48px;
   font-weight: bold;
-  font-size: 20px;
+  font-size: 1.2em;
   color: var(--text);
 }
 #stats-elo-data-table_wrapper table.dataTable > thead > tr > td:first-child,
 #stats-elo-data-table_wrapper table.dataTable > tbody > tr > td:first-child {
   border-right: none !important;
+
+  min-width: 80px !important;
+  max-width: 120px !important;
+  width: 120px !important;
 }
 
 #stats-elo-data-table_wrapper table.dataTable > tbody > tr > td {
@@ -46,6 +52,7 @@
 }
 .rank-change-indicator {
   font-size: 0.8em;
+  font-weight: normal;
   text-align: center;
 }
 
@@ -116,10 +123,39 @@
 }
 .elo-change-value {
   font-size: 0.8rem;
+  font-weight: normal;
   text-align: left;
 }
 
 @media screen and (max-width: 768px) {
+  /* Player stats styling */
+  #stats-player-data-table_wrapper table.dataTable > thead > tr > td:first-child,
+  #stats-player-data-table_wrapper table.dataTable > tbody > tr > td:first-child {
+    min-width: 80px !important;
+    max-width: 130px !important;
+    width: 130px !important;
+  }
+
+  /* Elo leaderboard styling */
+  #stats-elo-data-table_wrapper table.dataTable {
+    font-size: .875em;
+  }
+
+  #stats-elo-data-table_wrapper table.dataTable > thead > tr > td:first-child,
+  #stats-elo-data-table_wrapper table.dataTable > tbody > tr > td:first-child {
+    min-width: 60px !important;
+  }
+  .rank-badge {
+    display: flex;
+    text-align: center;
+    grid-template-columns: none;
+  }
+  .rank-change-indicator,
+  .elo-change-value {
+    display: none;
+  }
+
+  /* General styling */
   div[id$="_wrapper"] .row:first-child {
     flex-direction: column;
     white-space: nowrap;
@@ -129,4 +165,6 @@
   div[id$="_wrapper"] .row:first-child > .dt-layout-end {
     justify-content: center !important;
   }
+
+
 }
