@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             data: "player_name",
             title: "Player",
             name: "player_name",
-            width: "120px",
             render: function(data, type, row) {
                 if (type === 'filter') {
                     // Combine name + alias
@@ -215,9 +214,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const qParams = new URLSearchParams(filters);
         console.log("Applying filters:", filters);
 
-        // Update URL
-        updateURL(qParams);
+        if (filters.events) {
+            handleEventFilterChange(filters.events);
+        }
 
+        updateURL(qParams);
         dataTable.ajax.url(`/api/stats/player/data?${qParams.toString()}`).load();
     }
 
@@ -227,3 +228,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('filtersCleared', applyAndReloadTable);
 
 })
+

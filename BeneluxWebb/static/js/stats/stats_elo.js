@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             title: "#", 
             name: "rank", 
             className: "text-center", 
-            width: "120px",
             render: function(data, type, row) {
                 if (type === 'display') {
 

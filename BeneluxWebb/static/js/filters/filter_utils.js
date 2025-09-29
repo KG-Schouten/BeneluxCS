@@ -5,6 +5,10 @@ function collectFilterData() {
         const name = container.dataset.filterName;
         if (!name) return;
 
+        if (container.classList.contains("disabled")) {
+            return;
+        }
+
         // Collect checkboxes and radios
         const checkedInputs = Array.from(
             container.querySelectorAll('input[type="checkbox"]:checked, input[type="radio"]:checked')
@@ -72,6 +76,31 @@ function collectFilterData() {
     return filters;
 }
 
+function collectDefaultFilters() {
+    document.querySelectorAll('.filter-container').forEach(container => {
+        const name = container.dataset.filterName;
+
+        if (!name) return;
+
+        const checkedBoxes = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'));
+        const nonDefaultChecked = checkedBoxes.filter(box => !box.hasAttribute('data-default'));
+        if (nonDefaultChecked.length) {
+            console.log(`${name}: User changed checkboxes`, nonDefaultChecked.map(b => b.value));
+        }
+
+        // Handle radios
+        const checkedRadio = container.querySelector('input[type="radio"]:checked');
+        if (checkedRadio) {
+            if (checkedRadio.hasAttribute('data-default')) {
+                console.log(`${name}: Default radio selected`);
+            } else {
+                console.log(`${name}: User changed radio to`, checkedRadio.value);
+            }
+        }
+    });
+}
+
+
 function getSelectedCount(container) {
     const name = container.dataset.filterName;
     let count = 0;
@@ -117,6 +146,11 @@ function updateIndicators() {
         const indicator = container.querySelector('.filter-indicator');
         if (!indicator) return;
 
+        if (container.classList.contains("disabled")) {
+            indicator.style.display = 'none';
+            return;
+        }
+
         const count = getSelectedCount(container);
 
         if (count > 0) {
@@ -139,7 +173,12 @@ function updateIndicators() {
 
 function getParamsFromUrl() {
     // Fill with parameters from filters
+    const defaultParams = collectDefaultFilters();
     const filters = collectFilterData();
+
+    if (filters.events) {
+        handleEventFilterChange(filters.events);
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -222,4 +261,27 @@ function applyFiltersFromUrl() {
 
     // --- Update filter indicators / styling ---
     updateIndicators();  // updates counts, visibility, Clear All button
+}
+
+function handleEventFilterChange(value) {
+    const rules = {
+        "all": [],
+        "esea": [],
+        "hub": ["seasons", "divisions", "stages"],
+    };
+
+    // Reset all filters first
+    document.querySelectorAll('.filter-container').forEach(container => {
+        container.classList.remove("disabled");
+    });
+
+    // Disable the ones listed in rules[value]
+    const toDisable = rules[value] || [];
+    document.querySelectorAll('.filter-container').forEach(container => {
+        const name = container.dataset.filterName;
+        if (!name) return;
+        if (toDisable.includes(name)) {
+            container.classList.add("disabled");
+        }
+    });
 }

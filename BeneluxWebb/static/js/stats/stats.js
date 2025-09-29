@@ -1,37 +1,63 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Mark current active link
-    document.querySelectorAll(".nav-links-sidebar a").forEach(link => {
-        if (link.getAttribute("href") === window.location.pathname) {
-            link.classList.add("active");
-        }
-    });
-
-    // Initialize sidebar state based on window width
     const sidebar = document.getElementById("sidebar-filters");
     const collapser = document.querySelector(".sidebar-collapser");
 
-    function updateSidebarState() {
-        if (window.innerWidth <= 768) {
-            sidebar.classList.remove("active"); // start collapsed on mobile
-        } else {
-            sidebar.classList.add("active"); // always expanded on desktop
+    // Create backdrop
+    const backdrop = document.createElement("div");
+    backdrop.classList.add("sidebar-backdrop");
+    document.body.appendChild(backdrop);
+
+    function openSidebar(smallScreen = false) {
+        sidebar.classList.add("active");
+        if (smallScreen) {
+            backdrop.classList.add("active");
         }
     }
 
-    updateSidebarState();
-    window.addEventListener("resize", updateSidebarState);
+    function closeSidebar() {
+        sidebar.classList.remove("active");
+        backdrop.classList.remove("active");
+    }
+
+    function updateSidebarState(init = false) {
+        if (window.innerWidth <= 768) {
+            if (init) {
+                closeSidebar();
+            } else {
+            }
+        } else {
+            openSidebar();
+        }
+    }
+
+    // Initial run (force collapsed on mobile, open on desktop)
+    updateSidebarState(true);
+
+    // Only adjust on resize without auto-closing mobile sidebar
+    window.addEventListener("resize", () => {
+        updateSidebarState(false);
+    });
 
     // Collapser toggle
     collapser.addEventListener("click", (e) => {
-        e.stopPropagation(); // prevent triggering the document click
-        sidebar.classList.toggle("active");
+        e.stopPropagation();
+        if (sidebar.classList.contains("active")) {
+            closeSidebar();
+        } else {
+            openSidebar();
+        }
     });
 
-    document.addEventListener("click", (e) => {
-        if (window.innerWidth <= 768 && sidebar.classList.contains("active")) {
-            if (!sidebar.contains(e.target) && !collapser.contains(e.target)) {
-                sidebar.classList.remove("active");
-            }
+    // Only backdrop closes the sidebar
+    backdrop.addEventListener("mousedown", (e) => {
+        if (e.target === backdrop) {  // ensure it's not inside sidebar
+            closeSidebar();
+        }
+    });
+
+    backdrop.addEventListener("touchstart", (e) => {
+        if (e.target === backdrop) {  // ensure it's not inside sidebar
+            closeSidebar();
         }
     });
 });
