@@ -1,6 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const filterWrappers = document.querySelectorAll('.filter-wrapper');
-    const filterContainers = document.querySelectorAll('.filter-container');
     const clearAllButton = document.querySelector('.clear-all-filters');
 
     // Enable accordion behavior for filter headers
@@ -8,58 +6,76 @@ document.addEventListener('DOMContentLoaded', function () {
         header.addEventListener('click', () => header.parentElement.classList.toggle('open'));
     });
 
-    // Initialize search boxes
-    document.querySelectorAll('.search-box').forEach(box => {
-        const resultBox = box.querySelector('.result-box');
-        const inputBox = box.querySelector('input[type="text"]');
+    // Initialize search box for team search
+    document.querySelectorAll('.search-box[data-filter-name="teams"]')
+    .forEach(container => {
+        container.addEventListener("search:update", e => {
+            const { inputValue, options, results, setValue, selectedValues, multiselect } = e.detail;
 
-        // Get filter options from data attribute
-        const options = JSON.parse(resultBox.dataset.searchOptions || "[]");
+            console.log("=== search:update event ===");
+            console.log("Input value:", inputValue);
+            console.log("Multiselect enabled:", multiselect);
+            console.log("Currently selected values:", selectedValues);
+            console.log("Total options:", options.length);
 
-        inputBox.addEventListener("keyup", () => {
-            const input = inputBox.value.trim().toLowerCase();
-            let result = [];
-
-            if (input.length) {
-                if (input.length) {
-                    result = options.filter(opt =>
-                        opt.team_name.toLowerCase().includes(input)
-                    );
-                }
-            }
-
-            display(result);
-        });
-
-        function display(result) {
-            if (!result.length) {
-                resultBox.innerHTML = "";
+            results.innerHTML = "";
+            if (!inputValue) {
+                console.log("Input empty, clearing results.");
                 return;
             }
 
-            const content = result.map(opt => {
-                const teamNames = JSON.stringify(opt.team_name);
-                const avatar = opt.avatar || '/static/img/faceit/team_avatar_placeholder.jpg';
-                return `
-                    <li data-team-ids='${teamNames}'>
-                        <img src="${avatar}" 
-                            alt="Team Avatar"
-                            onerror="this.onerror=null;this.src='/static/img/faceit/team_avatar_placeholder.jpg';">
-                        <span>${opt.team_name}</span>
-                    </li>`;
-            }).join("");
-            resultBox.innerHTML = `<ul>${content}</ul>`;
+            const filtered = options.filter(opt =>
+                opt.team_name.toLowerCase().includes(inputValue.toLowerCase())
+            );
 
-            resultBox.querySelectorAll("li").forEach(li => {
-                li.addEventListener("click", () => {
-                    inputBox.value = li.querySelector("span").textContent;
-                    resultBox.innerHTML = "";
+            console.log("Filtered results:", filtered.map(o => o.team_name));
+
+            if (filtered.length) {
+                const ul = document.createElement("ul");
+
+                filtered.forEach(opt => {
+                    const li = document.createElement("li");
+
+                    const img = document.createElement("img");
+                    img.src = opt.avatar || "/static/img/faceit/team_avatar_placeholder.jpg";
+                    img.alt = "Team Avatar";
+                    img.onerror = () => {
+                        console.warn("Image failed to load for team:", opt.team_name);
+                        img.src = "/static/img/faceit/team_avatar_placeholder.jpg";
+                    };
+
+                    const span = document.createElement("span");
+                    span.textContent = opt.team_name;
+
+                    // If multiselect, mark already selected
+                    if (multiselect && selectedValues.includes(opt.team_name)) {
+                        li.classList.add("selected");
+                        console.log("Marking as selected:", opt.team_name);
+                    }
+
+                    li.appendChild(img);
+                    li.appendChild(span);
+
+                    li.addEventListener("click", () => {
+                        console.log("Clicked team:", opt.team_name);
+                        setValue(opt.team_name);
+                        console.log("Updated selected values:", container.dataset.value);
+                    });
+
+                    ul.appendChild(li);
                 });
-            });
-        }
+
+                results.appendChild(ul);
+                console.log("Results DOM updated.");
+            } else {
+                console.log("No matches found for input:", inputValue);
+            }
+        });
     });
 
 
+
+    
     const lastValues = {}; // store last value per filter
     const debounceTimers = {}; // store timer per filter
     observeFilterValueChanges((container, newValue) => {

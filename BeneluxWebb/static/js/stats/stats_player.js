@@ -211,7 +211,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // Function to apply filters and reload the table
-
     applyFiltersBtn.addEventListener('click', () => {
         applyFiltersAndReloadTable({
             table: dataTable,

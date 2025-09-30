@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Initialize tooltips for disabled links
-    const tooltipTriggerList = document.querySelectorAll('[data-toggle="tooltip"]')
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
     tooltipTriggerList.forEach(el => {
         new bootstrap.Tooltip(el)
     })
