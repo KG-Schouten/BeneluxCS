@@ -692,6 +692,11 @@ def gather_esea_season_info() -> list:
         unique_seasons = {}
         for row in res:
             season_number = row[0]
+            
+            # For now, keep s55 hidden
+            if season_number == 55:
+                continue
+            
             if season_number not in unique_seasons:
                 unique_seasons[season_number] = {
                     'season_number': season_number,
@@ -1528,8 +1533,6 @@ def get_todays_matches():
             division: grouped_matches[division]
             for division in sorted(grouped_matches.keys(), key=compute_division_rank)
         }
-        
-        print(sorted_grouped_matches)
         
         return sorted_grouped_matches
 
