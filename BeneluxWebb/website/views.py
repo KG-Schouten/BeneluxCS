@@ -84,23 +84,20 @@ def api_stats_player_data():
         season_numbers = request.args.get('seasons', '').split(',') if request.args.get('seasons') else []
         division_names = request.args.get('divisions', '').split(',') if request.args.get('divisions') else []
         stage_names = request.args.get('stages', '').split(',') if request.args.get('stages') else []
-        start_date = request.args.get('start_date', "") # UNIX timestamp as string
-        end_date = request.args.get('end_date', "") # UNIX timestamp as string
-        min_maps_played = request.args.get('min_maps_played', type=int)
-        max_maps_played = request.args.get('max_maps_played', type=int)
-        team_name = request.args.get('teams_name', [])
+        timestamp = request.args.get('timestamp', '')
+        maps_played = request.args.get('maps_played', '').split(',') if request.args.get('maps_played') else []
+        teams = request.args.get('teams', '').strip(',') if request.args.get('teams') else ''
         
+        print(f"Filters - Events: {events}, Countries: {countries}, Seasons: {season_numbers}, Divisions: {division_names}, Stages: {stage_names}, Timestamp: {timestamp}, Maps Played: {maps_played}, Teams: {teams}")
         data = gather_player_stats_esea(
             events=events,
             countries=countries,
             seasons=season_numbers,
             divisions=division_names,
             stages=stage_names,
-            start_date=start_date,
-            end_date=end_date,
-            min_maps=min_maps_played,
-            max_maps=max_maps_played,
-            team_name=team_name
+            timestamp=timestamp,
+            maps_played=maps_played,
+            teams=teams
         )
         
         return jsonify({
@@ -152,10 +149,9 @@ def api_stats_elo_data():
     
     try:
         countries = request.args.get('countries', '').split(',') if request.args.get('countries') else []
-        min_elo = request.args.get('min_elo', type=int)
-        max_elo = request.args.get('max_elo', type=int)
+        elo = request.args.get('elo', '').split(',') if request.args.get('elo') else []
         
-        data = gather_elo_leaderboard(countries=countries, min_elo=min_elo, max_elo=max_elo)
+        data = gather_elo_leaderboard(countries=countries, elo=elo)
         
         return jsonify({
             "data": data
