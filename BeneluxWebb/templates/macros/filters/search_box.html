@@ -1,5 +1,9 @@
-{% macro search_box(name, placeholder='', filter_options=[], init_checked=[]) %}
-<div class="filter-container search-box" id="search-box-{{ name }}" data-filter-name="{{ name }}" data-default='{{ init_checked | default([]) | tojson }}'>
+{% macro search_box(name, placeholder='', multiselect=true, filter_options=[], init_checked=[]) %}
+<div class="filter-container search-box" 
+     id="search-box-{{ name }}" 
+     data-filter-name="{{ name }}" 
+     data-multiselect="{{ 'true' if multiselect else 'false' }}"
+     data-default='{{ init_checked | default([]) | tojson }}'>
     <div class="search-box-wrapper sidebar-button">
         <i class="bi bi-search"></i>
         <input  
@@ -8,7 +12,8 @@
             placeholder="{{ placeholder }}"
             autocomplete="off">
     </div>
-    <div class="result-box" id="result-box-{{ name }}" data-search-options='{{ filter_options|tojson }}'>
+    <div class="result-box" id="result-box-{{ name }}" 
+        data-search-options='{{ filter_options|tojson }}'>
     </div>
 </div>
 
@@ -18,36 +23,92 @@
     const input = container.querySelector('input[type="text"]');
     const results = container.querySelector('.result-box');
     const options = JSON.parse(results.dataset.searchOptions || '[]');
+    const multiselect = container.dataset.multiselect === "true";
 
-    function updateValue() {
-        const val = input.value.trim();
-        container.dataset.value = JSON.stringify(val ? [val] : []);
-        // Optional: update live suggestions
-        if (results) {
-            results.innerHTML = '';
-            if (val) {
-                const filtered = options.filter(opt => opt.toLowerCase().includes(val.toLowerCase()));
-                filtered.forEach(opt => {
-                    const div = document.createElement('div');
-                    div.textContent = opt;
-                    div.className = 'result-item';
-                    div.addEventListener('click', () => {
-                        input.value = opt;
-                        updateValue();
-                        results.innerHTML = '';
-                    });
-                    results.appendChild(div);
-                });
+    console.log("Initializing search box:", container.id);
+    console.log("Multiselect:", multiselect);
+    console.log("Options loaded:", options);
+
+    // Initialize stored value from defaults
+    let selectedValues = JSON.parse(container.dataset.default || "[]");
+    console.log("Initial selected values:", selectedValues);
+
+    function updateValue(selected = null) {
+        let val = input.value.trim();
+        console.log("\n--- updateValue called ---");
+        console.log("Input value before update:", val);
+        console.log("Selected argument:", selected);
+        console.log("Current selectedValues:", selectedValues);
+
+        if (selected) {
+            if (multiselect) {
+                if (!selectedValues.includes(selected)) {
+                    selectedValues.push(selected);
+                    console.log("Added to selectedValues (multiselect):", selectedValues);
+                } else {
+                    console.log("Value already in selectedValues:", selected);
+                }
+                input.value = ""; // clear input after choosing
+            } else {
+                selectedValues = [selected];
+                input.value = selected; // show chosen value
+                console.log("Single-select mode, selectedValues now:", selectedValues);
             }
+        } else if (!multiselect) {
+            // In single mode, replace with input text directly
+            selectedValues = val ? [val] : [];
+            console.log("Single-select input update, selectedValues:", selectedValues);
         }
-        // console.log('Search box value updated:', container.dataset.value);
+
+        // Update container dataset
+        container.dataset.value = JSON.stringify(selectedValues);
+        console.log("container.dataset.value updated:", container.dataset.value);
+
+        // Trigger custom event so page-specific JS can render suggestions
+        const evt = new CustomEvent("search:update", {
+            detail: { 
+                container, 
+                inputValue: input.value.trim(), 
+                options, 
+                results, 
+                multiselect,
+                selectedValues: [...selectedValues], // give a copy
+                setValue: (v) => {
+                    console.log("setValue called with:", v);
+                    updateValue(v);
+                    results.innerHTML = "";
+                }
+            }
+        });
+        console.log("Dispatching search:update event");
+        container.dispatchEvent(evt);
     }
 
-    // Initialize dataset value
+    // Initialize
     updateValue();
 
-    // Event listener for input changes
-    input.addEventListener('input', updateValue);
+    // Event listener for external apply
+    container.addEventListener('applyValuesFromUrl', e => {
+        console.log("applyValuesFromUrl event received:", e.detail);
+        const newValues = Array.isArray(e.detail) ? e.detail : [e.detail];
+
+        selectedValues = [...newValues];
+        console.log("selectedValues updated from applyFilters:", selectedValues);
+
+        if (!multiselect) {
+            input.value = selectedValues[0] || "";
+        } else {
+            input.value = ""; // keep input empty for multi-select
+        }
+    });
+
+
+    // Event listener for typing
+    input.addEventListener("input", () => {
+        console.log("Input event triggered:", input.value);
+        updateValue();
+    });
 })();
 </script>
+
 {% endmacro %}
