@@ -105,7 +105,6 @@
   bottom: 0;
   width: 0;
   height: 2px;
-  /* background: linear-gradient(to right, #F02629, #FFCD01 , #1B448C); */
   background: var(--accent);
   transition: width 0.3s ease;
   transform: translateX(-50%);
@@ -124,6 +123,30 @@
 .nav-links li a:hover {
   /* color: var(--accent); */
   text-shadow: 0px 0px 6px var(--accent);
+}
+
+.nav-links li a.disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.nav-links li a.disabled:hover {
+  text-shadow: none;
+}
+.nav-links li a.disabled::after {
+  display: none;
+}
+
+.tooltip-inner {
+  background-color: var(--accent);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.tooltip-arrow::before {
+  border-bottom-color: var(--accent); /* match tooltip background */
 }
 
 /* === Dark mode toggle === */

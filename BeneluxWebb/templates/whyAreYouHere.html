@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; width: 75%; align-items: center; justify-content: center; flex-direction: column; margin-left: auto; margin-right: auto; margin-top: 50px;">
+    <div style="display: flex; flex-direction: row; white-space: nowrap; align-items: center; justify-content: center;">
+        <span style="font-size: 45px"> Steve's working, please don't distract :( </span>
+        <span style="font-size: 12px; margin-left: 10px;">*Also how did you even get here?</span>
+    </div>
+    <img src="{{ url_for('static', filename='img/steve_working_hard.gif') }}" alt="Why Are You Here?" style="width:60%; height:auto; display:block; margin-left:auto; margin-right:auto; margin-top:20px;">
+</div>
+{% endblock %}

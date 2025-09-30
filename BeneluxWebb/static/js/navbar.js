@@ -41,4 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
         navbar.classList.remove("scrolled");
         }
     });
+
+    // Initialize tooltips for disabled links
+    const tooltipTriggerList = document.querySelectorAll('[data-toggle="tooltip"]')
+    tooltipTriggerList.forEach(el => {
+        new bootstrap.Tooltip(el)
+    })
 });

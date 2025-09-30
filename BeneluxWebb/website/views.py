@@ -8,7 +8,22 @@ views = Blueprint('views', __name__, template_folder='../templates')
 def home_redirect():
     return redirect(url_for('views.esea'))
 
+# Some random redirects lol because soon™
+@views.route('/hub')
+def hub_redirect():
+    return redirect(url_for('views.why_are_you_here'))
+@views.route('/matches')
+def matches_redirect():
+    return redirect(url_for('views.why_are_you_here'))
+@views.route('/events')
+def events_redirect():
+    return redirect(url_for('views.why_are_you_here'))
+@views.route('/whyareyouhere')
+def why_are_you_here():
+    return render_template('whyAreYouHere.html')
 
+
+# Stats routes
 @views.route('/stats')
 def stats_redirect():
     return redirect(url_for('views.stats_player'))
@@ -164,6 +179,7 @@ def api_stats_elo_data():
         })
 
 
+# ESEA routes
 @views.route('/esea')
 def esea():
     # Current time in unix
