@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
+    const filterWrappers = document.querySelectorAll('.filter-wrapper');
     const filterContainers = document.querySelectorAll('.filter-container');
     const clearAllButton = document.querySelector('.clear-all-filters');
 
@@ -7,40 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
         header.addEventListener('click', () => header.parentElement.classList.toggle('open'));
     });
 
-    function resetFilter(container) {
-        const name = container.dataset.filterName;
-
-        if (name === 'countries' || name === 'divisions' || name === 'stages') {
-            container.querySelectorAll('input[type="checkbox"]:checked').forEach(c => c.checked = false);
-        } else if (name === 'seasons') {
-            $(`#${name}-select`).selectpicker('deselectAll');
-        } else if (name === 'events' || name === 'timestamp') {
-            // Find and check the default radio button
-            const defaultRadio = container.querySelector('input[type="radio"][data-default="true"]');
-            if (defaultRadio) {
-                defaultRadio.checked = true;
-            }
-        } else if (name === 'maps_played') {
-            const minVal = container.querySelector('.min-val');
-            const maxVal = container.querySelector('.max-val');
-            minVal.value = minVal.min;
-            maxVal.value = maxVal.max;
-            // Manually trigger input event to update UI
-            minVal.dispatchEvent(new Event('input'));
-            maxVal.dispatchEvent(new Event('input'));
-        } else if (name === 'teams') {
-            const inputBox = container.querySelector('input[type="text"]');
-            if (inputBox) {
-                inputBox.value = "";
-            }
-            const resultBox = container.querySelector('.result-box');
-            if (resultBox) resultBox.innerHTML = "";
-        }
-
-        updateIndicators(); 
-    }
-
-
+    // Initialize search boxes
     document.querySelectorAll('.search-box').forEach(box => {
         const resultBox = box.querySelector('.result-box');
         const inputBox = box.querySelector('input[type="text"]');
@@ -91,39 +59,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Event Listeners
-    filterContainers.forEach(container => {
-        // Listen for changes within the filter body
-        const body = container.querySelector('.filter-body');
-        body.addEventListener('change', updateIndicators);
 
-        // Special listener for search box input
-        const searchInput = container.querySelector('.search-box input[type="text"]');
-        if (searchInput) {
-            searchInput.addEventListener('input', updateIndicators);
-        }
+    const lastValues = {}; // store last value per filter
+    const debounceTimers = {}; // store timer per filter
+    observeFilterValueChanges((container, newValue) => {
+        const filterName = container.dataset.filterName;
+        if (!filterName) return;
+
+        // Initialize last value and timer for this filter if needed
+        if (!lastValues.hasOwnProperty(filterName)) lastValues[filterName] = null;
+        if (!debounceTimers.hasOwnProperty(filterName)) debounceTimers[filterName] = null;
+
+        clearTimeout(debounceTimers[filterName]);
+        debounceTimers[filterName] = setTimeout(() => {
+            if (newValue === lastValues[filterName]) return; // ignore duplicates
+            lastValues[filterName] = newValue;
+
+            if (filterName === 'events') {
+                console.log('=-=-=-= Events filter changed, updating dependent filters...');
+                handleEventsFilterChange(JSON.parse(newValue) || 'all');
+            }
+
+            updateIndicators();
+        }, 10);
     });
+
     
-
-    // Specific listener for range slider
-    document.querySelectorAll('.min-val, .max-val').forEach(slider => {
-        slider.addEventListener('input', updateIndicators);
-    });
-
-
     // Listener for the global clear all button
     clearAllButton.addEventListener('click', () => {
-        filterContainers.forEach(container => {
-            resetFilter(container);
-        });
+        resetFilters();
         document.dispatchEvent(new CustomEvent('filtersCleared'));
     });
-
-
-    // Initial check
-    updateIndicators();
-
-
-    // Apply filters from URL on page load
-    applyFiltersFromUrl();
 });

@@ -16,9 +16,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         var columns_mapping = {};
     }
 
-    // Initial page load
-    const queryParams = getParamsFromUrl();
+    console.log("---- Applying/gathering initial filters from URL ----");
     applyFiltersFromUrl();
+    const queryParams = collectParamsFromUrl();
+
 
     // Define core columns that are always shown
     const metaCols = [
@@ -208,24 +209,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     dataTable.buttons().container().appendTo('.stats-wrapper #stats-player-data-table_wrapper > div:first-child .dt-layout-end');
 
+
     // Function to apply filters and reload the table
-    function applyAndReloadTable() {
-        const filters = collectFilterData();
-        const qParams = new URLSearchParams(filters);
-        console.log("Applying filters:", filters);
 
-        if (filters.events) {
-            handleEventFilterChange(filters.events);
-        }
+    applyFiltersBtn.addEventListener('click', () => {
+        applyFiltersAndReloadTable({
+            table: dataTable,
+            endpoint: '/api/stats/player/data'
+        });
+    });
 
-        updateURL(qParams);
-        dataTable.ajax.url(`/api/stats/player/data?${qParams.toString()}`).load();
-    }
-
-    applyFiltersBtn.addEventListener('click', applyAndReloadTable);
-
-    // --- Listen for the custom event from filter_ui.js ---
-    document.addEventListener('filtersCleared', applyAndReloadTable);
+    // Custom event listener
+    document.addEventListener('filtersCleared', () => {
+        applyFiltersAndReloadTable({
+            table: dataTable,
+            endpoint: '/api/stats/player/data'
+        });
+    });
 
 })
 

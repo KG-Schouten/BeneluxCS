@@ -2,7 +2,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const applyFiltersBtn = document.querySelector('.apply-button');
     let dataTable = null; 
 
-    const queryParams = getParamsFromUrl();
+    console.log("---- Applying/gathering initial filters from URL ----");
+    applyFiltersFromUrl();
+    const queryParams = collectParamsFromUrl();
 
     // Define core columns that are always shown
     const Cols = [
@@ -226,23 +228,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchContainer = $('#stats-elo-data-table_wrapper > div:first-child .dt-search');
     searchContainer.addClass('search-with-icon');
     $('<i class="bi bi-search search-icon"></i>').prependTo(searchContainer);
+
     
+    applyFiltersBtn.addEventListener('click', () => {
+        applyFiltersAndReloadTable({
+            table: dataTable,
+            endpoint: '/api/stats/elo/data'
+        });
+    });
 
-    // Function to apply filters and reload the table
-    function applyAndReloadTable() {
-        const filters = collectFilterData();
-        const qParams = new URLSearchParams(filters);
-
-        // Update URL
-        const newUrl = `${window.location.pathname}?${qParams.toString()}`;
-        window.history.pushState({path: newUrl}, '', newUrl);
-
-        dataTable.ajax.url(`/api/stats/elo/data?${qParams.toString()}`).load();
-    }
-
-    applyFiltersBtn.addEventListener('click', applyAndReloadTable);
-
-    // --- Listen for the custom event from filter_ui.js ---
-    document.addEventListener('filtersCleared', applyAndReloadTable);
+    // Custom event listener
+    document.addEventListener('filtersCleared', () => {
+        applyFiltersAndReloadTable({
+            table: dataTable,
+            endpoint: '/api/stats/elo/data'
+        });
+    });
 
 })

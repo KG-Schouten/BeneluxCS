@@ -1,4 +1,23 @@
-function collectFilterData() {
+function collectDefaultFilters() {
+    const defaults = {};
+
+    document.querySelectorAll('.filter-container').forEach(container => {
+        const name = container.dataset.filterName;
+        if (!name) return;
+
+        try {
+            // Parse the initial default values
+            const value = JSON.parse(container.dataset.default);
+            defaults[name] = value;
+        } catch (err) {
+            console.warn(`Could not parse default value for filter "${name}":`, container.dataset.default);
+            defaults[name] = [];
+        }
+    });
+    return defaults;
+}
+
+function collectCurrentFilters() {
     const filters = {};
 
     document.querySelectorAll('.filter-container').forEach(container => {
@@ -9,279 +28,299 @@ function collectFilterData() {
             return;
         }
 
-        // Collect checkboxes and radios
-        const checkedInputs = Array.from(
-            container.querySelectorAll('input[type="checkbox"]:checked, input[type="radio"]:checked')
-        );
-        if (checkedInputs.length) {
-            // Radio → single, Checkbox → multiple
-            const values = checkedInputs.map(el => el.value);
-            filters[name] = checkedInputs[0].type === 'radio' ? values[0] : values.join(',');
+        try {
+            // Parse the current values
+            const value = JSON.parse(container.dataset.value);
+            filters[name] = value;
+        } catch (err) {
+            console.warn(`Could not parse current value for filter "${name}":`, container.dataset.value);
         }
-
-        // Select (single or multiple)
-        const select = container.querySelector('select');
-        if (select) {
-            const selected = $(select).val() || [];
-            if (Array.isArray(selected) && selected.length) {
-                filters[name] = selected.join(',');
-            } else if (typeof selected === 'string' && selected.trim() !== '') {
-                filters[name] = selected;
-            }
-        }
-
-        // Sliders (multiple per container)
-        container.querySelectorAll('.range-slider-container').forEach((sliderContainer, idx) => {
-            const minVal = sliderContainer.querySelector('.min-val');
-            const maxVal = sliderContainer.querySelector('.max-val');
-
-            if (minVal && maxVal) {
-                const minAttr = parseFloat(minVal.min ?? "");
-                const maxAttr = parseFloat(maxVal.max ?? "");
-
-                // Use an index or slider name to differentiate sliders in the same container
-                const sliderKey = sliderContainer.dataset.sliderName || idx;
-
-                if (parseFloat(minVal.value) !== minAttr) {
-                    filters[`min_${sliderKey}`] = minVal.value;
-                }
-                if (parseFloat(maxVal.value) !== maxAttr) {
-                    filters[`max_${sliderKey}`] = maxVal.value;
-                }
-            }
-        });
-
-        // Search box
-        const searchWrapper = container.querySelector('.search-box');
-
-        if (searchWrapper) {
-            const input = searchWrapper.querySelector('input[type="text"]');
-
-            if (input && input.value.trim() !== "") {
-                filters[`${name}_name`] = input.value.trim();
-            }
-        } 
     });
-
-    // Special case: timestamp → expand into start/end dates
-    if (filters.timestamp) {
-        const range = getDateRange(filters.timestamp);
-        if (range) {
-            filters.start_date = range.start;
-            filters.end_date = range.end;
-            delete filters.timestamp; // remove raw value if not needed
-        }
-    }
-    // console.log("Collected filters:", filters);
     return filters;
 }
 
-function collectDefaultFilters() {
-    document.querySelectorAll('.filter-container').forEach(container => {
-        const name = container.dataset.filterName;
+function collectParamsFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params;
+}
 
-        if (!name) return;
+function collectFiltersFromUrl() {
+    const params = collectParamsFromUrl();
+    const filters = {};
 
-        const checkedBoxes = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'));
-        const nonDefaultChecked = checkedBoxes.filter(box => !box.hasAttribute('data-default'));
-        if (nonDefaultChecked.length) {
-            console.log(`${name}: User changed checkboxes`, nonDefaultChecked.map(b => b.value));
+    for (const [key, value] of params.entries()) {
+        if (!value) {
+            // Empty string → empty array
+            filters[key] = [];
+        } else if (value.includes(',')) {
+            // Comma-separated values → array
+            filters[key] = value.split(',').map(v => v.trim());
+        } else {
+            // Single value → wrap in array
+            filters[key] = [value];
         }
+    }
 
-        // Handle radios
-        const checkedRadio = container.querySelector('input[type="radio"]:checked');
-        if (checkedRadio) {
-            if (checkedRadio.hasAttribute('data-default')) {
-                console.log(`${name}: Default radio selected`);
-            } else {
-                console.log(`${name}: User changed radio to`, checkedRadio.value);
-            }
-        }
-    });
+    return filters;
 }
 
 
-function getSelectedCount(container) {
-    const name = container.dataset.filterName;
-    let count = 0;
+function getSelectedCount() {
+    const currentFilters = collectCurrentFilters();
+    const defaultFilters = collectDefaultFilters();
+    const urlFilters = collectFiltersFromUrl();
 
-    if (name === 'countries' || name === 'divisions' || name === 'stages') {
-        count = container.querySelectorAll('input[type="checkbox"]:checked').length;
-    } else if (name === 'seasons') {
-        const select = $(`#${name}-select`);
-        if (select.length) {
-            const val = select.val();
-            if (Array.isArray(val)) {
-                count = val.length;
+    const isDisabled = (key) => {
+        const container = document.querySelector(`[data-filter-name="${key}"]`);
+        return container && container.classList.contains("disabled");
+    };
+
+    const normalizeArray = (val) => (Array.isArray(val) ? val : []);
+
+    const countDifferences = (arr1, arr2) => {
+        const set1 = new Set(arr1);
+        const set2 = new Set(arr2);
+        
+        if (set1.size > set2.size) {
+            return arr1.filter(v => !set2.has(v)).length;
+        } else if (set2.size < set2.size) {
+            return arr2.filter(v => !set1.has(v)).length;
+        } else {
+            return arr2.filter(v => !set1.has(v)).length
+        }
+    };
+
+    const computeCounts = (sourceObj, compareObj) => {
+        const counts = {};
+        Object.entries(sourceObj).forEach(([key, sourceVals]) => {
+            if (isDisabled(key)) {
+                counts[key] = 0;
+                return;
             }
-        }
-    } else if (name === 'events' || name === 'timestamp') {
-        // Check if the selected radio is NOT the default one
-        const selectedRadio = container.querySelector(`input[name="${name}"]:checked`);
-        if (selectedRadio && !selectedRadio.hasAttribute('data-default')) {
-            count = 1;
-        }
-    } else if (name === 'maps_played') {
-        const minVal = container.querySelector('.min-val');
-        const maxVal = container.querySelector('.max-val');
-        if (minVal && maxVal && (minVal.value !== minVal.min || maxVal.value !== maxVal.max)) {
-            count = 1;
-        }
-    } else if (name === 'teams') {
-        const inputBox = container.querySelector('input[type="text"]');
-        if (inputBox && inputBox.value.trim() !== "") {
-            count = 1;
-        }
-    }
-    return count;
+            const compareArr = normalizeArray(compareObj[key]);
+            counts[key] = countDifferences(sourceVals, compareArr);
+        });
+        return counts;
+    };
+
+    const currentFromDefaultCounts = computeCounts(defaultFilters, currentFilters);
+    const currentFromUrlCounts = computeCounts(urlFilters, currentFilters);
+    const urlFromDefaultCounts = computeCounts(defaultFilters, urlFilters);
+
+    return { currentFromDefaultCounts, currentFromUrlCounts, urlFromDefaultCounts };
 }
 
 function updateIndicators() {
-    const filterContainers = document.querySelectorAll('.filter-container');
+    console.log("--- Updating filter indicators ---");
+    const filterWrappers = document.querySelectorAll('.filter-wrapper');
     const clearAllButton = document.querySelector('.clear-all-filters');
-    if (!filterContainers.length) return;
+    const applyFiltersButton = document.querySelector('.apply-button');
 
-    let totalActiveFilters = 0;
-    filterContainers.forEach(container => {
-        const indicator = container.querySelector('.filter-indicator');
+    if (!filterWrappers.length) return;
+
+    const { currentFromDefaultCounts, currentFromUrlCounts, urlFromDefaultCounts } = getSelectedCount();
+
+    let clearCount = 0;
+    let applyCount = 0;
+
+    filterWrappers.forEach(wrapper => {
+        const indicator = wrapper.querySelector('.filter-indicator');
         if (!indicator) return;
 
-        if (container.classList.contains("disabled")) {
+        if (wrapper.classList.contains("disabled")) {
             indicator.style.display = 'none';
             return;
         }
 
-        const count = getSelectedCount(container);
+        const container = wrapper.querySelector('.filter-container');
+        if (!container) return;
 
-        if (count > 0) {
-            indicator.textContent = count;
-            indicator.style.display = 'flex';
-            totalActiveFilters++;
-        } else {
-            indicator.style.display = 'none';
+        const name = container.dataset.filterName;
+        if (!name) return;
+
+        const curFromDef = currentFromDefaultCounts[name] || 0;
+        const urlFromDef = urlFromDefaultCounts[name] || 0;
+        const curFromUrl = currentFromUrlCounts[name] || 0;
+
+        // Show/hide indicator
+        indicator.style.display = curFromDef > 0 ? 'flex' : 'none';
+        if (curFromDef > 0) indicator.textContent = curFromDef;
+
+        // Count for buttons
+        if (curFromDef > 0 || urlFromDef > 0) clearCount++;
+        if (curFromUrl > 0) applyCount++;
+    });
+
+    // Enable/disable buttons
+    if (applyFiltersButton) applyFiltersButton.disabled = applyCount === 0;
+    if (clearAllButton) clearAllButton.disabled = clearCount === 0;
+}
+
+
+function updateUrl() {
+    const filterWrappers = document.querySelectorAll('.filter-wrapper');
+    const currentFilters = collectCurrentFilters();
+    const defaultFilters = collectDefaultFilters();
+
+    // Fill currentFilters with defaults where missing
+    Object.entries(defaultFilters).forEach(([key, value]) => {
+        // If the value is not missing or undefined or an empty array/string
+        if (
+            value === undefined ||
+            value === null ||
+            (Array.isArray(value) && value.length === 0) ||
+            (typeof value === "string" && value.trim() === "")
+        ) {
+            return; // skip this entry
+        }
+
+        if (!currentFilters.hasOwnProperty(key) || currentFilters[key] === null || currentFilters[key] === undefined || currentFilters[key] === "") {
+            currentFilters[key] = value;
         }
     });
 
-    if (clearAllButton) {
-        if (totalActiveFilters > 0) {
-            clearAllButton.disabled = false;
+    // Convert currentFilters to URLSearchParams
+    const qParams = new URLSearchParams();
+    Object.entries(currentFilters).forEach(([key, value]) => {
+        // If the filterWrapper with corresponding data-filter-name is disabled, skip it
+        const wrapper = Array.from(filterWrappers).find(w => w.dataset.filterName === key);
+
+        if (wrapper && wrapper.classList.contains("disabled")) {
+            qParams.set(key, "");
+            return;
         } else {
-            clearAllButton.disabled = true;
-        }
-    }
-}
-
-function getParamsFromUrl() {
-    // Fill with parameters from filters
-    const defaultParams = collectDefaultFilters();
-    const filters = collectFilterData();
-
-    if (filters.events) {
-        handleEventFilterChange(filters.events);
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-
-    Object.entries(filters).forEach(([key, value]) => {
-        if (!urlParams.has(key) || urlParams.get(key) === "") {
-            // only fill if missing or empty
-            if (value !== null && value !== undefined) {
-                urlParams.set(key, value);
+            if (value !== null && value !== undefined && value !== "") {
+                qParams.set(key, value);
             }
         }
     });
+    console.log("Updating URL with filters:", currentFilters);
 
-    return urlParams;
-}
-
-function updateURL(qParams) {
+    // Update the browser URL without reloading the page
     const newUrl = `${window.location.pathname}?${qParams.toString()}`;
     window.history.pushState({path: newUrl}, '', newUrl);
 }
 
-function applyFiltersFromUrl() {
-    const params = getParamsFromUrl();
-
-    updateURL(params); // Ensure URL is in sync
-
-    if (params.toString() === '') return;
-
+function applyFilters(filters) {
     document.querySelectorAll('.filter-container').forEach(container => {
         const name = container.dataset.filterName;
         if (!name) return;
 
-        // --- Checkboxes / Radios ---
-        if (params.has(name)) {
-            const values = params.get(name).split(',');
-            container.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(input => {
-                input.checked = values.includes(input.value);
-            });
-        }
+        if (filters.hasOwnProperty(name)) {
+            container.dataset.value = JSON.stringify(filters[name]);
 
-        // --- Selectpicker ---
-        const select = container.querySelector('select');
-        if (params.has(name) && select) {
-            const values = params.get(name).split(',');
-            $(`#${select.id}`).selectpicker('val', values);
-            $(`#${select.id}`).selectpicker('refresh'); // Make sure styling updates
-        }
-
-        // --- Sliders ---
-        container.querySelectorAll('.range-slider-container').forEach(sliderContainer => {
-            const sliderKey = sliderContainer.dataset.sliderName;
-            if (!sliderKey) return;
-
-            const minKey = `min_${sliderKey}`;
-            const maxKey = `max_${sliderKey}`;
-
-            const minVal = sliderContainer.querySelector('.min-val');
-            const maxVal = sliderContainer.querySelector('.max-val');
-
-            if (params.has(minKey)) {
-                minVal.value = params.get(minKey);
-                minVal.dispatchEvent(new Event('input')); // triggers UI update
-            }
-
-            if (params.has(maxKey)) {
-                maxVal.value = params.get(maxKey);
-                maxVal.dispatchEvent(new Event('input'));
-            }
-        });
-
-        // --- Search box ---
-        if (params.has(`${name}_name`)) {
-            const input = container.querySelector('.search-box input[type="text"]');
-            if (input) {
-                input.value = params.get(`${name}_name`);
-                const event = new Event('input'); 
-                input.dispatchEvent(event); // trigger live search highlight if any
-            }
+            container.dispatchEvent(new CustomEvent('applyValuesFromUrl', {
+                detail: filters[name],
+                bubbles: true
+            }));
         }
     });
 
-    // --- Update filter indicators / styling ---
-    updateIndicators();  // updates counts, visibility, Clear All button
+    updateUrl();
+    updateIndicators();
 }
 
-function handleEventFilterChange(value) {
+function applyFiltersFromUrl() {
+    console.log("--- Applying filters from URL ---");
+    const filtersURL = collectFiltersFromUrl();
+    const defaultFilters = collectDefaultFilters();
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Fill filtersURL with defaults only for parameters NOT present in URL
+    Object.entries(defaultFilters).forEach(([key, value]) => {
+        // If the value is not missing or undefined or an empty array/string
+        if (
+            value === undefined ||
+            value === null ||
+            (Array.isArray(value) && value.length === 0) ||
+            (typeof value === "string" && value.trim() === "")
+        ) {
+            return; // skip this entry
+        }
+
+        // Only add default if the parameter wasn't in the URL at all
+        if (!urlParams.has(key) && !filtersURL.hasOwnProperty(key)) {
+            filtersURL[key] = value;
+        }
+    });
+
+    console.log("Applying filters from URL (with defaults):", filtersURL);
+
+    applyFilters(filtersURL);
+}
+
+
+function resetFilters() {
+    const defaultFilters = collectDefaultFilters();
+
+    console.log(`Resetting filters to default:`, defaultFilters);
+
+    applyFilters(defaultFilters);
+}
+
+
+// Apply filters on table
+function applyFiltersAndReloadTable({ table, endpoint, filters = null }) {
+    console.log("--- Applying filters and reloading table ---");
+    if (!table || !endpoint) return;
+
+    const appliedFilters = filters || collectCurrentFilters();
+
+    // Update URL in browser
+    applyFilters(appliedFilters);
+
+    // Convert filters to URL params
+    const qParams = collectParamsFromUrl()
+    table.ajax.url(`${endpoint}?${qParams.toString()}`).load();
+}
+
+
+function observeFilterValueChanges(callback) {
+    if (typeof callback !== 'function') {
+        console.warn('observeFilterValueChanges requires a callback function');
+        return [];
+    }
+
+    const containers = document.querySelectorAll('.filter-container');
+    const observers = [];
+
+    containers.forEach(container => {
+        const observer = new MutationObserver(mutationsList => {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'data-value') {
+                    const newValue = container.dataset.value;
+                    callback(container, newValue);
+                }
+            }
+        });
+
+        observer.observe(container, { attributes: true });
+        observers.push(observer);
+    });
+
+    return observers;
+}
+
+
+function handleEventsFilterChange(value) {
     const rules = {
         "all": [],
         "esea": [],
         "hub": ["seasons", "divisions", "stages"],
     };
 
-    // Reset all filters first
-    document.querySelectorAll('.filter-container').forEach(container => {
-        container.classList.remove("disabled");
-    });
-
     // Disable the ones listed in rules[value]
+    console.log(`Disabling filters based on events selection "${value}":`, rules[value] || []);
     const toDisable = rules[value] || [];
-    document.querySelectorAll('.filter-container').forEach(container => {
+    document.querySelectorAll('.filter-wrapper').forEach(container => {
         const name = container.dataset.filterName;
         if (!name) return;
         if (toDisable.includes(name)) {
             container.classList.add("disabled");
+            // Also if class is open, close it
+            container.classList.remove("open");
+        } else {
+            container.classList.remove("disabled");
         }
     });
 }
