@@ -1346,8 +1346,10 @@ def gather_player_stats_esea(
             params.append(int(end_date))
             
         if teams:
-            conditions.append("tb.team_name = %s")
-            params.append(teams)
+            placeholders = ','.join(['%s'] * len(teams))
+            conditions.append(f"LOWER(tb.team_name) IN ({placeholders})")
+            params.extend([t.lower() for t in teams if isinstance(t, str)]) 
+            print(params, teams)
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         stat_columns = gather_stat_table_columns()

@@ -101,9 +101,9 @@ def api_stats_player_data():
         stage_names = request.args.get('stages', '').split(',') if request.args.get('stages') else []
         timestamp = request.args.get('timestamp', '')
         maps_played = request.args.get('maps_played', '').split(',') if request.args.get('maps_played') else []
-        teams = request.args.get('teams', '').strip(',') if request.args.get('teams') else ''
+        teams = request.args.get('teams', '').split(',') if request.args.get('teams') else []
         
-        print(f"Filters - Events: {events}, Countries: {countries}, Seasons: {season_numbers}, Divisions: {division_names}, Stages: {stage_names}, Timestamp: {timestamp}, Maps Played: {maps_played}, Teams: {teams}")
+        
         data = gather_player_stats_esea(
             events=events,
             countries=countries,

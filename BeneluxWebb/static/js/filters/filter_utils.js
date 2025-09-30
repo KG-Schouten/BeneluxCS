@@ -271,6 +271,7 @@ function applyFiltersAndReloadTable({ table, endpoint, filters = null }) {
 
     // Convert filters to URL params
     const qParams = collectParamsFromUrl()
+    
     table.ajax.url(`${endpoint}?${qParams.toString()}`).load();
 }
 
