@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}BeneluxCS{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/beneluxcs_logo.png') }}">
 
     <script defer data-domain="beneluxcs.nl" src="https://analytics.beneluxcs.nl/js/script.file-downloads.hash.outbound-links.tagged-events.js"></script>
     <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
@@ -36,8 +38,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/footer.css') }}">
 
     {% block extra_css %}{% endblock %}
-
-    <title>{% block title %}Home{% endblock %}</title>
   </head>
   <body class="dark-mode">
     

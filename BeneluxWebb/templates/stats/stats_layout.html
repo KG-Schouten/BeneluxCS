@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 {% extends "base.html" %}
 
+{% block title %}{{ super() }} | Stats{% endblock %}
+
 {% import "macros/filters/range_slider.html" as sliders %}
 {% import "macros/filters/filter_group.html" as filter_group %}
 {% import "macros/filters/select_picker.html" as select_picker %}
