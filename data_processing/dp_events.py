@@ -19,7 +19,7 @@ from data_processing.faceit_api.logging_config import function_logger
 from data_processing.dp_general import process_matches, modify_keys, gather_event_details
 
 # db imports
-from database.db_down import gather_event_players
+from database.db_down_update import gather_event_players
 
 # Load api keys from .env file
 from dotenv import load_dotenv
