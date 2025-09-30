@@ -10,7 +10,7 @@
         </div>
 
         <div class="sidebar-body">
-            <div class="filter-container open" data-filter-name="events">
+            <div class="filter-wrapper open" data-filter-name="events">
                 <div class="filter-header">
                     <span>Events</span>
                     <span class="filter-indicator"></span>
@@ -21,7 +21,7 @@
                 </div>
             </div>
 
-            <div class="filter-container open" data-filter-name="countries">
+            <div class="filter-wrapper open" data-filter-name="countries">
                 <div class="filter-header">
                     <span>Countries</span>
                     <span class="filter-indicator"></span>
@@ -32,18 +32,18 @@
                 </div>
             </div>
 
-            <div class="filter-container" data-filter-name="seasons">
+            <div class="filter-wrapper" data-filter-name="seasons">
                 <div class="filter-header">
                     <span>Seasons</span>
                     <span class="filter-indicator"></span>
                     <span class="arrow"></span>
                 </div>
                 <div class="filter-body">
-                    {{ select_picker.select_picker_multiple("seasons", filter_options["seasons"]) }}
+                    {{ select_picker.select_picker("seasons", filter_options["seasons"], multiselect=True) }}
                 </div>
             </div>
 
-            <div class="filter-container" data-filter-name="divisions">
+            <div class="filter-wrapper" data-filter-name="divisions">
                 <div class="filter-header">
                     <span>Divisions</span>
                     <span class="filter-indicator"></span>
@@ -54,7 +54,7 @@
                 </div>
             </div>
 
-            <div class="filter-container" data-filter-name="stages">
+            <div class="filter-wrapper" data-filter-name="stages">
                 <div class="filter-header">
                     <span>Stages</span>
                     <span class="filter-indicator"></span>
@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <div class="filter-container open" data-filter-name="timestamp">
+            <div class="filter-wrapper open" data-filter-name="timestamp">
                 <div class="filter-header">
                     <span>Timestamp</span>
                     <span class="filter-indicator"></span>
@@ -76,7 +76,7 @@
                 </div>
             </div>
 
-            <div class="filter-container" data-filter-name="maps_played">
+            <div class="filter-wrapper" data-filter-name="maps_played">
                 <div class="filter-header">
                     <span>Maps Played</span>
                     <span class="filter-indicator"></span>
@@ -87,7 +87,7 @@
                 </div>
             </div>
 
-            <div class="filter-container" data-filter-name="teams">
+            <div class="filter-wrapper" data-filter-name="teams">
                 <div class="filter-header">
                     <span>Teams</span>
                     <span class="filter-indicator"></span>

@@ -1,9 +1,10 @@
-{% macro dual_range_slider(minval, maxval, step, slider_name) %}
-<div class="range-slider-container sidebar-button" data-slider-name="{{ slider_name }}">
+{% macro dual_range_slider(minval, maxval, step, slider_name, init_values=[minval, maxval]) %}
+<div class="filter-container range-slider-container sidebar-button" data-filter-name="{{ slider_name }}" data-default='{{ init_values | default([]) | map("string") | list | tojson }}'
+>
     <div class="range-slider">
         <span class="slider-track"></span>
-        <input type="range" name="min_val" class="min-val" min="{{ minval }}" max="{{ maxval }}" value="{{ minval }}" step="{{ step }}">
-        <input type="range" name="max_val" class="max-val" min="{{ minval }}" max="{{ maxval }}" value="{{ maxval }}" step="{{ step }}">
+        <input type="range" name="min_val" class="min-val" min="{{ minval }}" max="{{ maxval }}" value="{{ init_values[0] if init_values[0] is not none else minval }}" step="{{ step }}">
+        <input type="range" name="max_val" class="max-val" min="{{ minval }}" max="{{ maxval }}" value="{{ init_values[1] if init_values[1] is not none else maxval }}" step="{{ step }}">
     </div>
     <div class="range-values">
         <span class="min-range-value"></span>
@@ -14,46 +15,56 @@
 
 <script>
 (function() {
-    document.querySelectorAll('.range-slider-container').forEach(sliderContainer => {
-        const minVal = sliderContainer.querySelector('.min-val');
-        const maxVal = sliderContainer.querySelector('.max-val');
-        const minRangeValue = sliderContainer.querySelector('.min-range-value');
-        const maxRangeValue = sliderContainer.querySelector('.max-range-value');
-        const range = sliderContainer.querySelector('.slider-track');
+    const container = document.currentScript.previousElementSibling;
+    const minVal = container.querySelector('.min-val');
+    const maxVal = container.querySelector('.max-val');
+    const minRangeValue = container.querySelector('.min-range-value');
+    const maxRangeValue = container.querySelector('.max-range-value');
+    const range = container.querySelector('.slider-track');
+    const sliderMaxValue = parseFloat(maxVal.max);
 
-        const sliderMaxValue = parseFloat(maxVal.max);
-
-        function slideMin() {
-            if (parseFloat(minVal.value) > parseFloat(maxVal.value)) {
-                minVal.value = maxVal.value;
-            }
-            minRangeValue.textContent = minVal.value;
-            setArea();
+    function updateSlider() {
+        // Ensure min <= max
+        if (parseFloat(minVal.value) > parseFloat(maxVal.value)) {
+            minVal.value = maxVal.value;
+        }
+        if (parseFloat(maxVal.value) < parseFloat(minVal.value)) {
+            maxVal.value = minVal.value;
         }
 
-        function slideMax() {
-            if (parseFloat(maxVal.value) < parseFloat(minVal.value)) {
-                maxVal.value = minVal.value;
-            }
-            maxRangeValue.textContent = maxVal.value;
-            setArea();
+        // Update display
+        minRangeValue.textContent = minVal.value;
+        maxRangeValue.textContent = maxVal.value;
+
+        const minPercent = (minVal.value / sliderMaxValue) * 100;
+        const maxPercent = (maxVal.value / sliderMaxValue) * 100;
+        range.style.left = minPercent + '%';
+        range.style.right = (100 - maxPercent) + '%';
+
+        // Update standardized value on container
+        container.dataset.value = JSON.stringify([
+            String(minVal.value),
+            String(maxVal.value)
+        ]);
+        // console.log('Range slider value updated:', container.dataset.value);
+    }
+
+    // Initialize
+    updateSlider();
+
+    // Listen for external apply
+    container.addEventListener('applyValuesFromUrl', (e) => {
+        const values = e.detail || [];
+        if (values.length === 2) {
+            minVal.value = values[0];
+            maxVal.value = values[1];
+            updateSlider();
         }
-
-        function setArea() {
-            const minPercent = (minVal.value / sliderMaxValue) * 100;
-            const maxPercent = (maxVal.value / sliderMaxValue) * 100;
-            range.style.left = minPercent + '%';
-            range.style.right = (100 - maxPercent) + '%';
-        }
-
-        // Initialize slider
-        slideMin();
-        slideMax();
-
-        // Attach event listeners
-        minVal.addEventListener('input', slideMin);
-        maxVal.addEventListener('input', slideMax);
     });
+
+    // Event listeners
+    minVal.addEventListener('input', updateSlider);
+    maxVal.addEventListener('input', updateSlider);
 })();
 </script>
 {% endmacro %}

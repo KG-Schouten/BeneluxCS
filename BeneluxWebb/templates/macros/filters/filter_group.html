@@ -1,27 +1,103 @@
 {% macro checkbox_filter(name, values, init_checked=[]) %}
-<div class="filter-group" data-filter-group="{{ name }}">
+<div class="filter-container filter-group" data-filter-name="{{ name }}" data-default='{{ init_checked | default([]) | tojson }}'>
     {% for val in values %}
-        <input class="checkbox__input"
-                type="checkbox"
-                value="{{ val }}"
-                name="{{ name }}"
-                id="{{ name }}-{{ val }}"
-                {% if val in init_checked %}checked data-default="true"{% endif %}>
-        <label class="checkbox__label sidebar-button striped" for="{{ name }}-{{ val }}">{{ val }}</label>
+        <div class="button-wrapper striped">
+            <input class="checkbox__input sidebar-input"
+                    type="checkbox"
+                    value="{{ val | string }}"
+                    name="{{ name }}"
+                    id="{{ name }}-{{ val | string }}"
+                    {% if val in init_checked %}checked data-default="true"{% endif %}>
+            <label class="checkbox__label sidebar-button" for="{{ name }}-{{ val }}">{{ val }}</label>
+        </div>
     {% endfor %}
 </div>
+<script>
+    (function() {
+        const container = document.currentScript.previousElementSibling;
+
+        function updateValue() {
+            const checkedValues = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(el => el.value);
+            container.dataset.value = JSON.stringify(checkedValues);
+        }
+
+        // Initialize
+        updateValue();
+
+        // Listen for external apply
+        container.addEventListener('applyValuesFromUrl', (e) => {
+            const values = e.detail || [];
+            container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                const isChecked = values.includes(input.value);
+                input.checked = isChecked;
+
+                // Apply "current" class to input
+                input.classList.toggle('current', isChecked);
+            });
+            updateValue();
+        });
+
+        // Event delegation on the container
+        container.addEventListener('click', (e) => {
+            // Only act if the click affects a label or a hidden input
+            if (e.target.tagName === 'LABEL' || e.target.type === 'checkbox') {
+                // Let the checkbox toggle first
+                updateValue();
+            }
+        });
+    })();
+</script>
 {% endmacro %}
 
-{% macro radio_filter(name, values, init_checked=None) %}
-<div class="filter-group" data-filter-group="{{ name }}">
+
+{% macro radio_filter(name, values, init_checked=[]) %}
+<div class="filter-container filter-group" data-filter-name="{{ name }}" data-default='{{ [init_checked] | default([]) | tojson }}'>
     {% for val in values %}
-        <input class="checkbox__input" 
-               type="radio" 
-               value="{{ val }}" 
-               name="{{ name }}" 
-               id="{{ name }}-{{ val }}"
-               {% if init_checked == val %}checked data-default="true"{% endif %}>
-        <label class="checkbox__label sidebar-button striped" for="{{ name }}-{{ val }}">{{ val }}</label>
+        <div class="button-wrapper striped">
+            <input class="checkbox__input sidebar-input" 
+                type="radio" 
+                value="{{ val }}" 
+                name="{{ name }}" 
+                id="{{ name }}-{{ val }}"
+                {% if init_checked == val %}checked data-default="true"{% endif %}>
+            <label class="checkbox__label sidebar-button" for="{{ name }}-{{ val }}">{{ val }}</label>
+        </div>
     {% endfor %}
 </div>
+
+<script>
+    (function() {
+        const container = document.currentScript.previousElementSibling;
+        
+        function updateValue() {
+            const selected = container.querySelector('input[type="radio"]:checked');
+            container.dataset.value = JSON.stringify(selected ? [selected.value] : []);
+        }
+
+        // Initialize on page load
+        updateValue();
+        
+        // Listen for external apply
+        container.addEventListener('applyValuesFromUrl', (e) => {
+            let values = e.detail || [];
+            if (!Array.isArray(values)) values = [values];
+
+            container.querySelectorAll('input[type="radio"]').forEach(input => {
+                const isChecked = values.includes(input.value);
+                input.checked = isChecked;
+
+                // Apply "current" class to input
+                input.classList.toggle('current', isChecked);
+            });
+
+            updateValue();
+        });
+
+        // Attach event listeners to all radios
+        container.querySelectorAll('input[type="radio"]').forEach(input => {
+            input.addEventListener('change', updateValue);
+        });
+    })();
+</script>
 {% endmacro %}

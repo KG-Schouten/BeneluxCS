@@ -1,15 +1,43 @@
-{% macro select_picker_single(name, values) %}
-<select class="selectpicker" id="{{ name }}-select">
-    {% for val in values %}
-        <option>{{ val }}</option>
-    {% endfor %}
-</select>
-{% endmacro %}
+{% macro select_picker(name, values, multiselect=False, init_selected=None) %}
+{% set init_selected = init_selected if init_selected is not none else ([] if multiselect else []) %}
+<div class="filter-container select-picker-container sidebar-button" data-filter-name="{{ name }}" data-default='{{ init_selected | tojson }}'>
+    <select class="selectpicker" 
+            id="{{ name }}-select"
+            {% if multiselect %}multiple data-actions-box="true" data-size="5"{% endif %}>
+        {% for val in values %}
+            <option value="{{ val }}"
+                {% if multiselect and val in init_selected %}selected{% elif not multiselect and init_selected and val == init_selected[0] %}selected{% endif %}>
+                {{ val }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
 
-{% macro select_picker_multiple(name, values) %}
-<select class="selectpicker sidebar-button" id="{{ name }}-select" multiple data-actions-box="true" data-size="5">
-    {% for val in values %}
-        <option>{{ val }}</option>
-    {% endfor %}
-</select>
+<script>
+(function() {
+    const container = document.currentScript.previousElementSibling;
+    const select = container.querySelector('select');
+
+    function updateValue() {
+        const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+        container.dataset.value = JSON.stringify(selected);
+        // console.log('Select picker value updated:', container.dataset.value);
+    }
+
+    // Initialize value
+    updateValue();
+
+    // Listen for external apply
+    container.addEventListener('applyValuesFromUrl', (e) => {
+        const values = e.detail || [];
+        Array.from(select.options).forEach(option => {
+            option.selected = values.includes(option.value);
+        });
+        updateValue();
+    }); 
+
+    // Listen for changes
+    select.addEventListener('change', updateValue);
+})();
+</script>
 {% endmacro %}

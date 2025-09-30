@@ -1,26 +1,58 @@
-{% macro countries_filter(countries)%}
-<div class="countries-filter sidebar-button">
+{% macro countries_filter(countries, init_checked=[])%}
+<div class="filter-container countries-filter sidebar-button" data-filter-name="countries" data-default='{{ init_checked | default([]) | tojson }}'>
+    {% if not countries %}
+        <p>No countries available</p>
+    {% endif %}
     {% for country in countries %}
-    <div class="country-filter-item">
-        <input 
-            type="checkbox" 
-            class="btn-check" 
-            id="filter{{ country }}"
-            name="countries" 
-            value="{{ country }}"
-            {% if selected and country in selected %}checked{% endif %}>
-
-        <label 
-            class="flag-toggle" 
-            for="filter{{ country }}" 
-            title="{{ country.upper() }}">
-            
-            <img 
-                src="{{ url_for('static', filename='img/flags/' + country + '.png') }}"
-                alt="{{ country }} flag" 
-                class="flag-img">
-        </label>
-    </div>
+        <div class="country-filter-item">
+            <input class="btn-check" 
+                    type="checkbox" 
+                    value="{{ country }}"
+                    name="countries" 
+                    id="filter{{ country }}"
+                    {% if country in init_checked %}checked data-default="true"{% endif %}>
+            <label 
+                class="flag-toggle" 
+                for="filter{{ country }}" 
+                title="{{ country.upper() }}">
+                
+                <img 
+                    src="{{ url_for('static', filename='img/flags/' + country + '.png') }}"
+                    alt="{{ country }} flag" 
+                    class="flag-img">
+            </label>
+        </div>
     {% endfor %}
 </div>
+
+<script>
+    (function() {
+        const container = document.currentScript.previousElementSibling;
+        
+        function updateValue() {
+            const checkedValues = Array.from(
+                container.querySelectorAll('input[type="checkbox"]:checked')
+            ).map(el => el.value);
+            container.dataset.value = JSON.stringify(checkedValues);
+            // console.log('Countries filter value updated:', container.dataset.value);
+        }
+
+        // Initialize
+        updateValue();
+
+        // Listen for external apply
+        container.addEventListener('applyValuesFromUrl', (e) => {
+            const values = e.detail || [];
+            container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                input.checked = values.includes(input.value);
+            });
+            updateValue();
+        });
+        
+        // Event listeners
+        container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', updateValue);
+        });
+    })();
+</script>
 {% endmacro %}

@@ -1,5 +1,5 @@
-{% macro search_box(name, placeholder='', filter_options=[]) %}
-<div class="search-box" id="search-box-{{ name }}" data-search-name="{{ name }}">
+{% macro search_box(name, placeholder='', filter_options=[], init_checked=[]) %}
+<div class="filter-container search-box" id="search-box-{{ name }}" data-filter-name="{{ name }}" data-default='{{ init_checked | default([]) | tojson }}'>
     <div class="search-box-wrapper sidebar-button">
         <i class="bi bi-search"></i>
         <input  
@@ -11,4 +11,43 @@
     <div class="result-box" id="result-box-{{ name }}" data-search-options='{{ filter_options|tojson }}'>
     </div>
 </div>
+
+<script>
+(function() {
+    const container = document.currentScript.previousElementSibling;
+    const input = container.querySelector('input[type="text"]');
+    const results = container.querySelector('.result-box');
+    const options = JSON.parse(results.dataset.searchOptions || '[]');
+
+    function updateValue() {
+        const val = input.value.trim();
+        container.dataset.value = JSON.stringify(val ? [val] : []);
+        // Optional: update live suggestions
+        if (results) {
+            results.innerHTML = '';
+            if (val) {
+                const filtered = options.filter(opt => opt.toLowerCase().includes(val.toLowerCase()));
+                filtered.forEach(opt => {
+                    const div = document.createElement('div');
+                    div.textContent = opt;
+                    div.className = 'result-item';
+                    div.addEventListener('click', () => {
+                        input.value = opt;
+                        updateValue();
+                        results.innerHTML = '';
+                    });
+                    results.appendChild(div);
+                });
+            }
+        }
+        // console.log('Search box value updated:', container.dataset.value);
+    }
+
+    // Initialize dataset value
+    updateValue();
+
+    // Event listener for input changes
+    input.addEventListener('input', updateValue);
+})();
+</script>
 {% endmacro %}
