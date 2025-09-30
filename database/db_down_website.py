@@ -3,7 +3,8 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, time
+from dateutil.relativedelta import relativedelta
 import pandas as pd
 import json
 import re
@@ -37,8 +38,59 @@ def gather_columns_mapping():
     }
     
     return columns_mapping
-    
 
+def start_of_day(date):
+    return datetime.combine(date, time.min)
+
+def end_of_day(date):
+    return datetime.combine(date, time.max)
+
+def get_date_range(option: str):
+    now = datetime.now()
+    
+    # Normalize input for case-insensitive matching
+    normalized_option = option.strip().lower()
+    
+    match normalized_option:
+        case "all time":
+            return []
+        case "this week":
+            monday = now - timedelta(days=now.weekday())
+            start = start_of_day(monday)
+            end = end_of_day(now)
+        case "last week":
+            last_monday = now - timedelta(days=now.weekday() + 7)
+            last_sunday = last_monday + timedelta(days=6)
+            start = start_of_day(last_monday)
+            end = end_of_day(last_sunday)
+        case "this month":
+            start = start_of_day(now.replace(day=1))
+            end = end_of_day(now)
+        case "last month":
+            first_of_this_month = now.replace(day=1)
+            last_day_last_month = first_of_this_month - timedelta(days=1)
+            start = start_of_day(last_day_last_month.replace(day=1))
+            end = end_of_day(last_day_last_month)
+        case "last 3 months":
+            three_months_ago = (now.replace(day=1) - relativedelta(months=3))
+            start = start_of_day(three_months_ago)
+            end = end_of_day(now)
+        case "last 6 months":
+            six_months_ago = (now.replace(day=1) - relativedelta(months=6))
+            start = start_of_day(six_months_ago)
+            end = end_of_day(now)
+        case "this year":
+            start = start_of_day(now.replace(month=1, day=1))
+            end = end_of_day(now)
+        case _:
+            print(f"Unknown date range option: {option}")
+            return []
+    return [
+        int(start.replace(tzinfo=timezone.utc).timestamp()),
+        int(end.replace(tzinfo=timezone.utc).timestamp())
+    ]
+
+            
 # =============================
 #           ESEA Page
 # =============================
@@ -1086,8 +1138,7 @@ def gather_elo_ranges() -> list:
 
 def gather_elo_leaderboard(
     countries=None,
-    min_elo=None,
-    max_elo=None
+    elo=[]
     ) -> list:
     db, cursor = start_database()
     
@@ -1137,10 +1188,11 @@ def gather_elo_leaderboard(
         
         official_names, aliases = get_player_aliases(cursor)
         
-        if isinstance(min_elo, str) and min_elo.isdigit():
-            min_elo = int(min_elo)
-        if isinstance(max_elo, str) and max_elo.isdigit():
-            max_elo = int(max_elo)
+        if isinstance(elo, list) and elo:
+            if len(elo) != 2:
+                elo = []
+            else:
+                elo = [int(val) for val in elo if isinstance(val, (int, float)) or (isinstance(val, str) and val.isdigit())]
         
         output = []
         for player_id, group in df.groupby("player_id"):
@@ -1149,10 +1201,9 @@ def gather_elo_leaderboard(
 
             latest = group.iloc[0]
             
-            if min_elo and latest["faceit_elo"] < min_elo:
-                continue
-            if max_elo and latest["faceit_elo"] > max_elo:
-                continue
+            if elo:
+                if latest["faceit_elo"] < elo[0] or latest["faceit_elo"] > elo[1]:
+                    continue
             
             for _, row in group.iterrows():
                 history.append({
@@ -1212,12 +1263,20 @@ def gather_player_stats_esea(
     seasons=[],
     divisions=[],
     stages=[],
-    start_date=None,
-    end_date=None,
-    min_maps=None,
-    max_maps=None,
-    team_name=None
-):
+    timestamp=None,
+    maps_played=[],
+    teams=[],
+    ):
+    
+    # Convert timestamp to start_date and end_date
+    if timestamp:
+        timestamp = get_date_range(timestamp)
+    else:
+        timestamp = []
+        
+    # Make sure maps_played is a list of two integers
+    maps_played = [int(val) for val in maps_played if isinstance(val, (int, float)) or (isinstance(val, str) and val.isdigit())]
+    
     db, cursor = start_database()
     try:
         # === Get valid (player_id, team_id, event_id) combos ===
@@ -1277,20 +1336,18 @@ def gather_player_stats_esea(
             like_clauses = ' OR '.join(["LOWER(s.stage_name) LIKE %s"] * len(stages))
             conditions.append(f"({like_clauses})")
             params.extend([f"%{stage.lower()}%" for stage in stages])
-            
-        if start_date:
-            print("start_date " + start_date)
+        
+        if timestamp and len(timestamp) == 2:
+            start_date, end_date = timestamp
             conditions.append("m.match_time >= %s")
             params.append(int(start_date))
             
-        if end_date:
-            print("end_date " + end_date)
             conditions.append("m.match_time <= %s")
             params.append(int(end_date))
             
-        if team_name:
+        if teams:
             conditions.append("tb.team_name = %s")
-            params.append(team_name)
+            params.append(teams)
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         stat_columns = gather_stat_table_columns()
@@ -1338,10 +1395,9 @@ def gather_player_stats_esea(
         
         output = []
         for row in results:
-            if min_maps is not None and row["maps_played"] < min_maps:
-                continue
-            if max_maps is not None and row["maps_played"] > max_maps:
-                continue
+            if maps_played and len(maps_played) == 2:
+                if int(row["maps_played"]) < maps_played[0] or int(row["maps_played"]) > maps_played[1]:
+                    continue
             
             flat_stats = {col: float(row[col]) for col in stat_columns}
             player_id = row["player_id"]
