@@ -112,7 +112,7 @@ div[id$="_wrapper"] table.dataTable > tbody > tr > td {
   vertical-align: middle;
   white-space: nowrap;
 
-  font-size: 0.9em;
+  font-size: 1em;
 }
 div[id$="_wrapper"] table.dataTable > thead > tr > td:not(:last-child),
 div[id$="_wrapper"] table.dataTable > tbody > tr > td:not(:last-child) {

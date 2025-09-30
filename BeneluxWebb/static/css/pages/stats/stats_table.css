@@ -129,6 +129,10 @@
 
 @media screen and (max-width: 768px) {
   /* Player stats styling */
+  #stats-player-data-table_wrapper table.dataTable {
+    font-size: .875em;
+  }
+  
   #stats-player-data-table_wrapper table.dataTable > thead > tr > td:first-child,
   #stats-player-data-table_wrapper table.dataTable > tbody > tr > td:first-child {
     min-width: 80px !important;

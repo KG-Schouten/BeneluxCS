@@ -8,6 +8,8 @@
     background-color: var(--background-light1);
     position: relative;
     transition: all 0.3s ease;
+
+    font-size: 0.9em;
 }
 
 /* === Sidebar content styling === */
@@ -36,6 +38,9 @@
     background-color: var(--background-dark3);
 
     overflow: hidden;
+
+    font-size: 1.1em;
+    font-weight: bold;
 }
 .sidebar-content:first-child .sidebar-header {
     border-radius: var(--border-radius) var(--border-radius) 0 0;
@@ -62,31 +67,33 @@
 .sidebar-button {
     background-color: var(--background-light1)
 }
-.sidebar-button.striped:nth-of-type(odd) {
+.button-wrapper.striped:nth-of-type(odd) .sidebar-button {
     background-color: var(--background-light2);
 }
 .sidebar-button:hover {
     background-image: linear-gradient(rgba(0, 0, 0, 0.2));
 }
-.sidebar-button.active,
-.sidebar-button:focus,
-.sidebar-button:checked {
-    background-color: var(--secondary-dark3);
-    color: var(--btn-text);
+
+.button-wrapper .sidebar-input:checked + .sidebar-button {
+    background-color: var(--secondary) !important;
+    font-weight: 700;
+}
+.button-wrapper .sidebar-input.current:not(:checked) + .sidebar-button {
+    background-color: var(--secondary-light2);
 }
 
 /* === Sidebar Filter styles === */
-.filter-container {
+.filter-wrapper {
     display: flex;
     flex-direction: column;
     width: 100%;
 }
-.filter-container.disabled {
+.filter-wrapper.disabled {
     opacity: 0.5;
     pointer-events: none;
     cursor: not-allowed;
 }
-.filter-container.disabled .filter-header {
+.filter-wrapper.disabled .filter-header {
     background-color: var(--background-dark5);
 }
 
@@ -118,7 +125,7 @@
   border-left: 6px solid #6b7280;
   transition: transform 0.2s ease;
 }
-.filter-container.open .arrow {
+.filter-wrapper.open .arrow {
   transform: rotate(90deg);
 }
 
@@ -127,41 +134,10 @@
   overflow: hidden;
   transition: max-height 0.25s ease, padding 0.25s ease;
 }
-.filter-container.open .filter-body {
+.filter-wrapper.open .filter-body {
   max-height: 500px;
   overflow: visible;
 }
-
-.apply-button-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
-    overflow: hidden;
-}
-.apply-button {
-    width: 100%;
-    background-color: var(--primary);
-    color: black;
-    font-size: 14px;
-    font-weight: bold;
-    padding: 8px 16px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s ease, transform 0.1s ease;
-}
-.apply-button:disabled {
-    background-color: var(--border);
-    cursor: not-allowed;
-}
-.apply-button:hover {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.2));
-}
-.apply-button:active {
-    transform: scale(0.98);
-}
-
 
 /* == Sidebar Navigation == */
 .sidebar-body > ul {
