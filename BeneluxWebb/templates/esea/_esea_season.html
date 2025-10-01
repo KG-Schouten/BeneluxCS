@@ -29,7 +29,7 @@
             <div class="team-card-body">
             
                 <div class="team-avatar">
-                    <img src="{{ team.team_avatar }}"
+                    <img src="{{ url_for('static', filename='img/avatars/' ~ team.team_avatar) }}"
                         alt="Team Avatar"
                         data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
                         onerror="this.onerror=null;this.src=this.dataset.placeholder;">

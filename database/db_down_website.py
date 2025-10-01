@@ -727,7 +727,8 @@ def gather_teams_benelux() -> pd.DataFrame:
                 tb.players_main, 
                 tb.players_sub, 
                 tb.players_coach,
-                t.avatar AS team_avatar,
+                lt.avatar AS team_avatar,
+                t.avatar AS team_avatar_current,
                 t.nickname,
                 s.season_number,
                 s.region_name,
@@ -736,6 +737,7 @@ def gather_teams_benelux() -> pd.DataFrame:
             FROM teams_benelux tb
             LEFT JOIN teams t ON tb.team_id = t.team_id
             LEFT JOIN seasons s ON tb.event_id = s.event_id
+            LEFT JOIN league_teams lt ON tb.team_id = lt.team_id AND s.season_number = lt.season_number
         """
         
         cursor.execute(query)

@@ -264,7 +264,26 @@ def gather_elo_snapshot() -> pd.DataFrame:
         return pd.DataFrame()
     finally:
         close_database(db)
+
+def gather_league_teams() -> pd.DataFrame:
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                *
+            FROM league_teams lt
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_league_teams = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
         
+        return df_league_teams
+    except Exception as e:
+        function_logger.error(f"Error gathering league teams: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
+
 def gather_league_teams_merged():
     db, cursor = start_database()
     try:
