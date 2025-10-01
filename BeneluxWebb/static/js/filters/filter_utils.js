@@ -266,6 +266,10 @@ function applyFiltersAndReloadTable({ table, endpoint, filters = null }) {
 
     const appliedFilters = filters || collectCurrentFilters();
 
+    plausible('Filters Applied', {
+        props: appliedFilters
+    })
+
     // Update URL in browser
     applyFilters(appliedFilters);
 

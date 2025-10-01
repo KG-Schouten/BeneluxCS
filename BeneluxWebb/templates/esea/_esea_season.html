@@ -36,14 +36,20 @@
                 </div>
                 
                 <div class="team-card-name">
-                    <a class="team-link" href="https://www.faceit.com/en/teams/{{ team.team_id }}/leagues" target="_blank">
-                        {{ team.team_name_cur }}
+                    <a class="team-link"
+                        href="https://www.faceit.com/en/teams/{{ team.team_id }}/leagues"
+                        target="_blank"
+                        onclick="plausible('Team Link Clicked', { props: { team: '{{ team.team_name_cur }}', season: '{{ team.season_number }}' } })">
+                            {{ team.team_name_cur }}
                     </a>
                 </div>
 
                 <div class="main-players-box">
                     {% for player in team.players_main %}
-                    <a href="https://www.faceit.com/en/players/{{player.player_name}}" class="text-decoration-none text-reset" target="_blank">
+                    <a href="https://www.faceit.com/en/players/{{player.player_name}}"
+                        class="text-decoration-none text-reset"
+                        target="_blank"
+                        onclick="plausible('Player Profile Clicked', { props: { player: '{{ player.player_name }}' } })">
                         <div class="main-player">
                             <div class="main-player-avatar">
                                 <img src="{{ player.player_avatar }}"
@@ -104,7 +110,8 @@
                         data-bs-toggle="collapse"
                         data-bs-target="#collapseTeam{{ division_name | replace(' ', '') }}{{ loop.index }}"
                         aria-expanded="false"
-                        aria-controls="collapseTeam{{ division_name | replace(' ', '') }}{{ loop.index }}">
+                        aria-controls="collapseTeam{{ division_name | replace(' ', '') }}{{ loop.index }}"
+                        onclick="plausible('Team Details Toggled', { props: { team: '{{ team.team_name_cur }}', season: '{{ team.season_number }}' } })">
                         <i class="bi bi-chevron-down"></i>
                     </button>
                 </div>
@@ -127,7 +134,8 @@
                             <a href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" 
                                 class="match-info-box {{ 'highlight-border' if match.opponent_id in teams | map(attribute='team_id') | list else '' }}" 
                                 target="_blank" 
-                                rel="noopener noreferrer">
+                                rel="noopener noreferrer"
+                                onclick="plausible('Match Clicked', { props: { match_id: '{{ match.match_id }}', team: '{{ team.team_name_cur }}', opponent: '{{ match.opponent }}' } })">
                                 
                                 <div class="match-info-time">
                                     {% if match.match_time %}
