@@ -3,7 +3,6 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import json
 import pandas as pd
 from dateutil import parser
 from typing import List, Union
@@ -19,7 +18,7 @@ from data_processing.faceit_api.logging_config import function_logger
 from data_processing.dp_general import process_matches, modify_keys, gather_event_details
 
 # db imports
-from database.db_down import gather_event_players
+from database.db_down import gather_event_players, gather_league_teams
 
 # Load api keys from .env file
 from dotenv import load_dotenv
@@ -247,7 +246,7 @@ async def process_teams_benelux_esea(
     team_id: Union[str, List[str]] = "ALL",
     ) -> pd.DataFrame:
     """ Gathers the df_seasons, df_events and df_teams_benelux dataframes"""
-    df_teams_benelux = read_league_teams_json(
+    df_teams_benelux = gather_league_teams(
         season_number=season_number,
         team_id=team_id
     ) # Get the team ids from the json file
@@ -292,6 +291,9 @@ async def process_teams_benelux_esea(
         if df_league_team_season_standings.empty:
             raise ValueError("No league team season standings found. Please check the input parameters.")
     
+    # Convert season_number to string for both dataframes before merging
+    df_teams_benelux['season_number'] = df_teams_benelux['season_number'].astype(str)
+    df_league_team_season_standings['season_number'] = df_league_team_season_standings['season_number'].astype(str)
     df_teams_benelux = df_teams_benelux.merge(
         df_league_team_season_standings,
         on=['team_id', 'season_number'],
@@ -348,82 +350,6 @@ async def process_teams_benelux_esea(
         raise TypeError(f"df_teams_benelux is not a DataFrame: {df_teams_benelux}")
 
     return df_teams_benelux
-
-def read_league_teams_json(
-    season_number: Union[str, int, List[Union[str, int]]] = "ALL",
-    team_id: Union[str, List[str]] = "ALL" 
-    ) -> pd.DataFrame:
-    """
-    Loads team data from a JSON file and filters it based on optional parameters.
-
-    Args:
-        **kwargs:
-            - season_number (str | int | list): "ALL", a season number, or list of them
-            - team_id (str | list): A team ID or list of them
-
-    Returns:
-        pd.DataFrame: DataFrame with team details.
-    """
-    # Data path
-    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    DATA_PATH = os.path.join(BASE_DIR, 'data', 'league_teams.json')
-
-    try:
-        with open(DATA_PATH, 'r', encoding='utf-8') as f:  # Open the file in read mode with UTF-8 encoding
-            data = json.load(f)  # Load the JSON content into a Python dictionary
-            
-        # Convert into a dataframe
-        rows = [
-            {
-                'season_number': season.get('season_number'),
-                'team_id': team_id,
-                'team_name': team_dict.get('team_name'),
-                'avatar': team_dict.get('avatar')
-            }
-            for season in data.get('seasons', []) if isinstance(season, dict)
-            for team_id, team_dict in season.get('teams', {}).items()
-        ] 
-        
-        df = pd.DataFrame(rows)
-            
-        # Apply filters if provided
-        def validate_and_filter(df, column, value, convert=None):
-            df_used = df.copy()  # Make a copy to avoid modifying the original DataFrame
-            if value is None or value == "ALL":
-                return df_used
-            if isinstance(value, (str, int)):
-                value = [convert(value) if convert else value]
-            elif isinstance(value, list):
-                if convert:
-                    try:
-                        value = [convert(v) for v in value]
-                    except Exception:
-                        raise TypeError(f"Invalid value in {column}: {value}. Expected a string, integer, or list of strings/integers.")
-            else:
-                raise TypeError(f"Invalid type for {column}: {type(value)}. Expected a string, integer, or list of strings/integers.")
-            
-            invalid = [v for v in value if v not in df_used[column].values]
-            if invalid:
-                raise ValueError(f"Invalid {column} values: {invalid}. Must be in the existing data.")
-            
-            df_used.loc[:, column] = df_used[column]  # Ensure it's not a view
-            df_used = df_used[df_used[column].isin(value)]
-            return df_used
-        
-        # Apply filters one by one
-        df_filtered = validate_and_filter(df, 'season_number', season_number, convert=str)
-        if not df_filtered.empty:
-            df = df_filtered
-
-        df_filtered = validate_and_filter(df, 'team_id', team_id)
-        if not df_filtered.empty:
-            df = df_filtered
-        
-        return df    
-    
-    except Exception as e:
-        function_logger.critical(f"Error gathering team IDs from JSON: {e}")
-        raise
 
 async def process_league_team_season_standings(
     team_id, 

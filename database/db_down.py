@@ -111,71 +111,6 @@ def fuzzy_search(query: str, choices: list, scorer=fuzz.WRatio, limit=5, thresho
 ### DATABASE DOWN FUNCTIONS
 ### ----------------------------
 
-def gather_upcoming_matches_esea() -> pd.DataFrame:
-    """
-    Gathers the upcoming matches in ESEA from the database
-    """
-    query = """
-        SELECT 
-            m.match_id, 
-            m.event_id, 
-            m.match_time, 
-            m.status,
-            s.season_number,
-            s.division_name,
-            s.stage_name,
-            tm.team_id, 
-            tm.team_name, 
-            tb.team_name AS team_name_benelux
-        FROM matches m
-        INNER JOIN seasons s
-            ON m.event_id = s.event_id
-        LEFT JOIN teams_matches tm
-            ON m.match_id = tm.match_id
-        LEFT JOIN teams_benelux tb
-            ON tm.team_id = tb.team_id
-            AND m.event_id = tb.event_id
-        WHERE m.status = 'SCHEDULED'
-        ORDER BY m.event_id, m.match_time ASC
-    """
-    db, cursor = start_database()
-    try:
-        cursor.execute(query)
-        res = cursor.fetchall()
-        df_results = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
-        
-        ## Processing of data into new dataframe
-        df_upcoming = (
-            df_results
-            .sort_values(by=['team_name_benelux'], ascending=True)
-            .groupby('match_id', group_keys=False)
-            .apply(
-                lambda match: pd.Series({
-                    'match_id': match.name,
-                    'event_id': match['event_id'].iloc[0],
-                    'match_time': safe_convert_to_datetime(match['match_time'].iloc[0]),
-                    'season_number': match['season_number'].iloc[0],
-                    'division_name': match['division_name'].iloc[0],
-                    'stage_name': match['stage_name'].iloc[0],
-                    'team_ids': match['team_id'].to_list(),
-                    'team_names': match['team_name'].to_list(),
-                    'is_benelux': match['team_name_benelux'].notna().to_list()
-                }),
-                include_groups=False 
-            )
-            .reset_index(drop=True)
-        )
-        return df_upcoming
-        
-    except PostgresError as e:
-        print(f"Error gathering upcoming matches: {e}")
-        return pd.DataFrame()
-    except Exception as e:
-        print(f"Error gathering upcoming matches: {e}")
-        return pd.DataFrame()
-    finally:
-        close_database(db)
-
 def safe_convert_to_datetime(timestamp):
     try:
         return datetime.fromtimestamp(float(timestamp))
@@ -264,6 +199,65 @@ def gather_players(**kwargs) -> pd.DataFrame:
         function_logger.error(f"Error gathering players: {e}")
         return pd.DataFrame()
     finally:   
+        close_database(db)
+
+def gather_league_teams(
+    team_id: str | list = "ALL",
+    season_number: str | int | list = "ALL"
+    ) -> pd.DataFrame:
+    
+    """
+    Gathers league teams from the database
+
+    Returns:
+        df
+    """
+    db, cursor = start_database()
+
+    conditions = []
+    params = []
+    
+    try:
+        if team_id != "ALL":
+            if isinstance(team_id, str):
+                team_id = [team_id]
+            placeholders = ', '.join(['%s'] * len(team_id))
+            conditions.append(f"lt.team_id IN ({placeholders})")
+            params.extend(team_id)
+        if season_number != "ALL":
+            if isinstance(season_number, (str, int)):
+                season_number = [season_number]
+            
+            # Convert to digits only for safety
+            season_number = [int(sn) for sn in season_number if str(sn).isdigit()]
+            
+            placeholders = ', '.join(['%s'] * len(season_number))
+            conditions.append(f"lt.season_number IN ({placeholders})")
+            params.extend(season_number)
+    except Exception as e:
+        print("Error processing gather_league_teams parameters:", e)
+    
+    query = f"""
+        SELECT *      
+        FROM league_teams lt
+        {'WHERE ' + ' AND '.join(conditions) if conditions else ''}
+    """
+
+    try:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        df = pd.DataFrame(rows, columns=columns)
+        
+        return df
+
+    except PostgresError as e:
+        print(f"Error gathering league teams: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error gathering league teams: {e}")
+        return pd.DataFrame()
+    finally:
         close_database(db)
 
 ### ----------------------------
