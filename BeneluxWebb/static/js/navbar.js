@@ -43,8 +43,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Initialize tooltips for disabled links
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipTriggerList = document.querySelectorAll('.nav-links [data-bs-toggle="tooltip"]')
     tooltipTriggerList.forEach(el => {
-        new bootstrap.Tooltip(el)
+        new bootstrap.Tooltip(el, { 
+            customClass: () => 'navbar-tooltip'
+        });
     })
 });

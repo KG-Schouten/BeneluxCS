@@ -12,7 +12,7 @@
   top: 0; left: 0; right: 0;
   height: var(--navbar-height);
   border-bottom: 1px solid var(--border);
-  z-index: 9999;
+  z-index: 1000;
   
   display: flex;
   align-items: flex-start;
@@ -136,17 +136,23 @@
   display: none;
 }
 
-.tooltip-inner {
+.tooltip.navbar-tooltip {
+  z-index: 1050;
+}
+.tooltip.navbar-tooltip .tooltip-inner {
   background-color: var(--accent);
   color: white;
   font-size: 0.9rem;
   font-weight: 500;
   padding: 6px 12px;
   border-radius: 8px;
+
+  z-index: 1050;
 }
 
-.tooltip-arrow::before {
+.tooltip.navbar-tooltip .tooltip-arrow::before {
   border-bottom-color: var(--accent); /* match tooltip background */
+  z-index: 1050;
 }
 
 /* === Dark mode toggle === */

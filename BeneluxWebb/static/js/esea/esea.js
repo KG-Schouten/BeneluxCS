@@ -83,7 +83,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // Initialize all tooltips
   function initTooltips(context = document) {
-    const tooltipTriggerList = [].slice.call(context.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipTriggerList = [].slice.call(context.querySelectorAll('.esea-wrapper [data-bs-toggle="tooltip"]'));
+    console.log(`tooltipTriggerList: `, tooltipTriggerList);
     tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
   }
 
