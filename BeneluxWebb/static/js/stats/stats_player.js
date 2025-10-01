@@ -203,12 +203,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 text: '<i class="bi bi-funnel-fill"></i>',
                 columns: ':not(:first-child):not(:nth-child(2))',
                 popoverTitle: 'Toggle column visibility',
-                postfixButtons: ['colvisRestore']
+                postfixButtons: ['colvisRestore'],
             }
         ]
     });
     dataTable.buttons().container().appendTo('.stats-wrapper #stats-player-data-table_wrapper > div:first-child .dt-layout-end');
-
 
     // Function to apply filters and reload the table
     applyFiltersBtn.addEventListener('click', () => {
