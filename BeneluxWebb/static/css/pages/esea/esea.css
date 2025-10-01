@@ -1,8 +1,7 @@
 /* esea.css */
 :root {
   /* Main wrapper (ESEA wrapper) ratios */
-  --esea-wrapper-width: calc(100% - var(--sidebar-width) * 2); /* 1000px is fine */
-  --sidebar-width: 160px;
+  --sidebar-width: 168px;
 
   /* Spacing & sizing */
   --gap-small: 5px;
@@ -84,6 +83,8 @@
   flex-wrap: nowrap;
   align-items: center;
 
+  transition: background 0.2s ease;
+
   gap: 0.5rem;
   padding-inline: 10px;
 }
@@ -103,6 +104,12 @@
 
 .nav-link span {
   white-space: nowrap;
+}
+
+.nav-badge {
+  background-color: var(--secondary-light2);
+  color: var(--text);
+  font-size: 0.675em;
 }
 
 /* .dropdown-menu {

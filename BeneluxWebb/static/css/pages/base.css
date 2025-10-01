@@ -27,7 +27,7 @@ a {
 
 .highlight-border {
   border: 2px solid var(--bnlx) !important;
-}   
+}
 .highlight-text {
   color: var(--bnlx) !important;
 }
@@ -40,7 +40,7 @@ a {
 }
 .text-muted {
     color: var(--text-muted) !important;
-    font-size: 0.875rem;
+    font-size: 0.875em;
 }
 
 .page-wrapper {

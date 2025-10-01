@@ -10,20 +10,23 @@
     transition: all 0.3s ease;
 
     font-size: 0.9em;
+
+    gap: 10px;
+
+    padding: 8px;
 }
 
 /* === Sidebar content styling === */
 .sidebar-content {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
     flex-wrap: nowrap;
-
     width: 100%;
     height: auto;
-
-    border-radius: var(--border-radius-sm);
+    background-color: var(--secondary-dark5);
+    border-radius: var(--border-radius);
 }
 
 .sidebar-header {
@@ -41,13 +44,28 @@
 
     font-size: 1.1em;
     font-weight: bold;
+
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
 }
 .sidebar-content:first-child .sidebar-header {
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-radius: inherit inherit 0 0;
+}
+.sidebar-header:only-child {
+    border-radius: inherit;
+    border: none;
 }
 .sidebar-header span {
     width: 100%;
     text-align: center;
+}
+.sidebar-header.hoverable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+.sidebar-header.hoverable:hover {
+    background-color: var(--secondary-dark3);;
 }
 
 .sidebar-body {
@@ -61,14 +79,22 @@
 
     font-family: sans-serif;
     overflow: visible;
+
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+.sidebar-body > :last-child {
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
 }
 
 /* Sidebar buttons */
 .sidebar-button {
-    background-color: var(--background-light1)
+    background-color: transparent;
+    transition: background 0.2s ease;
 }
 .button-wrapper.striped:nth-of-type(odd) .sidebar-button {
-    background-color: var(--background-light2);
+    background-color: var(--secondary-dark3);
 }
 .sidebar-button:hover {
     background-image: linear-gradient(rgba(0, 0, 0, 0.2));
@@ -90,11 +116,11 @@
 }
 .filter-wrapper.disabled {
     opacity: 0.5;
-    pointer-events: none;
     cursor: not-allowed;
 }
 .filter-wrapper.disabled .filter-header {
     background-color: var(--background-dark5);
+    pointer-events: none;
 }
 
 .filter-header {
@@ -110,7 +136,7 @@
     width: 100%;
 
     transition: background 0.2s ease;
-    background-color: var(--secondary-dark5);
+    background-color: var(--background-dark2);
     box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.2)
 }
 .filter-header:hover {
@@ -167,6 +193,10 @@
 }
 .sidebar-body > ul > a:hover {
     color: var(--text);
+}
+.sidebar-body > ul > :last-child {
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
 }
 
 /* Sidebar collapse button styling */
