@@ -1,16 +1,17 @@
 /* === ColVis dropdown styling === */
 .btn-group .dt-button-collection {
-  background-color: var(--background) !important;
-  border-radius: 8px !important;
+  background-color: var(--secondary-dark5) !important;
+  border-radius: var(--border-radius) !important;
 
-  top: 42px !important;
   right: 0 !important;
   left: auto !important;
   transform: none !important;
 
-  padding: 8px !important;
+  border: 1px solid var(--border);
+
   min-width: 200px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  overflow: hidden !important;
 }
 
 /* Dropdown title */
@@ -20,6 +21,9 @@
     font-size: 0.9rem;
     padding: 4px !important;
     border-bottom: 1px solid var(--border);
+    background-color: var(--background-dark3);
+    margin: 0 !important;
+    text-align: center;
 }
 
 /* List items */
@@ -49,4 +53,10 @@
     font-size: 0.85rem;
     border-radius: 4px;
     display: block;
+}
+
+.btn-group .dt-button-collection ul.dropdown-menu li.buttons-colvisRestore {
+    border-top: 1px solid var(--border);
+    background-color: var(--secondary-light2);
+    text-align: center;
 }

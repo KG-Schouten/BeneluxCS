@@ -115,11 +115,6 @@
   width: 100%;
 }
 
-.nav-links li a.active {
-  /* color: var(--accent); */
-  text-shadow: 0px 0px 6px var(--accent);
-}
-
 .nav-links li a:hover {
   /* color: var(--accent); */
   text-shadow: 0px 0px 6px var(--accent);

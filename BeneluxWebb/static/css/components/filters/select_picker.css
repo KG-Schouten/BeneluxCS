@@ -28,7 +28,6 @@
   background-color: var(--background);
   box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
   font-size: 14px;
-  transform: translate(0px,36px) !important;
   border: unset;
   border-radius: 0px 0px var(--border-radius) var(--border-radius);
 }
