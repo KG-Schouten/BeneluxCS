@@ -67,7 +67,7 @@
 
 .nav-logo-text {
   margin-left: 10px;
-  font-family: DM Sans, sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-optical-sizing: auto;
   font-weight: 800;
   font-style: normal;
@@ -90,7 +90,6 @@
 .nav-links li a {
   color: var(--text);
   text-decoration: none;
-  font-family: 'Inter', sans-serif;
   font-size: 1.4rem;
   font-weight: 500;
   position: relative;

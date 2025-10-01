@@ -289,9 +289,9 @@
 
 @media screen and (max-width: 768px) {
   .collapse-body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .map-stat-box {
