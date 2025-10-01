@@ -340,3 +340,30 @@ def gather_league_teams_merged():
         return pd.DataFrame(), []
     finally:
         close_database(db)
+        
+def gather_league_team_avatars():
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                lt.team_id,
+                lt.season_number,
+                MIN(t.avatar) AS avatar
+            FROM league_teams lt
+            LEFT JOIN teams t ON lt.team_id = t.team_id
+            LEFT JOIN seasons s ON lt.season_number = s.season_number
+            LEFT JOIN events e ON s.event_id = e.event_id
+            WHERE e.event_end - 2629743 > EXTRACT(EPOCH FROM NOW()) -- Month before end of season
+            GROUP BY lt.team_id, lt.season_number;
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_avatars = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        
+        
+        return df_avatars
+    except Exception as e:
+        function_logger.error(f"Error gathering league team avatars: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
