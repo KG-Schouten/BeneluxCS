@@ -35,7 +35,6 @@
   border-radius: var(--border-radius);
 
   width: 100%;
-  max-width: 500px;
 }
 
 .details-box-header {
@@ -84,6 +83,7 @@
   background-color: var(--background-dark2);
 
   text-decoration: none;
+  transition: background 0.2s ease;
 }
 .match-info-box:nth-of-type(odd) {
   background-color: var(--secondary-dark5);
@@ -225,6 +225,7 @@
   background-color: var(--background-dark2);
 
   text-decoration: none;
+  transition: background 0.2s ease;
 }
 .map-stat-box:hover {
   background-color: var(--secondary);
