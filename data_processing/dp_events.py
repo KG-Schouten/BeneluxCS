@@ -158,12 +158,15 @@ async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.Da
         tasks = [faceit_data_v1.league_season_stages(season_id) for season_id in seasons.keys()]
         results = await gather_with_progress(tasks, desc="Processing ESEA seasons")
         
+        def safe_parse_ts(value):
+            return round(parser.isoparse(value).timestamp()) if value else None
+        
         rows, event_list = [], []
         for season_data, league_season_data in zip(results, league_seasons_data['payload']): 
             # Get the league season data from the dictionary inside payload where 'id' == season_id
             season_id = league_season_data['id']
             season_number = league_season_data['season_number']
-        
+
             for region in season_data['payload']['regions']:
                 region_id = region['id']
                 region_name = region['name']
@@ -205,9 +208,12 @@ async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.Da
                                     "event_format": "league",
                                     "event_description": league_data['payload'].get('description', None),
                                     "event_avatar": league_data['payload'].get('organizer_details', {}).get('avatar_url', None),
-                                    "event_banner": league_data['payload'].get('organizer_details', {}).get('cover_url', None),
-                                    "event_start": round(parser.isoparse(league_season_data.get('time_start', None)).timestamp()),
-                                    "event_end": round(parser.isoparse(league_season_data.get('time_end', None)).timestamp()),
+                                    "event_banner": league_season_data.get('header_image_url', None),
+                                    "event_start": safe_parse_ts(league_season_data.get('time_start')),
+                                    "event_end": safe_parse_ts(league_season_data.get('time_end')),
+                                    "registration_start": safe_parse_ts(league_season_data.get('registration_start')),
+                                    "registration_end": safe_parse_ts(league_season_data.get('registration_end')),
+                                    "roster_lock": safe_parse_ts(league_season_data.get('roster_lock_at')),
                                     "organizer_id": league_data['payload'].get('organizer_details', {}).get('id', None),
                                     "organizer_name": league_data['payload'].get('organizer_details', {}).get('name', None),
                                     "maps": [map.get('name', None) for map in league_season_data.get('map_pool', [{}])[0].get('maps', [{}]) if map.get('name', None) is not None]
