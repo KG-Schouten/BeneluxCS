@@ -307,7 +307,7 @@ function handleEventsFilterChange(value) {
     const rules = {
         "all": [],
         "esea": [],
-        "hub": ["seasons", "divisions", "stages"],
+        "hub": ["seasons", "divisions", "stages", "teams"],
     };
 
     // Disable the ones listed in rules[value]
