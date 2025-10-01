@@ -37,7 +37,6 @@
             <i class="material-icons">menu</i>
         </div>
         <div class="sidebar-content">
-
             <div class="sidebar-header">
                 <span>Navigation</span>
             </div>
@@ -57,6 +56,13 @@
         
         {% block sidebar_extra_left %} {% endblock %}
 
+        <div class="sidebar-content">
+            <div class="sidebar-header hoverable">
+                <a href="https://discord.gg/9xzsGTGhjm" target="_blank" rel="noopener noreferrer" style="margin: 10px 5px">
+                    <img src="{{ url_for('static', filename='img/join_discord.png') }}" alt="Join the Discord" class="img-fluid sidebar-discord"/>
+                </a>
+            </div>
+        </div>
     </div>
 
     <div class="stats-wrapper">
