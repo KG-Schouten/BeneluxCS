@@ -441,7 +441,7 @@ async def update_league_teams():
             function_logger.info("No teams found for the league_teams update.")
             
         if isinstance(df_teams, pd.DataFrame) and not df_teams.empty:
-            upload_data("league_teams", df_teams, clear=True)
+            upload_data("league_teams", df_teams, clear=False)
         else:
             function_logger.info("No teams found for the league_teams update.")
             return
