@@ -1,6 +1,6 @@
 ## Imports
 from database.db_down import gather_players
-from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot
+from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged
 from database.db_up import upload_data
 from data_processing.faceit_api.sliding_window import RequestDispatcher
 from data_processing.faceit_api.faceit_v4 import FaceitData
@@ -428,7 +428,29 @@ async def update_new_matches_esea():
         
     except Exception as e:
         function_logger.error(f"Error updating ESEA matches: {e}")
-         
+
+# === Daily update interval ===
+async def update_league_teams():
+    try:
+        df_teams, team_names_updated = gather_league_teams_merged()
+        
+        if isinstance(team_names_updated, list) and team_names_updated:
+            function_logger.info(f"Found {len(team_names_updated)} teams with updated names.")
+            function_logger.info(team_names_updated)
+        else:
+            function_logger.info("No teams found for the league_teams update.")
+            
+        if isinstance(df_teams, pd.DataFrame) and not df_teams.empty:
+            upload_data("league_teams", df_teams, clear=True)
+        else:
+            function_logger.info("No teams found for the league_teams update.")
+            return
+        
+        
+    except Exception as e:
+        function_logger.error(f"Error updating league_teams table: {e}")
+        return
+
          
 # === Weekly update interval ===
 async def update_hub_events():
@@ -489,7 +511,8 @@ async def main():
         await update_elo_leaderboard()
         await update_new_matches_hub()
         await update_new_matches_esea()
-    # elif task == "daily":
+    elif task == "daily":
+        await update_league_teams()
     elif task == "weekly":
         await update_hub_events()
         await update_esea_seasons_events()
@@ -500,6 +523,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-    # asyncio.run(update_esea_teams_benelux())
+    # asyncio.run(update_league_teams())
     # asyncio.run(update_matches())
     # asyncio.run(update_esea_teams_benelux())

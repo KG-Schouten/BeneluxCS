@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from psycopg2 import Error as PostgresError
 import pandas as pd
+from rapidfuzz import fuzz
 
 from database.db_manage import start_database, close_database
 from data_processing.faceit_api.logging_config import function_logger
@@ -261,5 +262,81 @@ def gather_elo_snapshot() -> pd.DataFrame:
     except Exception as e:
         function_logger.error(f"Error gathering elo snapshot: {e}")
         return pd.DataFrame()
+    finally:
+        close_database(db)
+        
+def gather_league_teams_merged():
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                tm.team_id,
+                tm.match_id,
+                tm.team_name AS team_name_match,
+                
+                m.event_id,
+                m.match_time,
+                
+                lt.team_name AS league_teams_name,
+                
+                s.season_number,
+                s.division_name
+                
+            FROM teams_matches tm
+            LEFT JOIN matches m ON tm.match_id = m.match_id
+            INNER JOIN seasons s ON m.event_id = s.event_id
+            INNER JOIN league_teams lt ON tm.team_id = lt.team_id AND s.season_number = lt.season_number
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        
+        def determine_equal_name(name1: str, name2: str):
+            # Normalize the names a bit more
+            name1, name2 = name1.lower().replace('-', ' ').replace('_', ' '), name2.lower().replace('-', ' ').replace('_', ' ')
+            
+            fuzzRatio = fuzz.ratio(name1, name2)
+            fuzzRatioPartial = fuzz.partial_ratio(name1, name2)
+            
+            return fuzzRatio, fuzzRatioPartial
+        
+        league_teams = []
+        team_names_updated = []
+        for team_id, team_group in df.groupby('team_id'):
+            team_group = team_group.sort_values(by='season_number', ascending=False).reset_index(drop=True)
+            for season_number, season_group in team_group.groupby('season_number'):
+                season_group = season_group.sort_values(by='match_time', ascending=False).reset_index(drop=True)
+                
+                last_name = season_group.at[0, 'team_name_match']
+                league_teams_name = season_group.at[0, 'league_teams_name']
+                
+                if pd.isna(league_teams_name) or pd.isna(last_name):
+                    continue
+                if isinstance(league_teams_name, str) and isinstance(last_name, str):
+                    fuzzRatio, fuzzRatioPartial = determine_equal_name(last_name, league_teams_name)
+                    
+                    if fuzzRatio < 50:
+                        team_names_updated.append([team_id, season_number, last_name, league_teams_name, fuzzRatio, fuzzRatioPartial])
+                        team_name = last_name
+                    else:
+                        team_name = league_teams_name
+                    
+                    league_teams.append(
+                        {
+                            'team_id': team_id,
+                            'season_number': season_number,
+                            'team_name': team_name,
+                            'division_name': season_group.at[0, 'division_name'],
+                        }
+                    )
+        
+        
+        
+        df_league_teams = pd.DataFrame(league_teams)
+        
+        return df_league_teams, team_names_updated
+    except Exception as e:
+        function_logger.error(f"Error gathering league teams merged: {e}")
+        return pd.DataFrame(), []
     finally:
         close_database(db)

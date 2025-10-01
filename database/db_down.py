@@ -193,6 +193,64 @@ def gather_players(**kwargs) -> pd.DataFrame:
     finally:   
         close_database(db)
 
+def gather_league_teams(
+    team_id: str | list = "ALL",
+    season_number: str | int | list = "ALL"
+    ) -> pd.DataFrame:
+    
+    """
+    Gathers league teams from the database
+
+    Returns:
+        df
+    """
+    db, cursor = start_database()
+
+    conditions = []
+    params = []
+    
+    try:
+        if team_id != "ALL":
+            if isinstance(team_id, str):
+                team_id = [team_id]
+            placeholders = ', '.join(['%s'] * len(team_id))
+            conditions.append(f"lt.team_id IN ({placeholders})")
+            params.extend(team_id)
+        if season_number != "ALL":
+            if isinstance(season_number, (str, int)):
+                season_number = [season_number]
+            
+            # Convert to digits only for safety
+            season_number = [int(sn) for sn in season_number if str(sn).isdigit()]
+            
+            placeholders = ', '.join(['%s'] * len(season_number))
+            conditions.append(f"lt.season_number IN ({placeholders})")
+            params.extend(season_number)
+    except Exception as e:
+        print("Error processing gather_league_teams parameters:", e)
+    
+    query = f"""
+        SELECT *      
+        FROM league_teams lt
+        {'WHERE ' + ' AND '.join(conditions) if conditions else ''}
+    """
+
+    try:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        df = pd.DataFrame(rows, columns=columns)
+        
+        return df
+
+    except PostgresError as e:
+        print(f"Error gathering league teams: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error gathering league teams: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
 
 if __name__ == "__main__":
     # Allow standalone execution
