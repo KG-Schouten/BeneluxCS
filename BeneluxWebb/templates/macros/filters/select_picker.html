@@ -3,7 +3,7 @@
 <div class="filter-container select-picker-container sidebar-button" data-filter-name="{{ name }}" data-default='{{ init_selected | tojson }}'>
     <select class="selectpicker" 
             id="{{ name }}-select"
-            {% if multiselect %}multiple data-actions-box="true" data-size="5"{% endif %}>
+            {% if multiselect %}multiple data-size="5"{% endif %}>
         {% for val in values %}
             <option value="{{ val }}"
                 {% if multiselect and val in init_selected %}selected{% elif not multiselect and init_selected and val == init_selected[0] %}selected{% endif %}>
@@ -18,10 +18,10 @@
     const container = document.currentScript.previousElementSibling;
     const select = container.querySelector('select');
 
+    // Initialize Bootstrap Select
     function updateValue() {
         const selected = Array.from(select.selectedOptions).map(opt => opt.value);
         container.dataset.value = JSON.stringify(selected);
-        // console.log('Select picker value updated:', container.dataset.value);
     }
 
     // Initialize value
@@ -33,6 +33,8 @@
         Array.from(select.options).forEach(option => {
             option.selected = values.includes(option.value);
         });
+        // Refresh the selectpicker to reflect the new selection
+        $(select).selectpicker('refresh');
         updateValue();
     }); 
 
