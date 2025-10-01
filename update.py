@@ -1,6 +1,6 @@
 ## Imports
 from database.db_down import gather_players
-from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged
+from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars
 from database.db_up import upload_data
 from data_processing.faceit_api.sliding_window import RequestDispatcher
 from data_processing.faceit_api.faceit_v4 import FaceitData
@@ -13,6 +13,7 @@ from data_processing.dp_benelux import get_benelux_leaderboard_players
 import pandas as pd
 import sys
 import asyncio
+import requests
 from datetime import date
 
 import os
@@ -451,6 +452,49 @@ async def update_league_teams():
         function_logger.error(f"Error updating league_teams table: {e}")
         return
 
+async def update_team_avatars():
+    try:
+        df_avatars = gather_league_team_avatars()
+        
+        try:
+            # Works when running as a script
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        except NameError:
+            # Fallback for Jupyter / interactive environments
+            project_root = os.getcwd()
+            
+        save_folder = os.path.join(project_root, "BeneluxWebb", "static", "img", "avatars")
+        os.makedirs(save_folder, exist_ok=True)
+        
+        for index, row in df_avatars.iterrows():
+            team_id = row['team_id']
+            season_number = row['season_number']
+            avatar_url = row['avatar']
+            
+            if not avatar_url:
+                print(f"team {team_id} has no avatar URL, skipping.")
+                continue
+            
+            ext = os.path.splitext(avatar_url.split("?")[0])[1]
+            if ext.lower() not in [".jpg", ".jpeg", ".png"]:
+                ext = ".png"
+                
+            filename = f"{team_id}_{season_number}{ext}"
+            filepath = os.path.join(save_folder, filename)
+
+            try:
+                response = requests.get(avatar_url, stream=True, timeout=10)
+                if response.status_code == 200:
+                    with open(filepath, "wb") as f:
+                        f.write(response.content)
+                    print(f"Saved {filepath}")
+                else:
+                    print(f"Failed to download {avatar_url} (status {response.status_code})")
+            except Exception as e:
+                print(f"Error downloading {avatar_url}: {e}")
+    except Exception as e:
+        function_logger.error(f"Error updating team avatars: {e}")
+        return
          
 # === Weekly update interval ===
 async def update_hub_events():
