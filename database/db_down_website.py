@@ -105,12 +105,12 @@ def gather_esea_season_info() -> list:
                 s.season_number,
                 e.event_start,
                 e.event_end,
-                e.event_banner
+                e.event_banner,
+                e.registration_end,
+                e.roster_lock
             FROM seasons s
             LEFT JOIN events e ON s.event_id = e.event_id
-            WHERE s.event_id IN (
-                SELECT event_id FROM teams_benelux
-            )
+            WHERE s.season_number > 49
             ORDER BY s.season_number DESC
         """
         
@@ -126,7 +126,9 @@ def gather_esea_season_info() -> list:
                     'season_number': season_number,
                     'event_start': row[1],
                     'event_end': row[2],
-                    'event_banner': row[3]
+                    'event_banner': row[3],
+                    'registration_end': row[4],
+                    'roster_lock': row[5]
                 }
 
         # Convert dict values to list and sort descending by season_number
