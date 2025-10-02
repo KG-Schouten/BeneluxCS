@@ -292,7 +292,7 @@
   flex-direction: column;
 
   overflow-x: hidden;
-  overflow-y: scroll;
+  overflow-y: auto;
   height: calc(var(--team-card-height) * (1 - var(--score-boxes-height-scale)));
   width: calc(var(--players-box-width) * var(--players-sub-width-scale));
   
