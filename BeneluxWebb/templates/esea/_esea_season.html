@@ -39,8 +39,8 @@
                     <a class="team-link"
                         href="https://www.faceit.com/en/teams/{{ team.team_id }}/leagues"
                         target="_blank"
-                        onclick="plausible('Team Link Clicked', { props: { team: '{{ team.team_name_cur }}', season: '{{ team.season_number }}' } })">
-                            {{ team.team_name_cur }}
+                        onclick="plausible('Team Link Clicked', { props: { team: '{{ team.team_name }}', season: '{{ team.season_number }}' } })">
+                            {{ team.team_name }}
                     </a>
                 </div>
 
@@ -111,7 +111,7 @@
                         data-bs-target="#collapseTeam{{ division_name | replace(' ', '') }}{{ loop.index }}"
                         aria-expanded="false"
                         aria-controls="collapseTeam{{ division_name | replace(' ', '') }}{{ loop.index }}"
-                        onclick="plausible('Team Details Toggled', { props: { team: '{{ team.team_name_cur }}', season: '{{ team.season_number }}' } })">
+                        onclick="plausible('Team Details Toggled', { props: { team: '{{ team.team_name }}', season: '{{ team.season_number }}' } })">
                         <i class="bi bi-chevron-down"></i>
                     </button>
                 </div>
@@ -135,7 +135,7 @@
                                 class="match-info-box {{ 'highlight-border' if match.opponent_id in teams | map(attribute='team_id') | list else '' }}" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                onclick="plausible('Match Clicked', { props: { match_id: '{{ match.match_id }}', team: '{{ team.team_name_cur }}', opponent: '{{ match.opponent }}' } })">
+                                onclick="plausible('Match Clicked', { props: { match_id: '{{ match.match_id }}', team: '{{ team.team_name }}', opponent: '{{ match.opponent }}' } })">
                                 
                                 <div class="match-info-time">
                                     {% if match.match_time %}
