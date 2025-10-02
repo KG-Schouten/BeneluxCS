@@ -302,13 +302,33 @@ def gather_league_teams_merged():
                             'team_id': team_id,
                             'season_number': season_number,
                             'team_name': team_name,
-                            'division_name': season_group.at[0, 'division_name'],
+                            'division_name': season_group.at[0, 'division_name']
                         }
                     )
         
-        
-        
         df_league_teams = pd.DataFrame(league_teams)
+        
+        # Gather avatars for the teams
+        pk_values = [(lt['team_id'], lt['season_number']) for lt in league_teams]
+        
+        query = """
+            SELECT
+                lt.team_id,
+                lt.season_number,
+                lt.avatar
+            FROM league_teams lt
+            WHERE (lt.team_id, lt.season_number) IN ({})
+        """
+        
+        placeholders = ', '.join(['(%s, %s)'] * len(pk_values))
+        query = query.format(placeholders)
+        flat_params = [item for sublist in pk_values for item in sublist]
+        cursor.execute(query, flat_params)
+        res = cursor.fetchall()
+        df_avatars = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        
+        if not df_avatars.empty and not df_league_teams.empty:
+            df_league_teams = df_league_teams.merge(df_avatars, on=['team_id', 'season_number'], how='left')
         
         return df_league_teams, team_names_updated
     except Exception as e:
