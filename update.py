@@ -1,6 +1,6 @@
 ## Imports
 from database.db_down import gather_players
-from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars
+from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars, gather_league_teams
 from database.db_up import upload_data
 from data_processing.faceit_api.sliding_window import RequestDispatcher
 from data_processing.faceit_api.faceit_v4 import FaceitData
@@ -14,6 +14,7 @@ import pandas as pd
 import sys
 import asyncio
 import requests
+from pathlib import Path
 from io import BytesIO
 from PIL import Image
 from datetime import date
@@ -508,6 +509,39 @@ async def update_team_avatars():
     except Exception as e:
         function_logger.error(f"Error updating team avatars: {e}")
         return
+
+async def update_local_team_avatars():
+    df = gather_league_teams()
+    
+    try:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    except NameError:
+        project_root = os.getcwd()
+    
+    # Save images locally to BeneluxWebb/static/img/avatars
+    save_folder = Path(project_root) / "BeneluxWebb" / "static" / "img" / "avatars"
+    save_folder.mkdir(parents=True, exist_ok=True)
+    
+    for idx, row in df.iterrows():
+        team_id = row['team_id']
+        season_number = row['season_number']
+        
+        try:
+            avatar_data = row['avatar']
+            
+            if avatar_data:
+                filename = f"{team_id}_{season_number}.png"
+                file_path = save_folder / filename
+                with open(file_path, 'wb') as f:
+                    f.write(avatar_data)
+                
+                function_logger.info(f"Saved avatar for team {team_id}, season {season_number} to {file_path}")
+            else:
+                function_logger.info(f"No avatar data for team {team_id}, season {season_number}")
+        except Exception as e:
+            function_logger.error(f"Error saving avatar for team {team_id}, season {season_number}: {e}")
+            continue
+
          
 # === Weekly update interval ===
 async def update_hub_events():
@@ -571,6 +605,7 @@ async def main():
     elif task == "daily":
         await update_league_teams()
         await update_team_avatars()
+        await update_local_team_avatars()
     elif task == "weekly":
         await update_hub_events()
         await update_esea_seasons_events()
@@ -585,3 +620,4 @@ if __name__ == "__main__":
     # asyncio.run(update_league_teams())
     # asyncio.run(update_team_avatars())
     # asyncio.run(update_esea_seasons_events())
+    # asyncio.run(update_local_team_avatars())
