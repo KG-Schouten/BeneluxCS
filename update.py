@@ -14,7 +14,8 @@ import pandas as pd
 import sys
 import asyncio
 import requests
-import glob
+from io import BytesIO
+from PIL import Image
 from datetime import date
 
 import os
@@ -443,37 +444,6 @@ async def update_league_teams():
             function_logger.info("No teams found for the league_teams update.")
             
         if isinstance(df_teams, pd.DataFrame) and not df_teams.empty:
-            # === Determine avatar filenames ===
-            try:
-                try:
-                    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                except NameError:
-                    # fallback if running in notebook
-                    project_root = os.getcwd()
-
-                avatar_folder = os.path.join(project_root, "BeneluxCS", "BeneluxWebb", "static", "img", "avatars")
-                avatar_filenames = []
-
-                for _, row in df_teams.iterrows():
-                    team_id = row["team_id"]
-                    season_number = row["season_number"]
-
-                    pattern = os.path.join(avatar_folder, f"{team_id}_{season_number}.*")
-                    matches = glob.glob(pattern)
-                    
-                    if matches:
-                        # Pick the first match
-                        filename = os.path.basename(matches[0])
-                        avatar_filenames.append(filename)
-                    else:
-                        avatar_filenames.append(None)  # fallback if no file found
-
-                # Assign as new column
-                df_teams["avatar"] = avatar_filenames
-            except Exception as e:
-                function_logger.error(f"Error determining avatar filenames: {e}")
-                df_teams["avatar"] = None  # Fallback to None if error occurs
-            
             upload_data("league_teams", df_teams, clear=False)
         else:
             function_logger.info("No teams found for the league_teams update.")
@@ -498,51 +468,43 @@ async def update_team_avatars():
         save_folder = os.path.join(project_root, "BeneluxWebb", "static", "img", "avatars")
         os.makedirs(save_folder, exist_ok=True)
         
-        filenames = []
-        for index, row in df_avatars.iterrows():
+        data = []
+        for _, row in df_avatars.iterrows():
             team_id = row['team_id']
             season_number = row['season_number']
+            team_name = row['team_name']
+            division_name = row['division_name']
             avatar_url = row['avatar']
             
-            if not avatar_url:
-                print(f"team {team_id} has no avatar URL, skipping.")
+            if not avatar_url or not isinstance(avatar_url, str) or not avatar_url.startswith("http"):
                 continue
-                
-            filename = f"{team_id}_{season_number}{'.png'}"
-            filepath = os.path.join(save_folder, filename)
             
-            filenames.append(filename)
-
             try:
-                response = requests.get(avatar_url, stream=True, timeout=10)
-                if response.status_code == 200:
-                    with open(filepath, "wb") as f:
-                        f.write(response.content)
-                    print(f"Saved {filepath}")
-                else:
-                    print(f"Failed to download {avatar_url} (status {response.status_code})")
+                response = requests.get(avatar_url)
+                response.raise_for_status()
+                
+                image = Image.open(BytesIO(response.content))
+                
+                png_bytes_io = BytesIO()
+                image.save(png_bytes_io, format='PNG')
+                png_bytes = png_bytes_io.getvalue()
+                
+                data.append({
+                    'team_id': team_id,
+                    'season_number': season_number,
+                    'team_name': team_name,
+                    'division_name': division_name,
+                    'avatar': png_bytes
+                })
+            
             except Exception as e:
-                print(f"Error downloading {avatar_url}: {e}")
-                
-            
-        # Now update the database with the new avatar filenames
-        df_league_teams = gather_league_teams()
-        
-        dir_list = os.listdir(save_folder)
-        
-        for img in dir_list:
-            team_id = img.split("_")[0]
-            season_number = img.split("_")[1].split(".")[0]
-            
-            match = df_league_teams[(df_league_teams['team_id'] == team_id) & (df_league_teams['season_number'] == int(season_number))]
-            
-            if match.empty:
+                function_logger.error(f"Error downloading or processing avatar for team {team_id}: {e}")
                 continue
-            
-            df_league_teams.loc[match.index, 'avatar'] = img
-                
         
-        upload_data("league_teams", df_league_teams, clear=False)      
+        if data:
+            df_team_leagues = pd.DataFrame(data)
+            
+            upload_data("league_teams", df_team_leagues)
         
         return  
 
@@ -611,6 +573,7 @@ async def main():
         await update_new_matches_esea()
     elif task == "daily":
         await update_league_teams()
+        await update_team_avatars()
     elif task == "weekly":
         await update_hub_events()
         await update_esea_seasons_events()
@@ -620,7 +583,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    # asyncio.run(main())
+    asyncio.run(main())
     # asyncio.run(update_league_teams())
-    asyncio.run(update_team_avatars())
+    # asyncio.run(update_team_avatars())
     # asyncio.run(update_esea_teams_benelux())
