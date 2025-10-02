@@ -402,7 +402,6 @@
     width: 85%;
     height: 85%;
     border-radius: var(--border-radius-sm);
-    object-fit: cover;
   }
 
   /* === Team name styling === */

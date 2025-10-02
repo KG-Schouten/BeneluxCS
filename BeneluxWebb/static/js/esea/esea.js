@@ -11,21 +11,40 @@ document.addEventListener('DOMContentLoaded', async function () {
     var columns_mapping = {};
   }
 
-  // Initialize components on page load
-  initTooltips();
-  setupEseaTabs();
-  autocollapse('#eseaTabs', 40);
-
-  // Re-run autocollapse on resize
-  window.addEventListener('resize', () => {
-    autocollapse('#eseaTabs', 40);
-    // Adjust all visible DataTables on resize so headers/body stay aligned
-    if ($.fn.dataTable) {
-      $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
-    }
-  });
-
   // --- ESEA TABS LOGIC ---
+  let currentFetchController = null;
+  function loadSeasonContent(season, content) {
+    // Abort any ongoing fetch request
+    if (currentFetchController) {
+      currentFetchController.abort();
+    }
+
+    currentFetchController = new AbortController();
+    const { signal } = currentFetchController;
+
+    content.innerHTML = '<div class="spinner-border text-muted" role="status"><span class="visually-hidden">Loading...</span></div>';
+
+    fetch(`/esea/season/${season}`, { signal })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch season data");
+        return res.text();
+      })
+      .then(html => {
+        content.innerHTML = html;
+
+        // Re-initialize components for the new content
+        initTooltips(content);
+        initBootstrapCollapse();
+        setupExpandAllButton();
+        initDataTables(content);
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+          content.innerHTML = `<div class="text-danger">Error loading season: ${err.message}</div>`;
+        });
+  }
+
+  
   function setupEseaTabs() {
     const tabs = document.querySelectorAll('#eseaTabs .nav-link:not(.dropdown-toggle), #eseaTabs button.nav-link:not(.dropdown-toggle)');
     const content = document.getElementById('season-content');
@@ -57,34 +76,25 @@ document.addEventListener('DOMContentLoaded', async function () {
     defaultTab?.click();
   }
 
-  function loadSeasonContent(season, content) {
-    content.innerHTML = '<div class="text-muted">Loading...</div>';
+  // Initialize components on page load
+  initTooltips();
+  setupEseaTabs();
+  autocollapse('#eseaTabs');
 
-    fetch(`/esea/season/${season}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch season data");
-        return res.text();
-      })
-      .then(html => {
-        content.innerHTML = html;
-
-        // Re-initialize components for the new content
-        initTooltips(content);
-        initBootstrapCollapse();
-        setupExpandAllButton();
-        initDataTables(content); // Initialize DataTables for the new content
-      })
-      .catch(err => {
-        content.innerHTML = `<div class="text-danger">Error loading season: ${err.message}</div>`;
-      });
-  }
+  // Re-run autocollapse on resize
+  window.addEventListener('resize', () => {
+    autocollapse('#eseaTabs');
+    // Adjust all visible DataTables on resize so headers/body stay aligned
+    if ($.fn.dataTable) {
+      $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+    }
+  });
 
   // --- COMPONENT INITIALIZATION FUNCTIONS ---
 
   // Initialize all tooltips
   function initTooltips(context = document) {
     const tooltipTriggerList = [].slice.call(context.querySelectorAll('.esea-wrapper [data-bs-toggle="tooltip"]'));
-    console.log(`tooltipTriggerList: `, tooltipTriggerList);
     tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
   }
 
@@ -194,7 +204,6 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   // --- COLLAPSE/EXPAND LOGIC ---
-
   // Update icon when a collapse panel is shown
   function updateIconOnShow(event) {
     const button = document.querySelector(`[data-bs-target="#${event.target.id}"]`);
@@ -257,57 +266,68 @@ document.addEventListener('DOMContentLoaded', async function () {
   // --- AUTO-COLLAPSE TABS ---
 
   // Auto-collapse overflowing tabs into a dropdown
-  function autocollapse(menuSelector, maxHeight) {
-    const nav = document.querySelector(menuSelector);
-    if (!nav) return;
+  function autocollapse(menuSelector) {
+    tabs = document.querySelector(menuSelector);
+    tabsParent = tabs.parentElement;
+    dropdown = tabsParent.querySelector('.dropdown');
+    dropdownBtn = dropdown.querySelector('.dropdown-toggle');
+    dropdownMenu = dropdown.querySelector('.dropdown-menu');
+
+    const tabsWidth = tabs.offsetWidth;
+    const parentWidth = tabsParent.offsetWidth;
+    const dropdownBtnWidth = dropdownBtn.offsetWidth;
+
+    // Get tabs children
+    const tabsChildren = Array.from(tabs.children).map(child => ({
+      el: child,
+      width: child.offsetWidth
+    }));
+    const last_tab_width = tabsChildren[tabsChildren.length - 1]?.width || 0;
+
+    // Get dropdown children
+    const dropdownChildren = Array.from(dropdownMenu.children).map(child => ({
+      el: child,
+      width: last_tab_width
+    }));
     
-    const dropdown = nav.querySelector('.dropdown');
-    const dropdownMenu = dropdown.querySelector('.dropdown-menu');
-
-    function getNavHeight() {
-      return nav.getBoundingClientRect().height;
-    }
-
-    function moveLastVisibleToDropdown() {
-      const items = Array.from(nav.children).filter(li => !li.classList.contains('dropdown'));
-      if (items.length > 0) {
-        dropdownMenu.insertBefore(items[items.length - 1], dropdownMenu.firstChild);
-      }
-    }
-
-    function moveFirstDropdownItemBack() {
-      const dropdownItems = Array.from(dropdownMenu.children);
-      if (dropdownItems.length > 0) {
-        nav.insertBefore(dropdownItems[0], dropdown);
-      }
-    }
-
-    if (getNavHeight() >= maxHeight) {
-      dropdown.classList.remove('d-none');
-      nav.classList.remove('w-auto');
-      nav.classList.add('w-100');
-
-      while (getNavHeight() > maxHeight) {
-        moveLastVisibleToDropdown();
-      }
-
-      nav.classList.add('w-auto');
-      nav.classList.remove('w-100');
+    let first_dropdown_item_width;
+    if (dropdownChildren.length > 0) {
+      first_dropdown_item_width = dropdownChildren[0]?.width || 0;
     } else {
-      let collapsedItems = Array.from(dropdownMenu.children);
+      first_dropdown_item_width = 0;
+    }
+
+    // Determine the width of the tabs (and dropdown if visible)
+    margin = 10;
+    let availableWidth = parentWidth - margin;
+    if (!dropdown.classList.contains('d-none')) {
+      availableWidth -= dropdownBtnWidth;
+    }
+
+    if (availableWidth <= tabsWidth) {
+      tabsParent.style.justifyContent = 'flex-start';
+      dropdown.classList.remove('d-none');
+
+      // Move last child in tabsChildren to dropdownMenu
+      last_tab = tabsChildren[tabsChildren.length - 1];
+      dropdownMenu.insertBefore(tabs.removeChild(last_tab.el), dropdownMenu.firstChild);
+
+      // Re-evaluate to see if we need to move more items
+      autocollapse(menuSelector);
       
-      if (collapsedItems.length === 0) {
-        dropdown.classList.add('d-none');
-      }
+    } else {
+      tabsParent.style.justifyContent = 'center';
+    }
 
-      while (getNavHeight() < maxHeight && collapsedItems.length > 0) {
-        moveFirstDropdownItemBack();
-        collapsedItems = Array.from(dropdownMenu.children);
-      }
+    if (dropdownMenu.children.length === 0) {
+      dropdown.classList.add('d-none');
+      tabsParent.style.justifyContent = 'center'; 
+    } else if (availableWidth >= (tabsWidth + first_dropdown_item_width) && dropdownChildren.length > 0) {
+      // Move first child in dropdownMenu to tabs
+      tabs.appendChild(dropdownMenu.removeChild(dropdownChildren[0].el));
 
-      if (getNavHeight() > maxHeight) {
-        autocollapse(menuSelector, maxHeight); // Re-check in case we overflow again
-      }
+      // Re-evaluate to see if we can move more items
+      autocollapse(menuSelector);
     }
   }
 });
