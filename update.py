@@ -456,16 +456,6 @@ async def update_team_avatars():
     try:
         df_avatars = gather_league_team_avatars()
         
-        try:
-            # Works when running as a script
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        except NameError:
-            # Fallback for Jupyter / interactive environments
-            project_root = os.getcwd()
-            
-        save_folder = os.path.join(project_root, "BeneluxWebb", "static", "img", "avatars")
-        os.makedirs(save_folder, exist_ok=True)
-        
         data = []
         for _, row in df_avatars.iterrows():
             team_id = row['team_id']
@@ -512,29 +502,38 @@ async def update_team_avatars():
 
 async def update_local_team_avatars():
     df = gather_league_teams()
-    
+
+    # Determine project root (always BeneluxCS)
     try:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Running from a Python file
+        project_root = Path(__file__).resolve().parent
     except NameError:
-        project_root = os.getcwd()
-    
-    # Save images locally to BeneluxWebb/static/img/avatars
-    save_folder = Path(project_root) / "BeneluxWebb" / "static" / "img" / "avatars"
+        # Running in Jupyter, fallback to cwd
+        cwd = Path(os.getcwd()).resolve()
+        # If cwd is inside BeneluxCS, use it; otherwise look for BeneluxCS in path
+        for parent in [cwd] + list(cwd.parents):
+            if parent.name == "BeneluxCS":
+                project_root = parent
+                break
+        else:
+            raise RuntimeError("Cannot determine project root (BeneluxCS)")
+
+    # Save images locally to BeneluxWebb/static/img/avatars inside project
+    save_folder = project_root / "BeneluxWebb" / "static" / "img" / "avatars"
     save_folder.mkdir(parents=True, exist_ok=True)
-    
-    for idx, row in df.iterrows():
+
+    for _, row in df.iterrows():
         team_id = row['team_id']
         season_number = row['season_number']
-        
+
         try:
             avatar_data = row['avatar']
-            
             if avatar_data:
                 filename = f"{team_id}_{season_number}.png"
                 file_path = save_folder / filename
                 with open(file_path, 'wb') as f:
                     f.write(avatar_data)
-                
+
                 function_logger.info(f"Saved avatar for team {team_id}, season {season_number} to {file_path}")
             else:
                 function_logger.info(f"No avatar data for team {team_id}, season {season_number}")
@@ -615,9 +614,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())
     # asyncio.run(update_esea_teams_benelux())
     # asyncio.run(update_league_teams())
     # asyncio.run(update_team_avatars())
     # asyncio.run(update_esea_seasons_events())
-    # asyncio.run(update_local_team_avatars())
+    asyncio.run(update_local_team_avatars())
