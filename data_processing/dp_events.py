@@ -317,14 +317,25 @@ async def process_teams_benelux_esea(
                     list_main_2 = row["players_main_df2"]
                     list_sub_1 = row["players_sub_df1"]
                     list_sub_2 = row["players_sub_df2"]
-                    if isinstance(list_main_1, list) and isinstance(list_main_2, list) and list_main_2:
+
+                    # Case 1: list_main_2 missing or NaN
+                    if list_main_2 is None or (isinstance(list_main_2, float) and pd.isna(list_main_2)):
+                        return (list_main_1, list_sub_1)
+
+                    # Case 2: both are lists
+                    if isinstance(list_main_1, list) and isinstance(list_main_2, list):
                         if not list_main_1:
                             return (list_main_2, list_sub_2)
                         if len(list_main_1) < len(list_main_2):    
                             return (list_main_2, list_sub_2)
                         else:
                             return (list_main_1, list_sub_1)
-                    return (list_main_1, list_sub_1) if pd.notna(list_main_1) else (list_main_2, list_sub_2)
+
+                    # Fallback: if list_main_1 is usable, take it; otherwise fallback to list_main_2
+                    if list_main_1 is not None and not (isinstance(list_main_1, float) and pd.isna(list_main_1)):
+                        return (list_main_1, list_sub_1)
+                    else:
+                        return (list_main_2, list_sub_2)
                 except Exception as e:
                     function_logger.warning(f"Issue choosing players for team {row.get('team_name', 'Unknown')}: {e}")
                     return (row.get("players_main_df1", []), row.get("players_sub_df1", []))

@@ -130,10 +130,7 @@ async def update_esea_teams_benelux():
                     upload_data("players", df_players)
     
         if isinstance(df_teams_benelux, pd.DataFrame) and not df_teams_benelux.empty:
-            # Remove all data from the teams_benelux table
-            upload_data("teams_benelux", pd.DataFrame(), clear=True)
-            
-            upload_data("teams_benelux", df_teams_benelux)
+            upload_data("teams_benelux", df_teams_benelux, clear=True)
     
     except Exception as e:
         function_logger.error(f"Error updating teams_benelux table: {e}", exc_info=True)
