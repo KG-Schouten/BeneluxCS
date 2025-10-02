@@ -10,6 +10,7 @@ import json
 import re
 from dotenv import load_dotenv
 from psycopg2.extras import RealDictCursor
+import base64
 
 from database.db_manage import start_database, close_database
 from database.db_down import get_player_aliases
@@ -90,6 +91,12 @@ def get_date_range(option: str):
         int(end.replace(tzinfo=timezone.utc).timestamp())
     ]
 
+def bytes_to_data_url(b: bytes, mime="image/png") -> str:
+    """Convert bytes to a data URL that can be used in <img src=''>."""
+    if b is None:
+        return None
+    encoded = base64.b64encode(b).decode("utf-8")
+    return f"data:{mime};base64,{encoded}"
             
 # =============================
 #           ESEA Page
@@ -550,7 +557,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     team_name = group_team['team_name'].iloc[0]
                     team_name_cur = team_names_data.get(team_id, team_name)
                     nickname = group_team['nickname'].iloc[0]
-                    team_avatar = group_team['team_avatar'].iloc[0]
+                    team_avatar = bytes_to_data_url(group_team['team_avatar'].iloc[0]) if group_team['team_avatar'].iloc[0] else None
                     region_name = group_team['region_name'].iloc[0]
                     
                     stages = [

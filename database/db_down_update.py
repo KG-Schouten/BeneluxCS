@@ -324,6 +324,8 @@ def gather_league_team_avatars():
             SELECT
                 lt.team_id,
                 lt.season_number,
+                lt.team_name,
+                lt.division_name,
                 MIN(t.avatar) AS avatar
             FROM league_teams lt
             LEFT JOIN teams t ON lt.team_id = t.team_id
