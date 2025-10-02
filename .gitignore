@@ -171,8 +171,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# ignore all data files in the data folder
-data/*
+# ignore all avatars in the avatars folder
+BeneluxWebb/static/img/avatars/*
 
 # ignore the api key file
 tokens/api_keys.json
