@@ -159,49 +159,6 @@ def gather_event_matches(event_ids: list) -> list:
         return []
     finally:
         close_database(db)
-    
-def gather_last_match_time_database(event_ids: list = [], ONGOING: bool = False, ESEA: bool = False) -> int:
-    db, cursor = start_database()
-    try:
-        query_base = """
-            SELECT
-                m.match_time
-            FROM matches m
-            LEFT JOIN events e ON m.event_id = e.event_id
-        """
-        
-        if ESEA:
-            query_base += " INNER JOIN seasons s ON m.event_id = s.event_id"
-        
-        query_base += " WHERE m.match_time IS NOT NULL AND m.status = 'FINISHED'  "
-        
-        filters = []
-        params = []
-        
-        if event_ids:
-            placeholders = ', '.join(['%s'] * len(event_ids))
-            filters.append(f"m.event_id IN ({placeholders})")
-            params.extend(event_ids)
-        if ONGOING:
-            filters.append("e.event_end > EXTRACT(EPOCH FROM NOW())")
-        
-        if filters:
-            query_base += " AND " + " AND ".join(filters)
-        
-        query_base += " ORDER BY m.match_time DESC LIMIT 1"
-        cursor.execute(query_base, params)
-        res = cursor.fetchone()
-        
-        last_match_time = res[0] if res else 0
-        if last_match_time is not None:
-            return int(last_match_time)
-        else:
-            function_logger.warning("No last match time found.")
-            return 0
-            
-    except Exception as e:
-        function_logger.error(f"Error gathering last match time: {e}")
-        return 0
 
 def gather_internal_event_ids(event_ids: list) -> pd.DataFrame:
     db, cursor = start_database()
