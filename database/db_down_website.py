@@ -152,17 +152,11 @@ def gather_esea_season_info() -> list:
 
 def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
     db, cursor = start_database()
-    try:
-        
-        timestamps = []
-        timestamps.append([1, datetime.now()])
-        
+    try:   
         df_teams_benelux = gather_teams_benelux(szn_number=szn_number)
         if df_teams_benelux.empty:
             function_logger.warning("No ESEA teams found in the Benelux region.")
             return {}
-        
-        timestamps.append([2, datetime.now()])
         
         df_teams_benelux["division_sort_rank"] = df_teams_benelux["division_name"].apply(compute_division_rank)
 
@@ -499,8 +493,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 # Store the complete map stats for this team/season
                 map_stats_data[(team_id, season_num)] = final_map_stats
         
-        timestamps.append([3, datetime.now()])
-        
         # Now, construct the final nested dictionary output
         esea_data = {}
         for season_number, group_season in df_teams_benelux.sort_values(by=["season_number"], ascending=False).groupby("season_number", sort=False):
@@ -516,7 +508,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                 for team_id, group_team in group_division.groupby('team_id'):
                     team_name = group_team['team_name'].iloc[0]
                     nickname = group_team['nickname'].iloc[0]
-                    team_avatar = bytes_to_data_url(group_team['team_avatar'].iloc[0]) if group_team['team_avatar'].iloc[0] else None
+                    # team_avatar = bytes_to_data_url(group_team['team_avatar'].iloc[0]) if group_team['team_avatar'].iloc[0] else None
                     region_name = group_team['region_name'].iloc[0]
                     
                     stages = [
@@ -644,7 +636,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         'team_id': team_id,
                         'team_name': team_name,
                         'nickname': nickname,
-                        'team_avatar': team_avatar,
+                        # 'team_avatar': team_avatar,
                         'players_main': players_main,
                         'players_sub': players_sub,
                         'players_coach': players_coach,
@@ -659,8 +651,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     }
 
                     esea_data[season_number][division_name].append(team_dict)
-        
-        timestamps.append([4, datetime.now()])
         
         # Sort teams by standing within each division
         for season in esea_data:
@@ -682,8 +672,15 @@ def gather_teams_benelux(szn_number: int | str = "ALL") -> pd.DataFrame:
     """
     db, cursor = start_database()
     
+    params = []
+    if szn_number != "ALL":
+        where_clause = "WHERE s.season_number = %s"
+        params.append(szn_number)
+    else:
+        where_clause = ""
+
     try:
-        query = """
+        query = f"""
             SELECT 
                 tb.team_id, 
                 tb.event_id, 
@@ -694,7 +691,6 @@ def gather_teams_benelux(szn_number: int | str = "ALL") -> pd.DataFrame:
                 tb.players_sub, 
                 tb.players_coach,
                 lt.team_name,
-                lt.avatar AS team_avatar,
                 t.avatar AS team_avatar_current,
                 t.nickname,
                 s.season_number,
@@ -705,12 +701,10 @@ def gather_teams_benelux(szn_number: int | str = "ALL") -> pd.DataFrame:
             LEFT JOIN teams t ON tb.team_id = t.team_id
             LEFT JOIN seasons s ON tb.event_id = s.event_id
             LEFT JOIN league_teams lt ON tb.team_id = lt.team_id AND s.season_number = lt.season_number
-            WHERE (%s = 'ALL' OR s.season_number = %s)
+            {where_clause}
         """
         
-        szn_number = str(szn_number).upper()
-        
-        cursor.execute(query, (szn_number, szn_number))
+        cursor.execute(query, params)
         res = cursor.fetchall()
         
         df_teams_benelux = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])

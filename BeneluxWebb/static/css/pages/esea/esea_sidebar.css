@@ -9,6 +9,10 @@
   border-bottom: 1px solid var(--primary)
 }
 
+.sidebar-body > .text-muted {
+  padding: 8px;
+}
+
 @media screen and (max-width: 992px) {
   .sidebar.left {
     display: none;
