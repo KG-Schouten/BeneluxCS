@@ -116,6 +116,7 @@
 
   height: calc(var(--team-card-height) * var(--team-name-height-scale));
   width: max-content;
+  max-width: calc(100% - (var(--team-card-height) * var(--team-avatar-width-scale)) - var(--details-btn-width) - 80px);
 
   position: absolute;
   top: 0;
@@ -126,11 +127,15 @@
   font-size: 1.3rem;
   font-weight: bold;
   color: var(--primary);
+
+  white-space: nowrap;
 }
 .team-link {
   text-decoration: none;
   color: var(--primary);
   transition: color 0.3s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .team-link:hover {
   text-decoration: underline;
