@@ -36,6 +36,7 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
         if clear:
             # Safely construct DELETE query
             cursor.execute(f'DELETE FROM "{table_name}"')
+            db.commit()
             function_logger.info(f"Cleared data from {table_name} table.")
         
         if df.empty:
@@ -51,6 +52,7 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
         
         df = clean_invalid_foreign_keys(df, table_name)
         
+        
         ## Preparing the data as tuples with None for the missing keys in the database
         data = [
             clean_row(tuple(
@@ -63,7 +65,7 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
         ## Uploading the data to the database 
         if not data:
             function_logger.info(f"No data to upload for table {table_name}. Skipping upload.")
-        else:
+        else:  
             # Start the database connection and cursor
             execute_values(cursor, sql, data)
             updated_rows = cursor.fetchall()
@@ -149,7 +151,7 @@ def upload_data_query(table_name: str, keys: list[str], primary_keys: list[str])
             VALUES %s
             ON CONFLICT ({', '.join(escaped_pks)})
             DO UPDATE SET {update_clause}
-            RETURNING {', '.join(escaped_keys)};
+            RETURNING {', '.join(escaped_keys)}
         """
     return query.strip()
 

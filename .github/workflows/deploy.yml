@@ -19,6 +19,7 @@ jobs:
         port: 10272
         script: |
           cd /srv/BeneluxCS
+          git reset --hard
           git config pull.rebase true  # Prevents pull prompt
           git checkout main
           git pull --rebase origin main

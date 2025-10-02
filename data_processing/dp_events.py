@@ -161,11 +161,15 @@ async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.Da
         def safe_parse_ts(value):
             return round(parser.isoparse(value).timestamp()) if value else None
         
+        def safe_parse_ts(value):
+            return round(parser.isoparse(value).timestamp()) if value else None
+        
         rows, event_list = [], []
         for season_data, league_season_data in zip(results, league_seasons_data['payload']): 
             # Get the league season data from the dictionary inside payload where 'id' == season_id
             season_id = league_season_data['id']
             season_number = league_season_data['season_number']
+
 
             for region in season_data['payload']['regions']:
                 region_id = region['id']
@@ -214,6 +218,12 @@ async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.Da
                                     "registration_start": safe_parse_ts(league_season_data.get('registration_start')),
                                     "registration_end": safe_parse_ts(league_season_data.get('registration_end')),
                                     "roster_lock": safe_parse_ts(league_season_data.get('roster_lock_at')),
+                                    "event_banner": league_season_data.get('header_image_url', None),
+                                    "event_start": safe_parse_ts(league_season_data.get('time_start')),
+                                    "event_end": safe_parse_ts(league_season_data.get('time_end')),
+                                    "registration_start": safe_parse_ts(league_season_data.get('registration_start')),
+                                    "registration_end": safe_parse_ts(league_season_data.get('registration_end')),
+                                    "roster_lock": safe_parse_ts(league_season_data.get('roster_lock_at')),
                                     "organizer_id": league_data['payload'].get('organizer_details', {}).get('id', None),
                                     "organizer_name": league_data['payload'].get('organizer_details', {}).get('name', None),
                                     "maps": [map.get('name', None) for map in league_season_data.get('map_pool', [{}])[0].get('maps', [{}]) if map.get('name', None) is not None]
@@ -247,6 +257,7 @@ async def process_teams_benelux_esea(
     team_id: Union[str, List[str]] = "ALL",
     ) -> pd.DataFrame:
     """ Gathers the df_seasons, df_events and df_teams_benelux dataframes"""
+    df_teams_benelux = gather_league_teams(
     df_teams_benelux = gather_league_teams(
         season_number=season_number,
         team_id=team_id
@@ -295,6 +306,9 @@ async def process_teams_benelux_esea(
     # Convert season_number to string for both dataframes before merging
     df_teams_benelux['season_number'] = df_teams_benelux['season_number'].astype(str)
     df_league_team_season_standings['season_number'] = df_league_team_season_standings['season_number'].astype(str)
+    # Convert season_number to string for both dataframes before merging
+    df_teams_benelux['season_number'] = df_teams_benelux['season_number'].astype(str)
+    df_league_team_season_standings['season_number'] = df_league_team_season_standings['season_number'].astype(str)
     df_teams_benelux = df_teams_benelux.merge(
         df_league_team_season_standings,
         on=['team_id', 'season_number'],
@@ -325,12 +339,25 @@ async def process_teams_benelux_esea(
 
                     # Case 2: both are lists
                     if isinstance(list_main_1, list) and isinstance(list_main_2, list):
+
+                    # Case 1: list_main_2 missing or NaN
+                    if list_main_2 is None or (isinstance(list_main_2, float) and pd.isna(list_main_2)):
+                        return (list_main_1, list_sub_1)
+
+                    # Case 2: both are lists
+                    if isinstance(list_main_1, list) and isinstance(list_main_2, list):
                         if not list_main_1:
                             return (list_main_2, list_sub_2)
                         if len(list_main_1) < len(list_main_2):    
                             return (list_main_2, list_sub_2)
                         else:
                             return (list_main_1, list_sub_1)
+
+                    # Fallback: if list_main_1 is usable, take it; otherwise fallback to list_main_2
+                    if list_main_1 is not None and not (isinstance(list_main_1, float) and pd.isna(list_main_1)):
+                        return (list_main_1, list_sub_1)
+                    else:
+                        return (list_main_2, list_sub_2)
 
                     # Fallback: if list_main_1 is usable, take it; otherwise fallback to list_main_2
                     if list_main_1 is not None and not (isinstance(list_main_1, float) and pd.isna(list_main_1)):
