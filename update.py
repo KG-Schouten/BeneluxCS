@@ -1,6 +1,6 @@
 ## Imports
 from database.db_down import gather_players
-from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars, gather_league_teams
+from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars
 from database.db_up import upload_data
 from data_processing.faceit_api.sliding_window import RequestDispatcher
 from data_processing.faceit_api.faceit_v4 import FaceitData
