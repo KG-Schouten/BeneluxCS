@@ -11,6 +11,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     var columns_mapping = {};
   }
 
+  function refreshMatches() {
+    console.log('Refreshing matches...');
+    fetch('/esea/matches')
+      .then(response => response.text())
+      .then(html => {
+          document.getElementById('matches-sidebar').innerHTML = html;
+      })
+      .catch(err => console.error('Error fetching matches:', err));
+  }
+
+  // Initial fetch of matches
+  refreshMatches();
+  // Refresh matches every 30 seconds
+  setInterval(refreshMatches, 30000);
+
   // --- ESEA TABS LOGIC ---
   let currentFetchController = null;
   function loadSeasonContent(season, content) {
