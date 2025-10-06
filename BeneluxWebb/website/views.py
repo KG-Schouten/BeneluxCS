@@ -186,9 +186,27 @@ def esea():
     from datetime import datetime
     current_time = int(datetime.now().timestamp())
     
-    from database.db_down_website import gather_esea_season_info, get_upcoming_matches
-    
-    # Gathering and separating upcoming matches
+    from database.db_down_website import gather_esea_season_info
+
+    # Gather ESEA season info
+    season_info = gather_esea_season_info()
+    return render_template(
+        'esea/esea.html', 
+        season_info=season_info, 
+        current_time=current_time
+    )
+
+@views.route('/api/esea')
+def api_esea():
+    from database.db_down_website import gather_columns_mapping
+    columns_mapping = gather_columns_mapping()
+    return jsonify({
+        "columns_mapping": columns_mapping
+    })
+      
+@views.route('/esea/matches')
+def esea_matches():
+    from database.db_down_website import get_upcoming_matches
     upcoming_matches, end_of_day = get_upcoming_matches()
     
     benelux_matches = [
@@ -203,25 +221,12 @@ def esea():
         if match["match_time"] < end_of_day
     ]
     
-    # Gather ESEA season info
-    season_info = gather_esea_season_info()
     return render_template(
-        'esea/esea.html', 
-        season_info=season_info, 
-        current_time=current_time, 
-        end_of_day=end_of_day,
+        'esea/esea_matches.html', 
         benelux_matches=benelux_matches, 
-        todays_matches=todays_matches
+        todays_matches=todays_matches,
+        end_of_day=end_of_day
     )
-
-@views.route('/api/esea')
-def api_esea():
-    from database.db_down_website import gather_columns_mapping
-    columns_mapping = gather_columns_mapping()
-    return jsonify({
-        "columns_mapping": columns_mapping
-    })
-
 
 @views.route('/esea/season/<int:season_number>')
 def esea_season_partial(season_number):

@@ -1,11 +1,8 @@
 <!DOCTYPE html>
 {% extends "base.html" %}
 
-{% from "macros/match_box.html" import match_box %}
-
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/sidebar.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/match_box.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/table/table.css') }}">
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea.css') }}">
@@ -86,38 +83,8 @@
       <div class="text-muted">Loading...</div>
     </div>
   </div>
-  <div class="sidebar right">
-    {% if benelux_matches %}
-    <div class="sidebar-content">
-      <div class="sidebar-header">
-        <span> Benelux Clashes </span>
-      </div>
-      <div class="sidebar-body">
-        {% for match in benelux_matches %}
-          {% if match.match_time < end_of_day %}
-            {{ match_box(match.division_name, match, today=true) }}
-          {% else %}
-            {{ match_box(match.division_name, match, today=false) }}
-          {% endif %}
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-    
-    <div class="sidebar-content">
-      <div class="sidebar-header">
-        <span> Today's Matches </span>
-      </div>
-      <div class="sidebar-body">
-        {% if todays_matches %}
-          {% for match in todays_matches %}
-            {{ match_box(match.division_name, match) }}
-          {% endfor %}
-        {% else %}
-          <div class="text-muted"> No matches scheduled for today. </div>
-        {% endif %}
-      </div>
-    </div>
+  <div class="sidebar right" id="matches-sidebar">
+    {% include 'esea/esea_matches.html' %}
   </div>
 </div>
 
