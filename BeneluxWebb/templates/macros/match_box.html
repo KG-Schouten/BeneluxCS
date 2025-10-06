@@ -1,7 +1,13 @@
 {% macro match_box(division, match, today=true) %}
 <a class="sidebar-match-box {{ 'highlight-border' if match.team.is_benelux and match.opponent.is_benelux else '' }}"
    href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" target="_blank" rel="noopener noreferrer"
-   onclick="plausible('Match Click', {props: {match_id: '{{ match.match_id }}', team: '{{ match.team.team_name }}', opponent: '{{ match.opponent.team_name }}' }})">
+   onclick="plausible('Match Click', {props: {
+        location: 'ESEA Sidebar',
+        match_id: '{{ match.match_id }}', 
+        team: '{{ match.team.team_name }}',
+        division: '{{ division }}',
+        today: '{{ today }}',
+        is_benelux: '{{ match.team.is_benelux and match.opponent.is_benelux }}'}})">
     <div class="match-top">
         <div class="event-name">
             <span class="text-muted">{{ division }}</span>
