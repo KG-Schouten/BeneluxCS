@@ -24,5 +24,9 @@ jobs:
           git checkout main
           git pull --rebase origin main
           git lfs pull 
+
+          # Ensure all files are owned by webapp
+          sudo chown -R webapp:webapp /srv/BeneluxCS
+          
           sudo systemctl restart beneluxcs.service
 
