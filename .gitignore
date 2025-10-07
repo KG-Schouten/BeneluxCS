@@ -173,6 +173,7 @@ cython_debug/
 
 # Ignore avatars folder
 BeneluxWebb/static/img/avatars/*
+BeneluxWebb/static/img/avatars_master/*
 
 # ignore the api key file
 tokens/api_keys.json

@@ -28,7 +28,7 @@
             <div class="team-card-body">
             
                 <div class="team-avatar">
-                    <img src="{{ url_for('static', filename='img/avatars/' ~ team.team_id ~ '_' ~ team.season_number ~ '.png') }}"
+                    <img src="{{ url_for('static', filename='img/avatars/' ~ team.team_id ~ '_' ~ team.season_number ~ '.webp') }}"
                         alt="Team Avatar"
                         data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
                         onerror="this.onerror=null;this.src=this.dataset.placeholder;">
@@ -166,7 +166,7 @@
                                 <div class="match-info-team-wrapper">
 
                                     <img class="match-info-team-avatar"
-                                        src="{{ url_for('static', filename='img/avatars/' ~ team.team_id ~ '_' ~ team.season_number ~ '.png') }}"
+                                        src="{{ url_for('static', filename='img/avatars/' ~ team.team_id ~ '_' ~ team.season_number ~ '.webp') }}"
                                         alt="{{ team.team_name }}"
                                         loading="lazy"
                                         data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
@@ -247,7 +247,7 @@
 
                                 <div class="match-info-team-wrapper">
                                     <img class="match-info-team-avatar"
-                                        src="{{ url_for('static', filename='img/avatars/' ~ team.team_id ~ '_' ~ team.season_number ~ '.png') }}"
+                                        src="{{ url_for('static', filename='img/avatars/' ~ team.team_id ~ '_' ~ team.season_number ~ '.webp') }}"
                                         alt="{{ team.team_name }}"
                                         loading="lazy"
                                         data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"

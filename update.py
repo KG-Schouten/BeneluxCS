@@ -16,8 +16,11 @@ import asyncio
 import requests
 from pathlib import Path
 from io import BytesIO
+import io
 from PIL import Image
 from datetime import date
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 import os
 from dotenv import load_dotenv
@@ -500,6 +503,37 @@ async def update_team_avatars():
         function_logger.error(f"Error updating team avatars: {e}")
         return
 
+def save_avatar(team_id, season_number, avatar_bytes, project_root, master=False):
+    try:
+        if master:
+            save_folder = Path(project_root) / "BeneluxWebb" / "static" / "img" / "avatars_master"
+            filename = f"{team_id}_{season_number}.png"
+        else:
+            save_folder = Path(project_root) / "BeneluxWebb" / "static" / "img" / "avatars"
+            filename = f"{team_id}_{season_number}.webp"
+        
+        save_folder.mkdir(parents=True, exist_ok=True)
+
+        file_path = save_folder / filename
+        
+        # Save avatar_bytes to file
+        if not avatar_bytes:
+            return f"No avatar data for {team_id}_{season_number}"
+        
+        if master:
+            # Save the PNG bytes directly
+            with open(file_path, "wb") as f:
+                f.write(avatar_bytes)
+            return f"Saved (master) {team_id}_{season_number}"
+        else:
+            # Convert from avatar_bytes (PNG) to WebP
+            image = Image.open(io.BytesIO(avatar_bytes)).convert("RGBA")
+            image.save(file_path, "WEBP", quality=80, method=6)
+            return f"Saved {team_id}_{season_number}"
+
+    except Exception as e:
+        return f"Failed {team_id}_{season_number}: {e}"
+
 async def update_local_team_avatars():
     df = gather_league_teams()
 
@@ -518,30 +552,28 @@ async def update_local_team_avatars():
         else:
             raise RuntimeError("Cannot determine project root (BeneluxCS)")
 
-    # Save images locally to BeneluxWebb/static/img/avatars inside project
-    save_folder = project_root / "BeneluxWebb" / "static" / "img" / "avatars"
-    save_folder.mkdir(parents=True, exist_ok=True)
+    tasks = []
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        for _, row in df.iterrows():
+            avatar_data = row["avatar"]
+            if not avatar_data:
+                function_logger.info(f"No avatar for {row['team_id']}, season {row['season_number']}")
+                continue
+            
+            avatar_bytes = bytes(avatar_data)
+            tasks.append(executor.submit(
+                save_avatar,
+                row["team_id"],
+                row["season_number"],
+                avatar_bytes,
+                project_root,
+                master=False
+            ))
 
-    for _, row in df.iterrows():
-        team_id = row['team_id']
-        season_number = row['season_number']
+        for future in as_completed(tasks):
+            function_logger.info(future.result())
 
-        try:
-            avatar_data = row['avatar']
-            if avatar_data:
-                filename = f"{team_id}_{season_number}.png"
-                file_path = save_folder / filename
-                with open(file_path, 'wb') as f:
-                    f.write(avatar_data)
-
-                function_logger.info(f"Saved avatar for team {team_id}, season {season_number} to {file_path}")
-            else:
-                function_logger.info(f"No avatar data for team {team_id}, season {season_number}")
-        except Exception as e:
-            function_logger.error(f"Error saving avatar for team {team_id}, season {season_number}: {e}")
-            continue
-
-         
+   
 # === Weekly update interval ===
 async def update_hub_events():
     hub_id = "801f7e0c-1064-4dd1-a960-b2f54f8b5193"  # Benelux Hub ID
