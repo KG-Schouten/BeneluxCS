@@ -652,3 +652,7 @@ if __name__ == "__main__":
     # asyncio.run(update_team_avatars())
     # asyncio.run(update_esea_seasons_events())
     # asyncio.run(update_local_team_avatars())
+    # asyncio.run(update_new_matches_esea())
+    # asyncio.run(update_league_teams())
+    # asyncio.run(update_team_avatars())
+    # asyncio.run(update_local_team_avatars())
