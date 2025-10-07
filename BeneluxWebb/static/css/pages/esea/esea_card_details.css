@@ -165,8 +165,9 @@
 .match-info-avatar img {
   height: 100%;
   width: auto;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
+  aspect-ratio: 1/1;
 }
 
 .match-info-name {
