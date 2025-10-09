@@ -963,6 +963,95 @@ def get_upcoming_matches() -> tuple:
     finally:
         close_database(db)
 
+def get_esea_player_of_the_week() -> list:
+    db, cursor = start_database()
+    try:
+        start_of_week = int((datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        
+        query = """
+            SELECT
+                p.player_id,
+                p.player_name,
+                p.avatar,
+                COALESCE(pc.country, p.country) AS country,
+
+                COUNT(DISTINCT CONCAT(m.match_id, '-', m.match_round)) AS maps_played,
+
+                ROUND(AVG(ps.kills)::numeric, 0) AS kills,
+                ROUND(AVG(ps.hltv)::numeric, 2) AS hltv,
+                ROUND(SUM(ps.headshots)::numeric * 100.0 / NULLIF(SUM(ps.kills), 0), 0) AS headshot_percentage,
+                ROUND(AVG(ps.adr)::numeric, 0) AS adr,
+                SUM(ps.knife_kills) AS knife_kills,
+                SUM(ps.penta_kills) AS penta_kills,
+                SUM(ps.zeus_kills) AS zeus_kills
+
+            FROM maps m
+            JOIN matches ma ON m.match_id = ma.match_id
+            INNER JOIN seasons s ON ma.event_id = s.event_id
+            JOIN players_stats ps ON m.match_id = ps.match_id AND m.match_round = ps.match_round
+            JOIN players p ON ps.player_id = p.player_id
+            JOIN players_country pc ON p.player_id = pc.player_id
+
+            WHERE ma.match_time >= %s
+            AND COALESCE(pc.country, p.country) IN ('nl', 'be', 'lu')
+
+            GROUP BY
+                p.player_id,
+                p.player_name,
+                p.avatar,
+                COALESCE(pc.country, p.country)
+            ORDER BY
+                maps_played DESC,
+                hltv DESC,
+                headshot_percentage DESC,
+                adr DESC
+
+        """
+        
+        cursor.execute(query, (start_of_week,))
+        rows = cursor.fetchall()
+        df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+        
+        if df.empty:
+            return []
+        
+        # Get the players with specific highest stats
+        top_stats = []
+        stats_to_check = {
+            "hltv": "HLTV Rating",
+            "headshot_percentage": "Headshot %",
+            "adr": "ADR",
+            "knife_kills": "Knife Kills",
+            "penta_kills": "Aces",
+            "zeus_kills": "Zeus Kills"
+        }
+        
+        player_set = set()
+        for stat, desc in stats_to_check.items():
+            df_sorted = df.sort_values(by=['maps_played', stat, 'kills'], ascending=[False, False, False]).head(5)
+            for index, row in df_sorted.iterrows():
+                value = row[stat]
+                if value > 0 and row['player_id'] not in player_set:
+                    top_stats.append(
+                        {
+                            "stat": stat,
+                            "description": desc,
+                            "value": value,
+                            "player": row.to_dict()
+                        }
+                    )
+                    player_set.add(row['player_id'])
+                    break  # Only take the top player for this stat
+                
+        return top_stats
+        
+    except Exception as e:
+        function_logger.error(f"Error fetching player of the week: {e}", exc_info=True)
+        return []
+    
+    finally:
+        close_database(db)
+
 # =============================
 #   Stats Page
 # =============================
