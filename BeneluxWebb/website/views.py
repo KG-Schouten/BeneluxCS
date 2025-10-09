@@ -186,14 +186,19 @@ def esea():
     from datetime import datetime
     current_time = int(datetime.now().timestamp())
     
-    from database.db_down_website import gather_esea_season_info
+    from database.db_down_website import gather_esea_season_info, get_esea_player_of_the_week
 
     # Gather ESEA season info
     season_info = gather_esea_season_info()
+    
+    # Get player of the week info
+    top_stats = get_esea_player_of_the_week()
+    
     return render_template(
         'esea/esea.html', 
         season_info=season_info, 
-        current_time=current_time
+        current_time=current_time,
+        top_stats=top_stats
     )
 
 @views.route('/api/esea')
