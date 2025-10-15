@@ -1,8 +1,8 @@
 <div id="playerOfTheWeek" class="potw-carousel carousel slide" style="height: 150px;">
     <div class="potw-indicators carousel-indicators">
-        <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-        <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="1" aria-label="Slide 2"></button>
-        <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="2" aria-label="Slide 3"></button>
+        {% for stat in top_stats %}
+        <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="{{ loop.index0 }}" class="{% if loop.first %}active{% endif %}" aria-current="{% if loop.first %}true{% else %}false{% endif %}" aria-label="Slide {{ loop.index }}"></button>
+        {% endfor %}
     </div>
 
     <div class="potw-inner carousel-inner">
