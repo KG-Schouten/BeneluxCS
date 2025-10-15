@@ -967,6 +967,16 @@ def get_upcoming_matches() -> tuple:
         close_database(db)
 
 def get_esea_player_of_the_week() -> list:
+    
+    load_dotenv()
+    use_fake = os.getenv("USE_FAKE_DATA", "false").lower() == "true"
+    
+    if use_fake:
+        with open("database/fake_data/fake_potw.json", "r", encoding="utf-8") as f:
+            fake_data = json.load(f)
+            print("Using fake upcoming matches data")
+            return fake_data
+    
     db, cursor = start_database()
     try:
         start_of_week = int((datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
