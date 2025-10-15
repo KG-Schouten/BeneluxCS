@@ -61,13 +61,13 @@
 
                         <div class="main-player">
                             <div class="main-player-avatar">
-                                <img class="{{ 'highlight-border' if player.player_country in ['nl', 'be', 'lu'] else ''}}" 
+                                <img class="{{ 'highlight-border' if player.player_country|lower in ['nl', 'be', 'lu'] else ''}}" 
                                     src="{{ player.player_avatar }}"
                                     alt="{{ player.player_name }}"
                                     data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
                                     onerror="this.onerror=null;this.src=this.dataset.placeholder;">
                             </div>
-                            <div class="main-player-name {{ 'highlight-text' if player.player_country in ['nl', 'be', 'lu'] else ''}}">
+                            <div class="main-player-name {{ 'highlight-text' if player.player_country|lower in ['nl', 'be', 'lu'] else ''}}">
                                 <strong>{{ player.player_name }}</strong>
                                 <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
                                     alt="{{ player.player_country }}">
@@ -83,8 +83,8 @@
                         <a href="https://www.faceit.com/en/players/{{ player.player_name }}" class="text-decoration-none text-reset" target="_blank">
                             <div class="sub-player">
                                 <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
-                                    alt="{{ player.player_country }}">
-                                <span>{{ player.player_name }}</span>
+                                    alt="{{ player.player_country|lower }}">
+                                <span class="{{ 'highlight-text' if player.player_country|lower in ['nl', 'be', 'lu'] else ''}}">{{ player.player_name }}</span>
                             </div>
                         </a>
                         {% endfor %}
