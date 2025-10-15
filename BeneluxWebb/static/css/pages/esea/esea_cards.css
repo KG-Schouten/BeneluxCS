@@ -438,4 +438,7 @@
   .main-player-avatar {
     display: none;
   }
+  .main-player-name strong {
+    font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+  }
 }
