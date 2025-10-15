@@ -61,12 +61,13 @@
 
                         <div class="main-player">
                             <div class="main-player-avatar">
-                                <img src="{{ player.player_avatar }}"
+                                <img class="{{ 'highlight-border' if player.player_country in ['nl', 'be', 'lu'] else ''}}" 
+                                    src="{{ player.player_avatar }}"
                                     alt="{{ player.player_name }}"
                                     data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
                                     onerror="this.onerror=null;this.src=this.dataset.placeholder;">
                             </div>
-                            <div class="main-player-name">
+                            <div class="main-player-name {{ 'highlight-text' if player.player_country in ['nl', 'be', 'lu'] else ''}}">
                                 <strong>{{ player.player_name }}</strong>
                                 <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
                                     alt="{{ player.player_country }}">
@@ -78,15 +79,26 @@
 
                 <div class="sub-players-box">
                     {% if team.players_sub %}
-                    {% for player in team.players_sub %}
-                    <a href="https://www.faceit.com/en/players/{{ player.player_name }}" class="text-decoration-none text-reset" target="_blank">
-                        <div class="sub-player">
-                            <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
-                                alt="{{ player.player_country }}">
-                            <span>{{ player.player_name }}</span>
-                        </div>
-                    </a>
-                    {% endfor %}
+                        {% for player in team.players_sub %}
+                        <a href="https://www.faceit.com/en/players/{{ player.player_name }}" class="text-decoration-none text-reset" target="_blank">
+                            <div class="sub-player">
+                                <img src="{{ url_for('static', filename='img/flags/' ~ player.player_country|lower ~ '.png') }}"
+                                    alt="{{ player.player_country }}">
+                                <span>{{ player.player_name }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    {% endif %}
+                    {% if team.players_coach %}
+                        {% for coach in team.players_coach %}
+                        <a href="https://www.faceit.com/en/players/{{ coach.player_name }}" class="text-decoration-none text-reset" target="_blank">
+                            <div class="sub-player">
+                                <img src="{{ url_for('static', filename='img/flags/' ~ coach.player_country|lower ~ '.png') }}"
+                                    alt="{{ coach.player_country }}">
+                                <span class="text-muted">{{ coach.player_name }} <em>(C)</em></span>
+                            </div>
+                        </a>
+                        {% endfor %}
                     {% endif %}
                 </div>
 
