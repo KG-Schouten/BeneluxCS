@@ -335,7 +335,8 @@
   text-overflow: ellipsis;
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  font-style: italic;
 }
 .sub-player img {
   width: clamp(14px, 2vw, 18px);
