@@ -561,8 +561,23 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     players_sub = [p for p in players_sub if p['player_id'] not in [pm['player_id'] for pm in players_main]]
                     
                     # Use pre-loaded player data
+                    country_order = ['nl', 'be', 'lu']
                     players_main = [players_data.get(p['player_id'], p) for p in players_main if p['player_id'] in players_data]
+                    players_main.sort(
+                        key=lambda p: (
+                            0 if p['player_country'] in country_order else 1,
+                            country_order.index(p['player_country']) if p['player_country'] in country_order else 99,
+                            p['player_country']
+                        )
+                    )
                     players_sub = [players_data.get(p['player_id'], p) for p in players_sub if p['player_id'] in players_data]
+                    players_sub.sort(
+                        key=lambda p: (
+                            0 if p['player_country'] in country_order else 1,
+                            country_order.index(p['player_country']) if p['player_country'] in country_order else 99,
+                            p['player_country']
+                        )
+                    )
                     players_coach = [players_data.get(p['player_id'], p) for p in players_coach if p['player_id'] in players_data]
 
                     # Use pre-loaded matches data
