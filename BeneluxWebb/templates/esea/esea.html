@@ -37,28 +37,7 @@
         <span> Player Highlights </span>
       </div>
       <div class="sidebar-body">
-        <div id="playerOfTheWeek" class="carousel slide" style="height: 150px;">
-          <div class="carousel-indicators">
-            <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-            <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="1" aria-label="Slide 2"></button>
-            <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="2" aria-label="Slide 3"></button>
-          </div>
-
-          <div class="carousel-inner">
-            {% for stat in top_stats %}
-              <div class="carousel-item {% if loop.first %}active{% endif %}">
-                <!-- <img src="{{ url_for('static', filename='img/esea/PlayerOfTheWeek.webp') }}" class="d-block w-100" alt="Player of the Week"/> -->
-                <img src="{{ stat.player['avatar'] }}"
-                  class="player-avatar"
-                  alt="Player of the Week"
-                  data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-                  onerror="this.onerror=null;this.src=this.dataset.placeholder;"/>
-                <span>{{ stat.description }}</span>
-                <span>{{ stat.player['player_name']}}</span>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
+        {% include 'esea/esea_potw.html' %}
       </div>
     </div>
   </div>
