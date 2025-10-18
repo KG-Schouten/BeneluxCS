@@ -5,21 +5,23 @@ import redis
 from contextlib import contextmanager
 import os
 from dotenv import load_dotenv
+import time
 
 import asyncio
-# from update import (
-#     update_matches,
-#     update_esea_teams_benelux,
-#     update_new_matches_hub,
-#     update_new_matches_esea,
-#     update_leaderboard,
-#     update_elo_leaderboard,
-#     update_league_teams,
-#     update_team_avatars,
-#     update_local_team_avatars,
-#     update_hub_events,
-#     update_esea_seasons_events
-# )
+from update import (
+    update_ongoing_matches,
+    update_upcoming_matches,
+    update_esea_teams_benelux,
+    update_new_matches_hub,
+    update_new_matches_esea,
+    update_leaderboard,
+    update_elo_leaderboard,
+    update_league_teams,
+    update_team_avatars,
+    update_local_team_avatars,
+    update_hub_events,
+    update_esea_seasons_events
+)
 
 from .update_logger import log_message
 
@@ -31,112 +33,122 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 # ------------------
 # Redis lock
 # ------------------
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+redis_client = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0)
 
 @contextmanager
-def redis_lock(lock_name, timeout=60):
+def redis_lock(lock_name, timeout=60, wait=True):
     if REDIS_HOST == "localhost":
         yield
         return
     
-    got_lock = redis_client.set(lock_name, "1", nx=True, ex=timeout)
-    if got_lock:
-        try:
-            yield
-        finally:
-            redis_client.delete(lock_name)
-    else:
-        log_message("scheduler", f"[LOCK SKIPPED] {lock_name} is already locked", "info")
-
-# ------------------
-# Placeholder async job
-# ------------------
-def log_placeholder(job_name):
-    async def job():
-        log_message("scheduler", f"[PLACEHOLDER] Job '{job_name}' started", "info")
-    return job
+    got_lock = False
+    start = time.time()
+    while not got_lock:
+        got_lock = redis_client.set(lock_name, "1", nx=True, ex=timeout)
+        if got_lock:
+            try:
+                yield
+            finally:
+                redis_client.delete(lock_name)
+            break
+        elif not wait:
+            log_message("scheduler", f"[LOCK SKIPPED] {lock_name} is already locked", "info")
+            break
+        else:
+            time.sleep(0.5)
+            # optional: prevent infinite wait
+            if time.time() - start > timeout:
+                log_message("scheduler", f"[LOCK TIMEOUT] {lock_name} waited too long", "warning")
+                break
 
 # ------------------
 # Wrapper for async jobs with optional lock
 # ------------------
-def run_async_job(job_func, lock_name=None, lock_timeout=300):
-    def wrapper():
+GLOBAL_SCHEDULER_LOCK = "scheduler_global_lock"
+def run_async_job(job_func, lock_timeout=300):
+    def wrapper(*args, **kwargs):
         async def runner():
+            job_name = job_func.__name__
+            log_message("scheduler", f"[JOB START] {job_name}", "info")
             try:
-                await job_func()
+                await job_func(*args, **kwargs)
+                log_message("scheduler", f"[JOB FINISH] {job_name}", "info")
             except Exception as e:
-                log_message("scheduler", f"[ERROR] {job_func.__name__}: {e}", "error")
+                log_message("scheduler", f"[JOB ERROR] {job_name}: {e}", "error")
 
-        if lock_name:
-            with redis_lock(lock_name, timeout=lock_timeout):
-                asyncio.run(runner())
-        else:
+        with redis_lock(GLOBAL_SCHEDULER_LOCK, timeout=lock_timeout):
             asyncio.run(runner())
-    return wrapper
 
+    return wrapper
 
 # ------------------
 # Scheduler initialization
 # ------------------
-async def func_placeholder():
-    log_message("scheduler", "[PLACEHOLDER] This is a placeholder function.", "info")
-
-
 def init_scheduler(app):
+    if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        log_message("scheduler", "Skipping scheduler in reloader process", "info")
+        return
+    
     scheduler = BackgroundScheduler(timezone="UTC")
 
-    # --- Every 5 min ---
+    # --- Every minute ---
     scheduler.add_job(
-        run_async_job(log_placeholder("update_matches"), lock_name="func_placeholder"),
-        CronTrigger(minute="*/5")
+        run_async_job(update_ongoing_matches),
+        CronTrigger(minute="*")
     )
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_esea_teams_benelux"), lock_name="func_placeholder"),
-    #     CronTrigger(minute="*/5")
-    # )
-
+    
+    # --- Every 20 minutes ---
+    scheduler.add_job(
+        run_async_job(update_upcoming_matches),
+        CronTrigger(minute="*/20")
+    )
+    scheduler.add_job(
+        run_async_job(update_esea_teams_benelux),
+        CronTrigger(minute="*/20")
+    )
+    
     # --- Hourly ---
     scheduler.add_job(
-        run_async_job(log_placeholder("update_leaderboard"), lock_name="func_placeholder"),
+        run_async_job(update_leaderboard),
         CronTrigger(minute=0)
     )
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_elo_leaderboard"), lock_name="func_placeholder"),
-    #     CronTrigger(minute=0)
-    # )
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_new_matches_hub"), lock_name="func_placeholder"),
-    #     CronTrigger(minute=0)
-    # )
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_new_matches_esea"), lock_name="func_placeholder"),
-    #     CronTrigger(minute=0)
-    # )
+    scheduler.add_job(
+        run_async_job(update_elo_leaderboard),
+        CronTrigger(minute=0)
+    )
+    scheduler.add_job(
+        run_async_job(update_new_matches_hub),
+        CronTrigger(minute=0)
+    )
+    scheduler.add_job(
+        run_async_job(update_new_matches_esea),
+        CronTrigger(minute=0)
+    )
 
-    # # --- Daily ---
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_league_teams"), lock_name="func_placeholder"),
-    #     CronTrigger(hour=0, minute=0)
-    # )
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_team_avatars"), lock_name="func_placeholder"),
-    #     CronTrigger(hour=0, minute=0)
-    # )
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_local_team_avatars"), lock_name="func_placeholder"),
-    #     CronTrigger(hour=0, minute=0)
-    # )
+    # --- Daily (00:00 UTC) ---
+    scheduler.add_job(
+        run_async_job(update_league_teams),
+        CronTrigger(hour=0, minute=0)
+    )
+    scheduler.add_job(
+        run_async_job(update_team_avatars),
+        CronTrigger(hour=0, minute=0)
+    )
+    scheduler.add_job(
+        run_async_job(update_local_team_avatars),
+        CronTrigger(hour=0, minute=0)
+    )
 
-    # # --- Weekly ---
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_hub_events"), lock_name="func_placeholder"),
-    #     CronTrigger(day_of_week="sun", hour=0, minute=0)
-    # )
-    # scheduler.add_job(
-    #     run_async_job(log_placeholder("update_esea_seasons_events"), lock_name="func_placeholder"),
-    #     CronTrigger(day_of_week="sun", hour=0, minute=0)
-    # )
-
+    # --- Weekly (Sunday 00:00 UTC) ---
+    scheduler.add_job(
+        run_async_job(update_hub_events),
+        CronTrigger(day_of_week="sun", hour=0, minute=0)
+    )
+    scheduler.add_job(
+        run_async_job(update_esea_seasons_events),
+        CronTrigger(day_of_week="sun", hour=0, minute=0)
+    )
+    
     scheduler.start()
     log_message("scheduler", "--- APScheduler placeholder started ---", "info")
     
@@ -144,67 +156,3 @@ def init_scheduler(app):
     atexit.register(lambda: scheduler.shutdown(wait=False))
     
     app.scheduler = scheduler
-
-
-# def init_scheduler(app):
-#     scheduler = BackgroundScheduler(timezone="UTC")
-
-#     # --- Every 5 min ---
-#     scheduler.add_job(
-#         run_async_job(update_matches, lock_name="update_matches_lock"),
-#         CronTrigger(minute="*/5")
-#     )
-#     scheduler.add_job(
-#         run_async_job(update_esea_teams_benelux, lock_name="update_esea_teams_lock"),
-#         CronTrigger(minute="*/5")
-#     )
-
-#     # --- Hourly ---
-#     scheduler.add_job(
-#         run_async_job(update_leaderboard, lock_name="update_leaderboard_lock"),
-#         CronTrigger(minute=0)
-#     )
-#     scheduler.add_job(
-#         run_async_job(update_elo_leaderboard, lock_name="update_elo_lock"),
-#         CronTrigger(minute=0)
-#     )
-#     scheduler.add_job(
-#         run_async_job(update_new_matches_hub, lock_name="update_hub_lock"),
-#         CronTrigger(minute=0)
-#     )
-#     scheduler.add_job(
-#         run_async_job(update_new_matches_esea, lock_name="update_esea_lock"),
-#         CronTrigger(minute=0)
-#     )
-
-#     # --- Daily (00:00 UTC) ---
-#     scheduler.add_job(
-#         run_async_job(update_league_teams, lock_name="update_league_teams_lock"),
-#         CronTrigger(hour=0, minute=0)
-#     )
-#     scheduler.add_job(
-#         run_async_job(update_team_avatars, lock_name="update_team_avatars_lock"),
-#         CronTrigger(hour=0, minute=0)
-#     )
-#     scheduler.add_job(
-#         run_async_job(update_local_team_avatars, lock_name="update_local_team_avatars_lock"),
-#         CronTrigger(hour=0, minute=0)
-#     )
-
-#     # --- Weekly (Sunday 00:00 UTC) ---
-#     scheduler.add_job(
-#         run_async_job(update_hub_events, lock_name="update_hub_events_lock"),
-#         CronTrigger(day_of_week="sun", hour=0, minute=0)
-#     )
-#     scheduler.add_job(
-#         run_async_job(update_esea_seasons_events, lock_name="update_esea_seasons_events_lock"),
-#         CronTrigger(day_of_week="sun", hour=0, minute=0)
-#     )
-
-#     scheduler.start()
-#     scheduler_logger.info("--- APScheduler placeholder started ---")
-    
-#     import atexit
-#     atexit.register(lambda: scheduler.shutdown(wait=False))
-    
-#     app.scheduler = scheduler
