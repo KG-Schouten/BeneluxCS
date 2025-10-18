@@ -84,70 +84,69 @@ def run_async_job(job_func, lock_timeout=300):
 # ------------------
 # Scheduler initialization
 # ------------------
-def init_scheduler(app):
-    if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
-        log_message("scheduler", "Skipping scheduler in reloader process", "info")
-        return
-    
+def init_scheduler(app):    
     scheduler = BackgroundScheduler(timezone="UTC")
 
-    # --- Every minute ---
-    scheduler.add_job(
-        run_async_job(update_ongoing_matches),
-        CronTrigger(minute="*")
-    )
-    
-    # --- Every 20 minutes ---
-    scheduler.add_job(
-        run_async_job(update_upcoming_matches),
-        CronTrigger(minute="*/20")
-    )
-    scheduler.add_job(
-        run_async_job(update_esea_teams_benelux),
-        CronTrigger(minute="*/20")
-    )
-    
-    # --- Hourly ---
-    scheduler.add_job(
-        run_async_job(update_leaderboard),
-        CronTrigger(minute=0)
-    )
-    scheduler.add_job(
-        run_async_job(update_elo_leaderboard),
-        CronTrigger(minute=0)
-    )
-    scheduler.add_job(
-        run_async_job(update_new_matches_hub),
-        CronTrigger(minute=0)
-    )
-    scheduler.add_job(
-        run_async_job(update_new_matches_esea),
-        CronTrigger(minute=0)
-    )
+    try:
+        # --- Every minute ---
+        scheduler.add_job(
+            run_async_job(update_ongoing_matches),
+            CronTrigger(minute="*")
+        )
+        
+        # --- Every 20 minutes ---
+        scheduler.add_job(
+            run_async_job(update_upcoming_matches),
+            CronTrigger(minute="*/20")
+        )
+        scheduler.add_job(
+            run_async_job(update_esea_teams_benelux),
+            CronTrigger(minute="*/20")
+        )
+        
+        # --- Hourly ---
+        scheduler.add_job(
+            run_async_job(update_leaderboard),
+            CronTrigger(minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_elo_leaderboard),
+            CronTrigger(minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_new_matches_hub),
+            CronTrigger(minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_new_matches_esea),
+            CronTrigger(minute=0)
+        )
 
-    # --- Daily (00:00 UTC) ---
-    scheduler.add_job(
-        run_async_job(update_league_teams),
-        CronTrigger(hour=0, minute=0)
-    )
-    scheduler.add_job(
-        run_async_job(update_team_avatars),
-        CronTrigger(hour=0, minute=0)
-    )
-    scheduler.add_job(
-        run_async_job(update_local_team_avatars),
-        CronTrigger(hour=0, minute=0)
-    )
+        # --- Daily (00:00 UTC) ---
+        scheduler.add_job(
+            run_async_job(update_league_teams),
+            CronTrigger(hour=0, minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_team_avatars),
+            CronTrigger(hour=0, minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_local_team_avatars),
+            CronTrigger(hour=0, minute=0)
+        )
 
-    # --- Weekly (Sunday 00:00 UTC) ---
-    scheduler.add_job(
-        run_async_job(update_hub_events),
-        CronTrigger(day_of_week="sun", hour=0, minute=0)
-    )
-    scheduler.add_job(
-        run_async_job(update_esea_seasons_events),
-        CronTrigger(day_of_week="sun", hour=0, minute=0)
-    )
+        # --- Weekly (Sunday 00:00 UTC) ---
+        scheduler.add_job(
+            run_async_job(update_hub_events),
+            CronTrigger(day_of_week="sun", hour=0, minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_esea_seasons_events),
+            CronTrigger(day_of_week="sun", hour=0, minute=0)
+        )
+    except Exception as e:
+        log_message("scheduler", f"[INIT] Error adding jobs to scheduler: {e}", "error")
     
     scheduler.start()
     log_message("scheduler", "--- APScheduler placeholder started ---", "info")
