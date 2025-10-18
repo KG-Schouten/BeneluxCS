@@ -1,9 +1,13 @@
 # app/webhook.py
 import os
+import json
 from dotenv import load_dotenv
 from flask import Blueprint, request, jsonify
-from .scheduler import run_async_job, log_placeholder
+from .scheduler import run_async_job
 from .update_logger import log_message
+from update import update_matches, update_esea_teams_benelux
+from database.db_down_update import gather_teams_benelux_primary
+
 
 # Load .env variables
 load_dotenv()
@@ -13,27 +17,70 @@ FACEIT_HEADER_VALUE = os.getenv("FACEIT_HEADER_VALUE", '')
 
 webhook_bp = Blueprint("webhook", __name__)
 
+def faceit_check_teams(team_ids, event_id) -> list:
+    df_teams_benelux = gather_teams_benelux_primary()
+    
+    try:
+        teams = []
+        for tid in team_ids:
+            if (tid, event_id) in zip(df_teams_benelux['team_id'], df_teams_benelux['event_id']):
+                teams.append(tid)
+        
+        return teams
+
+    except Exception:
+        return []
+
+def start_background_job(func, *args, lock_name=None):
+    import threading
+    wrapper = run_async_job(func)
+    threading.Thread(target=wrapper, args=args, daemon=True).start()
+
+
 @webhook_bp.route(FACEIT_WEBHOOK_URL, methods=["POST"])
 def faceit_webhook():
     # Verify security header
     received_header = request.headers.get(FACEIT_HEADER)
     if received_header != FACEIT_HEADER_VALUE:
-        log_message("webhook", "[WEBHOOK] Unauthorized request blocked.", "warning")
+        log_message("webhook", "Unauthorized request blocked.", "warning")
         return jsonify({"error": "Unauthorized"}), 401
     
     # Get payload
-    try:
-        payload = request.get_json(force=True)  # Parse JSON
-    except Exception:
-        payload = request.data.decode('utf-8')  # Fallback to raw data
+    payload = request.get_json(silent=True)
+    if payload is None:
+        try:
+            payload = json.loads(request.data.decode('utf-8'))
+        except Exception as e:
+            log_message("webhook", f"Invalid payload: {e}", "error")
+            return jsonify({"error": "Invalid JSON"}), 400
 
-    log_message("webhook", f"[WEBHOOK] Request received. Payload: {payload}", "info")
+    log_message("webhook", f"Request received. Payload: {payload}", "info")
     
     # Trigger placeholder job
-    wrapper = run_async_job(log_placeholder("Webhook job"), lock_name="func_placeholder")
-    
-    # Run in background so webhook responds quickly
-    import threading
-    threading.Thread(target=wrapper, daemon=True).start()
+    if isinstance(payload, dict):
+        # --- Check if any of the teams are Benelux ---
+        payload_data = payload.get('payload') or {}
+        teams = payload_data.get('teams', [])
+        team_ids = [team.get('id') for team in teams if team]
+        event_id = payload_data.get('entity', {}).get('id')
+        
+        if not team_ids:
+            log_message("webhook", "No teams found, skipping.", "info")
+            return jsonify({"status": "No teams"}), 200
+
+        team_ids = faceit_check_teams(team_ids, event_id)
+        
+        if not team_ids:
+            log_message("webhook", "No Benelux teams found after check, skipping.", "info")
+            return jsonify({"status": "No Benelux teams"}), 200
+        
+        match_id = payload['payload'].get('id')
+        
+        if payload['event'] in ['match_status_ready', 'match_status_configuring']:
+            start_background_job(update_matches, match_id, event_id)
+        elif payload['event'] == 'match_status_finished':
+            start_background_job(update_esea_teams_benelux, team_ids, event_id)
 
     return jsonify({"status": "Jobs triggered"}), 200
+    
+    
