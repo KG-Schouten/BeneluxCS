@@ -1,18 +1,16 @@
 ## Imports
 from database.db_down import gather_players
-from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars, gather_league_teams
+from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars, gather_league_teams, gather_ongoing_matches
 from database.db_up import upload_data
 from data_processing.faceit_api.sliding_window import RequestDispatcher
 from data_processing.faceit_api.faceit_v4 import FaceitData
 from data_processing.faceit_api.faceit_v1 import FaceitData_v1
 from data_processing.faceit_api.logging_config import function_logger
-from data_processing.dp_general import process_matches, process_team_details_batch, process_player_details_batch
-from data_processing.dp_events import process_teams_benelux_esea, gather_esea_matches, gather_hub_matches, gather_event_details, process_esea_season_data, modify_keys
+from data_processing.dp_general import process_matches, process_team_details_batch, process_player_details_batch, gather_event_details
+from data_processing.dp_events import process_teams_benelux_esea, gather_esea_matches, gather_hub_matches, process_esea_season_data, modify_keys
 from data_processing.dp_benelux import get_benelux_leaderboard_players
 
 import pandas as pd
-import sys
-import asyncio
 import requests
 from pathlib import Path
 from io import BytesIO
@@ -27,8 +25,62 @@ from dotenv import load_dotenv
 load_dotenv()
 FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 
-# === 5 minute update interval ===
-async def update_matches():
+# === General functions ===
+async def update_matches(match_ids, event_ids):
+    try:
+        async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
+            async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1:
+                df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(match_ids, event_ids, faceit_data, faceit_data_v1)
+
+    except Exception as e:
+        function_logger.error(f"Error while fetching match details: {e}")
+        return 
+    
+    if not isinstance(df_matches, pd.DataFrame) or df_matches.empty:
+        function_logger.info("No match details found for upcoming matches.")
+        return
+    
+    event_ids = df_matches['event_id'].unique().tolist()
+    if event_ids and isinstance(event_ids, list):
+        df_events = gather_internal_event_ids(event_ids=event_ids)
+        df_matches = df_matches.merge(
+            df_events[['event_id', 'internal_event_id']],
+            on='event_id',
+            how='left'
+        )
+    
+    upload_data("matches", df_matches)
+    upload_data("teams_matches", df_teams_matches)
+    upload_data("teams", df_teams)
+    upload_data("maps", df_maps)
+    upload_data("teams_maps", df_teams_maps)
+    upload_data("players_stats", df_players_stats)
+    upload_data("players", df_players)
+    
+# === Minute update interval ===
+async def update_ongoing_matches():
+    try:
+        df_ongoing = gather_ongoing_matches()
+        
+        if df_ongoing.empty:
+            return
+
+        match_ids = df_ongoing['match_id'].tolist()
+        event_ids = df_ongoing['event_id'].tolist()
+        
+        if not match_ids or not event_ids:
+            function_logger.error("No match_id or event_id found.")
+            return
+        
+        await update_matches(match_ids, event_ids)
+        
+        
+    except Exception as e:
+        function_logger.error(f"An error occurred during the update ongoing matches process: {e}", exc_info=True)
+        return
+
+# === 20 Minutes update interval ===
+async def update_upcoming_matches():
     """ Update matches from the database """
     ## Main logic
     try:
@@ -43,45 +95,24 @@ async def update_matches():
         if not event_ids:
             function_logger.info("No event IDs found for upcoming matches.")
             return
-        try:
-            async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
-                async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1:
-                    df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(match_ids, event_ids, faceit_data, faceit_data_v1)
-
-        except Exception as e:
-            function_logger.error(f"Error while fetching match details: {e}")
-            return 
         
-        if not isinstance(df_matches, pd.DataFrame) or df_matches.empty:
-            function_logger.info("No match details found for upcoming matches.")
-            return
-        event_ids = df_matches['event_id'].unique().tolist()
-        if event_ids and isinstance(event_ids, list):
-            df_events = gather_internal_event_ids(event_ids=event_ids)
-            df_matches = df_matches.merge(
-                df_events[['event_id', 'internal_event_id']],
-                on='event_id',
-                how='left'
-            )
-        
-        upload_data("matches", df_matches)
-        upload_data("teams_matches", df_teams_matches)
-        upload_data("teams", df_teams)
-        upload_data("maps", df_maps)
-        upload_data("teams_maps", df_teams_maps)
-        upload_data("players_stats", df_players_stats)
-        upload_data("players", df_players)
+        await update_matches(match_ids, event_ids)
         
     except Exception as e:
         function_logger.error(f"An error occurred during the update matches process: {e}", exc_info=True)
         return
 
-async def update_esea_teams_benelux():
+async def update_esea_teams_benelux(team_ids: list = [], event_ids: list = [], season_numbers: list = []):
     try:
+        if team_ids or event_ids or season_numbers:
+            clear = False  # Do not clear if specific IDs are provided
+        else:
+            clear = True  # Clear the table if no specific IDs are provided
+        
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
             async with FaceitData_v1(dispatcher) as faceit_data_v1: 
-                # Updates the teams_benelux data to the database
-                df_teams_benelux = await process_teams_benelux_esea(faceit_data_v1=faceit_data_v1, season_number="ALL")
+                # Updates the teams_benelux data to the database                
+                df_teams_benelux = await process_teams_benelux_esea(faceit_data_v1=faceit_data_v1, team_ids=team_ids, event_ids=event_ids, season_numbers=season_numbers)
         
         # Gather the events and seasons data
         event_ids = df_teams_benelux['event_id'].tolist()
@@ -102,13 +133,11 @@ async def update_esea_teams_benelux():
             # Only update overlapping rows/columns
             df_teams_benelux.update(df_event_players)
 
-            # Optionally, re-add new rows if df_event_players has any team/event pairs not in df_teams_benelux
-            new_rows = df_event_players[~df_event_players.index.isin(df_teams_benelux.index)]
-            df_teams_benelux = pd.concat([df_teams_benelux, new_rows])
+            # # Optionally, re-add new rows if df_event_players has any team/event pairs not in df_teams_benelux
+            # new_rows = df_event_players[~df_event_players.index.isin(df_teams_benelux.index)]
+            # df_teams_benelux = pd.concat([df_teams_benelux, new_rows])
 
             df_teams_benelux.reset_index(inplace=True)
-         
-        df_teams_benelux = modify_keys(df_teams_benelux)
         
         if not isinstance(df_teams_benelux, pd.DataFrame) or df_teams_benelux.empty:
             function_logger.warning("No teams found for the Benelux ESEA events.")
@@ -119,7 +148,16 @@ async def update_esea_teams_benelux():
             async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1: 
                 
                 team_ids = df_teams_benelux['team_id'].unique().tolist()
-                player_ids = df_teams_benelux['players_main'].explode().apply(pd.Series).drop_duplicates(subset='player_id')['player_id'].unique().tolist()
+                player_ids = (
+                    pd.concat([df_teams_benelux['players_main'], df_teams_benelux['players_sub']])
+                    .explode()
+                    .apply(pd.Series)
+                    .drop_duplicates(subset='player_id')
+                    ['player_id']
+                    .unique()
+                    .tolist()
+                )
+
                 if isinstance(team_ids, str):
                     team_ids = [team_ids]
                 if isinstance(player_ids, str):
@@ -132,17 +170,17 @@ async def update_esea_teams_benelux():
                     function_logger.warning("No team details found for the Benelux ESEA teams.")
                 else:
                     upload_data("teams", df_teams)
+                
                 if not isinstance(df_players, pd.DataFrame) or df_players.empty:
                     function_logger.warning("No player details found for the Benelux ESEA teams.")
                 else:
                     upload_data("players", df_players)
     
         if isinstance(df_teams_benelux, pd.DataFrame) and not df_teams_benelux.empty:
-            upload_data("teams_benelux", df_teams_benelux, clear=True)
+            upload_data("teams_benelux", df_teams_benelux, clear=clear)
     
     except Exception as e:
         function_logger.error(f"Error updating teams_benelux table: {e}", exc_info=True)
-
 
 # === Hourly update interval ===
 async def update_new_matches_hub():
@@ -616,37 +654,8 @@ async def update_esea_seasons_events():
     except Exception as e:
         function_logger.error(f"Error updating seasons and events tables: {e}")
 
-# === Main function to run all updates ===
-async def main():
-    if len(sys.argv) > 2:
-        print("Usage: python cron_tasks.py [every5min|hourly|daily]")
-        sys.exit(1)
-    
-    task = sys.argv[1]
-    
-    if task == "every5min":
-        await update_matches()
-        await update_esea_teams_benelux()
-    elif task == "hourly":
-        await update_leaderboard(elo_cutoff=2000)
-        await update_elo_leaderboard()
-        await update_elo_leaderboard()
-        await update_new_matches_hub()
-        await update_new_matches_esea()
-    elif task == "daily":
-        await update_league_teams()
-        await update_team_avatars()
-        await update_local_team_avatars()
-    elif task == "weekly":
-        await update_hub_events()
-        await update_esea_seasons_events()
-    else:
-        print(f"Unknown task {task}")
-        sys.exit(1)
-
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    pass
     # asyncio.run(update_esea_teams_benelux())
     # asyncio.run(update_league_teams())
     # asyncio.run(update_team_avatars())
