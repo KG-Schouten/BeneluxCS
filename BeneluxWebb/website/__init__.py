@@ -26,15 +26,18 @@ def create_app():
     from .views import views
     app.register_blueprint(views, url_prefix='/')
     
+    import pprint
+    pprint.pprint(dict(os.environ))
+
     # Initialize scheduler only if not in debug mode or in the main process
     from .update_logger import log_message
     if os.environ.get("GUNICORN_CMD") is None:
         # Running locally, Flask dev server
-        log_message("scheduler", f"Initializing scheduler in PID {os.getpid()} {os.environ.get("GUNICORN_CMD")}", "info")
+        log_message("scheduler", f"Initializing scheduler in PID {os.getpid()} {os.environ.get('GUNICORN_CMD')}", "info")
         init_scheduler(app)
     else:
         # Running under Gunicorn, skip scheduler here
-        log_message("scheduler", f"Gunicorn worker PID {os.getpid()} {os.environ.get("GUNICORN_CMD")} — skipping scheduler", "info")
+        log_message("scheduler", f"Gunicorn worker PID {os.getpid()} {os.environ.get('GUNICORN_CMD')} — skipping scheduler", "info")
         
     # Register webhook blueprint
     app.register_blueprint(webhook_bp)
