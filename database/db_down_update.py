@@ -365,3 +365,40 @@ def gather_league_team_avatars():
         return pd.DataFrame()
     finally:
         close_database(db)
+        
+def gather_ongoing_matches() -> pd.DataFrame:
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                m.match_id,
+                m.event_id,
+                m.match_time,
+                m.status
+            FROM matches m
+            WHERE m.status NOT IN ('FINISHED', 'CANCELLED', 'SCHEDULED')
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_ongoing = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+    except Exception as e:
+        function_logger.error(f"Error gathering ongoing matches: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
+    
+    return df_ongoing
+
+def gather_teams_benelux_primary():
+    db, cursor = start_database()
+    try:
+        query = "SELECT team_id, event_id, team_name FROM teams_benelux;"
+        cursor.execute(query)
+        res = cursor.fetchall()
+        df_teams_benelux = pd.DataFrame(res, columns=['team_id', 'event_id', 'team_name'])
+        return df_teams_benelux
+    except Exception as e:
+        function_logger.error(f"Error gathering teams benelux primary: {e}")
+        return pd.DataFrame()
+    finally:
+        close_database(db)
