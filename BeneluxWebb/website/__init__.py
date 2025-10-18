@@ -26,9 +26,15 @@ def create_app():
     from .views import views
     app.register_blueprint(views, url_prefix='/')
     
-    # Initialize the scheduler (only once, if not in debug reload)
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
+    # Initialize scheduler only if not in debug mode or in the main process
+    if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        from .update_logger import log_message
+        log_message("scheduler", f"Initializing scheduler in PID {os.getpid()}", "info")
         init_scheduler(app)
+    else:
+        from .update_logger import log_message
+        log_message("scheduler", f"Skipping scheduler init in reloader PID {os.getpid()}", "info")
+
         
     # Register webhook blueprint
     app.register_blueprint(webhook_bp)
