@@ -10,16 +10,15 @@ from typing import List, Union
 # API imports
 from data_processing.faceit_api.faceit_v4 import FaceitData
 from data_processing.faceit_api.faceit_v1 import FaceitData_v1
-from data_processing.faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
 from data_processing.faceit_api.async_progress import gather_with_progress
 from data_processing.faceit_api.logging_config import function_logger
 
 # dp imports
-from data_processing.dp_general import process_matches, modify_keys, gather_event_details
+from data_processing.dp_general import modify_keys
 
 # db imports
 from database.db_down_update import gather_event_players
-from database.db_down import gather_league_teams
+from database.db_down import gather_league_teams, gather_season_numbers_from_event_ids
 
 # Load api keys from .env file
 from dotenv import load_dotenv
@@ -29,104 +28,6 @@ FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 ### -----------------------------------------------------------------
 ### ESEA Data Processing
 ### -----------------------------------------------------------------
-
-async def process_esea_teams_data(**kwargs) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """The main function to process all data of the Benelux teams in ESEA.
-    Args:
-        **kwargs: Additional optional keyword arguments:
-            - season_number ("ALL" | int | list[int])
-            - season_id ("ALL" | int | list[int])
-            - team_id (str | list[str])
-            - match_amount ("ALL" | int)
-            - match_amount_type ("ANY" | "TEAM" | "SEASON"):
-            - from_timestamp (int | str): The start timestamp (UNIX) for the matches to be gathered. (default is 0)
-            - event_status (list | str): "ALL" | "ONGOING" | "PAST" | "UPCOMING"
-    Returns:
-        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]
-    """
-    print("--- Processing ESEA Teams Data ---")
-
-    async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
-        # Initialize the FaceitData object with the API token and dispatcher
-        async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1: # Use the FaceitData context manager to ensure the session is closed properly
-            df_seasons, df_events = await process_esea_season_data(faceit_data_v1=faceit_data_v1)
-            
-            ## Add internal_event_id to df_events and df_matches (a combination of event_id and stage_id)
-            df_events['internal_event_id'] = df_events['event_id'].astype(str) + "_" + df_events['stage_id'].astype(str)
-            
-            df_teams_benelux = await process_teams_benelux_esea(
-                faceit_data_v1=faceit_data_v1, 
-                season_number=kwargs.get('season_number', 'ALL'),
-                team_id=kwargs.get('team_id', 'ALL')
-            )
-            
-            ## Gathering the match ids
-            team_ids = df_teams_benelux['team_id'].to_list()
-            event_ids = df_teams_benelux['event_id'].tolist()
-            df_esea_matches = await gather_esea_matches(
-                team_ids, 
-                event_ids, 
-                faceit_data_v1=faceit_data_v1, 
-                match_amount=kwargs.get('match_amount', 'ALL'),
-                match_amount_type=kwargs.get('match_amount_type', 'ANY'),
-                from_timestamp=kwargs.get('from_timestamp', 0),
-                event_status=kwargs.get('event_status', 'ALL'),
-                df_events=df_events
-            ) # Get the match ids from the teams
-            
-            if df_esea_matches.empty:
-                msg = "No matches found for the given criteria"
-                function_logger.warning(msg)
-                return df_seasons, df_events, df_teams_benelux, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-            # confirm column
-            if 'match_id' not in df_esea_matches.columns or 'event_id' not in df_esea_matches.columns:
-                msg = "The DataFrame df_esea_matches does not contain the required columns 'match_id' and 'event_id'."
-                function_logger.critical(msg)
-                raise ValueError(msg)
-            
-            # Filter df_esea_matches to remove duplicate (match_id, event_id) pairs and rows where either or is None        
-            df_matches_events = df_esea_matches[['match_id', 'event_id']].drop_duplicates()
-            df_matches_events = df_matches_events.dropna(subset=['match_id', 'event_id'])
-            
-            match_ids = df_matches_events['match_id'].to_list()
-            event_ids = df_matches_events['event_id'].to_list()
-            
-            ## Processing matches in esea
-            df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(
-                match_ids=match_ids, 
-                event_ids=event_ids, 
-                faceit_data=faceit_data, faceit_data_v1=faceit_data_v1
-            )
-            
-            if df_matches.empty:
-                msg = "No matches found for the given criteria"
-                function_logger.warning(msg)
-                return df_seasons, df_events, df_teams_benelux, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-            if 'event_id' not in df_matches.columns:
-                msg = "The DataFrame df_matches does not contain the required columns 'event_id'"
-                function_logger.critical(msg)
-                raise ValueError(msg)
-            
-            df_matches = df_matches.merge(
-                df_events[['event_id', 'internal_event_id']],
-                on='event_id',
-                how='left'
-            )
-                
-            ## Set the names of the dataframes
-            df_seasons.name = "seasons"
-            df_teams_benelux.name = "teams_benelux"
-            df_events.name = "events"
-            df_matches.name = "matches"
-            df_teams_matches.name = "teams_matches"
-            df_teams.name = "teams"
-            df_maps.name = "maps"
-            df_teams_maps.name = "teams_maps"
-            df_players_stats.name = "players_stats"
-            df_players.name = "players"  
-
-        return df_seasons, df_events, df_teams_benelux, df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players
-
 async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.DataFrame, pd.DataFrame]:
     """ Gathers all of the esea seasons and """
     try:
@@ -244,20 +145,24 @@ async def process_esea_season_data(faceit_data_v1: FaceitData_v1) -> tuple[pd.Da
 
 async def process_teams_benelux_esea(
     faceit_data_v1: FaceitData_v1,
-    season_number: Union[str, int, List[Union[str, int]]] = "ALL",
-    team_id: Union[str, List[str]] = "ALL",
+    team_ids: list = [],
+    event_ids: list = [],
+    season_numbers: list = [],
     ) -> pd.DataFrame:
+
     """ Gathers the df_seasons, df_events and df_teams_benelux dataframes"""
+    # In case of event_ids instead of season_numbers, gather the season_numbers from the event_ids
+    season_numbers = gather_season_numbers_from_event_ids(
+        event_ids=event_ids,
+    ) if event_ids else season_numbers
+    
     df_teams_benelux = gather_league_teams(
-        season_number=season_number,
-        team_id=team_id
+        team_ids=team_ids,
+        season_numbers=season_numbers,
     ) # Get the team ids from the json file
     
-    if not isinstance(df_teams_benelux, pd.DataFrame) or df_teams_benelux is None:
-        raise TypeError(f"df_teams_benelux is not a DataFrame: {df_teams_benelux}")
-    else:
-        if df_teams_benelux.empty:
-            raise ValueError(f"No teams found in the Benelux json for the specified season(s). {df_teams_benelux}")
+    if df_teams_benelux.empty:
+        raise ValueError(f"No teams found in the Benelux json for the specified season(s). {team_ids}/{event_ids}/{season_numbers}")
     
     # Create the season standings dataframe
     team_ids = df_teams_benelux['team_id'].unique().tolist() # Get the unique team ids from the dataframe
@@ -684,106 +589,6 @@ def filter_esea_matches(
 ### -----------------------------------------------------------------
 ### Hub Data Processing
 ### -----------------------------------------------------------------
-
-async def process_hub_data(hub_id: str, items_to_return: int|str=100, **kwargs) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """
-    The main function to process the data for a hub
-    
-    Args:
-        hub_id (str): The ID of the hub to process data for
-        items_to_return (int | str): Specifies the amount of matches that will be gathered. It can be: (default=100) 
-            - An integer, which will return the latests n matches where n is the integer
-            - The string "ALL", which will return all matches played in the hub since the start
-        **kwargs: Additional optional keyword arguments:
-            - from_timestamp (int | str): The start timestamp (UNIX) for the matches to be gathered. (default is 0)
-    Returns:
-        tuple:
-            - df_events: DataFrame containing event details
-            - df_matches: DataFrame containing match data
-            - `df_teams`_matches: DataFrame containing team match data
-            - df_teams: DataFrame containing team details
-            - df_maps: DataFrame containing map data
-            - df_teams_maps: DataFrame containing team map data
-            - df_players_stats: DataFrame containing player statistics
-            - df_hub_players: DataFrame containing player details
-    """
-    print(
-    """ 
-    -------------------------------------
-        Processing Hub Data:
-    -------------------------------------
-    """
-    )
-    async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
-        async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1: # Use the FaceitData context manager to ensure the session is closed properly
-        
-            ## Gathering event details
-            df_events = await gather_event_details(event_id=hub_id, event_type="hub", faceit_data_v1=faceit_data_v1)
-            
-            ## Gathering matches in hub
-            df_hub_matches = await gather_hub_matches(hub_id, faceit_data=faceit_data)
-            if isinstance(items_to_return, str):
-                if items_to_return.upper() == "ALL":
-                    pass
-                else:
-                    function_logger.critical(f"Invalid items_to_return string: {items_to_return}. Must be an integer or 'ALL'.")
-                    raise ValueError(f"Invalid items_to_return string: {items_to_return}. Must be an integer or 'ALL'.")
-            elif isinstance(items_to_return, int):
-                if items_to_return <= 0:
-                    function_logger.critical(f"Invalid items_to_return value: {items_to_return}. Must be a positive integer or 'ALL'.")
-                    raise ValueError(f"Invalid items_to_return value: {items_to_return}. Must be a positive integer or 'ALL'.")
-                else:
-                    df_hub_matches = df_hub_matches.sort_values(by='match_time', ascending=False).head(items_to_return)
-            else:
-                function_logger.critical(f"Invalid items_to_return type: {type(items_to_return)}. Must be an integer or 'ALL'.")
-                raise TypeError(f"Invalid items_to_return type: {type(items_to_return)}. Must be an integer or 'ALL'.")
-            
-            ## Filter the matches based on the from_timestamp
-            df_hub_matches = df_hub_matches.loc[df_hub_matches['match_time'] >= int(kwargs.get("from_timestamp", 0)), :].reset_index(drop=True)
-            
-            match_ids = df_hub_matches['match_id'].unique().tolist()
-            
-            if not match_ids:
-                function_logger.warning(f"No matches found for hub_id {hub_id}. Returning empty dataframes.")
-                return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-            if not isinstance(match_ids, list):
-                function_logger.critical(f"match_ids is not a list: {match_ids}")
-                raise TypeError(f"match_ids is not a list: {match_ids}")
-            
-            # Processing matches in hub
-            event_ids = [hub_id]*len(match_ids)
-            df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(
-                match_ids=match_ids, 
-                event_ids=event_ids, 
-                faceit_data=faceit_data, faceit_data_v1=faceit_data_v1
-            )
-            
-            ## Add internal_event_id to df_events (a combination of event_id and stage_id)
-            df_events['internal_event_id'] = df_events['event_id'].astype(str) + "_" + df_events['stage_id'].astype(str)
-            df_matches = df_matches.merge(
-                df_events[['event_id', 'internal_event_id']],
-                on='event_id',
-                how='left'
-            )
-            
-            ## Modify the keys in all dataframes using modify_keys function
-            df_events = modify_keys(df_events)
-            
-            if not isinstance(df_events, pd.DataFrame):
-                df_events = pd.DataFrame(df_events)
-            
-            # Set the names of the dataframes
-            df_events.name = "events"
-            df_matches.name = "matches"
-            df_teams_matches.name = "teams_matches"
-            df_teams.name = "teams"
-            df_maps.name = "maps"
-            df_teams_maps.name = "teams_maps"
-            df_players_stats.name = "players_stats"
-            df_players.name = "players"  
-            
-        return df_events, df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players
-
 async def gather_hub_matches(hub_id: str, faceit_data: FaceitData):
     """
     Gathers all the hub matches from a specific hub
@@ -815,229 +620,6 @@ async def gather_hub_matches(hub_id: str, faceit_data: FaceitData):
                   
     df_hub_matches = pd.DataFrame(match_list)
     return df_hub_matches
-
-# ### --------------------------------------------------------------------------------------------------------
-# ### Championship Data Processing (also includes championships that are hosted in hub queues and LANs)
-# ### --------------------------------------------------------------------------------------------------------
-
-# async def process_championship_data(championship_id: str, event_type: str, items_to_return: int|str="ALL", **kwargs) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#     """
-#     The main function to process the data for a championship
-    
-#     Args:
-#         championship_id (str): The ID of the championship to process data for
-#         event_type (str): The type of the event (e.g., championship, championship_hub, championship_lan)
-#         items_to_return (int | str): Specifies the amount of matches that will be gathered. It can be: (default="ALL") 
-#             - An integer, which will return the latests n matches where n is the integer
-#             - The string "ALL", which will return all matches played in the hub since the start
-#         **kwargs: Additional optional keyword arguments:
-#             - from_timestamp (int | str): The start timestamp (UNIX) for the matches to be gathered. (default is 0)
-#     Returns:
-#         tuple:
-#             - df_events: DataFrame containing event details
-#             - df_matches: DataFrame containing match data
-#             - df_teams_matches: DataFrame containing team match data
-#             - df_teams: DataFrame containing team details
-#             - df_maps: DataFrame containing map data
-#             - df_teams_maps: DataFrame containing team map data
-#             - df_players_stats: DataFrame containing player statistics
-#             - df_championship_players: DataFrame containing player details
-#     """
-#     print("--- Processing Championship Data ---")
-    
-#     async with RequestDispatcher(request_limit=request_limit, interval=interval, concurrency=concurrency) as dispatcher: # Create a dispatcher with the specified rate limit and concurrency
-#         async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1: # Use the FaceitData context manager to ensure the session is closed properly
-        
-#             ## Gathering event details
-#             df_events = await gather_event_details(event_id=championship_id, event_type=event_type, faceit_data_v1=faceit_data_v1)
-            
-#             ## Gathering match ids
-#             if event_type == "championship":
-#                 ## Gathering matches in championship
-#                 df_championship_matches = await gather_championship_matches(championship_id, faceit_data=faceit_data)
-#                 if isinstance(items_to_return, str):
-#                     if items_to_return.upper() == "ALL":
-#                         pass
-#                     else:
-#                         function_logger.critical(f"Invalid items_to_return string: {items_to_return}. Must be an integer or 'ALL'.")
-#                         raise ValueError(f"Invalid items_to_return string: {items_to_return}. Must be an integer or 'ALL'.")
-#                 elif isinstance(items_to_return, int):
-#                     if items_to_return <= 0:
-#                         function_logger.critical(f"Invalid items_to_return value: {items_to_return}. Must be a positive integer or 'ALL'.")
-#                         raise ValueError(f"Invalid items_to_return value: {items_to_return}. Must be a positive integer or 'ALL'.")
-#                     else:
-#                         df_championship_matches = df_championship_matches.sort_values(by='match_time', ascending=False).head(items_to_return)
-#                 else:
-#                     function_logger.critical(f"Invalid items_to_return type: {type(items_to_return)}. Must be an integer or 'ALL'.")
-#                     raise TypeError(f"Invalid items_to_return type: {type(items_to_return)}. Must be an integer or 'ALL'.")
-                    
-#                 ## Filter the matches based on the from_timestamp
-#                 df_championship_matches = df_championship_matches.loc[df_championship_matches['match_time'] >= int(kwargs.get("from_timestamp", 0)), :].reset_index(drop=True)
-#                 match_ids = df_championship_matches['match_id'].unique().tolist()
-                
-#             elif event_type == "championship_hub":
-#                 ## Gathering matches in championship hub
-#                 match_ids = await gather_championship_hub_matches(championship_id)
-
-#             elif event_type == "championship_lan":
-#                 # ADD LATER
-#                 print("championship_lan event type is not yet supported.")
-#                 return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-                
-#             else:
-#                 function_logger.critical(f"Invalid event_type: {event_type}. Must be 'championship', 'championship_hub' or 'championship_lan'.")
-#                 raise ValueError(f"Invalid event_type: {event_type}. Must be 'championship', 'championship_hub' or 'championship_lan'.")
-            
-#             ## Processing matches in championship
-#             event_ids = [championship_id]*len(match_ids)
-#             df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(
-#                 match_ids=match_ids, 
-#                 event_ids=event_ids,
-#                 faceit_data=faceit_data, faceit_data_v1=faceit_data_v1
-#             )
-            
-#             # Add team_id_linked_column to df_teams (and make it a copy of team_id)
-#             df_teams['team_id_linked'] = df_teams['team_id']
-            
-#             ## Add additional data from the events.json file to the dataframes if championship_hub event type
-#             if event_type == "championship_hub":
-#                 events = load_event_data_json()
-#                 for event in events:
-#                     if event['event_id'] == championship_id:
-#                         # add round/group ids to df_matches
-#                         for stage in event.get('event_stages', [{}]):
-#                             for group in stage.get('groups', [{}]):
-#                                 group_id = group.get('group_id', None)
-#                                 for match in group.get('matches', [{}]):
-#                                     match_id = match.get('match_id', None)
-#                                     round = match.get('round', None)
-                                    
-#                                     if match_id and match_id in df_matches['match_id'].values:
-#                                         df_matches.loc[df_matches['match_id'] == match_id, 'group_id'] = group_id
-#                                         df_matches.loc[df_matches['match_id'] == match_id, 'round'] = round
-                        
-#                         ## add correct team details to df_teams
-#                         for team in event.get('teams', [{}]):
-#                             team_id = team.get('team_id', None)
-#                             team_name = team.get('team_name', None)
-#                             avatar = team.get('avatar', None)
-#                             team_id_linked = team.get('team_id_linked', None)
-                            
-#                             if team_id and team_id in df_teams['team_id'].values:
-#                                 if team_name:
-#                                     df_teams.loc[df_teams['team_id'] == team_id, 'team_name'] = team_name
-#                                 if avatar:
-#                                     df_teams.loc[df_teams['team_id'] == team_id, 'avatar'] = avatar
-#                                 if team_id_linked:
-#                                     df_teams.loc[df_teams['team_id'] == team_id, 'team_id_linked'] = team_id_linked
-#                         break
-#                 else:
-#                     function_logger.warning(f"Championship hub with ID {championship_id} not found in the events data.")
-#                     raise ValueError(f"Championship hub with ID {championship_id} not found in the events data.")
-
-#             ## Add internal_event_id to df_events (a combination of event_id and stage_id)
-#             df_events['internal_event_id'] = df_events['event_id'].astype(str) + "_" + df_events['stage_id'].astype(str)
-            
-#             ## Add internal_event_id to df_matches (a combination of the event_id in df_matches and the corresponding stage_id in df_events *it will be unique*)
-#             if event_type == "championship_hub":
-#                 events = load_event_data_json()
-#                 for event in events:
-#                     if event['event_id'] == championship_id:
-#                         match_event_stage_list = []
-#                         for stage in event.get('event_stages', [{}]):
-#                             stage_id = stage.get('stage_id', None)
-#                             for group in stage.get('groups', [{}]):
-#                                 for match in group.get('matches', [{}]):
-#                                     match_id = match.get('match_id', None)
-#                                     match_event_stage_list.append(
-#                                         {
-#                                             "match_id": match_id,
-#                                             "event_id": championship_id,
-#                                             "stage_id": stage_id,
-#                                         }
-#                                     )
-#                         ## Create df with match_id, event_id and stage_id
-#                         df_match_event_stage = pd.DataFrame(match_event_stage_list)
-                        
-#                         df_matches['internal_event_id'] = df_matches['event_id'].astype(str) + "_" + df_match_event_stage.loc[df_match_event_stage['match_id'].isin(df_matches['match_id']), 'stage_id'].astype(str).values
-#             elif event_type == "championship":
-#                 df_matches['internal_event_id'] = df_matches['event_id'].astype(str) + "_" + df_events.loc[df_events['event_id'].isin(df_matches['event_id']), 'stage_id'].astype(str).values
-    
-#             # Modify the keys in all dataframes using modify_keys function
-#             df_events = modify_keys(df_events)
-            
-#             if not isinstance(df_events, pd.DataFrame):
-#                 df_events = pd.DataFrame(df_events)
-            
-#             # Rename the dataframes
-#             df_events.name = "events"
-#             df_matches.name = "matches"
-#             df_teams_matches.name = "teams_matches"
-#             df_teams.name = "teams"
-#             df_maps.name = "maps"
-#             df_teams_maps.name = "teams_maps"
-#             df_players_stats.name = "players_stats"
-#             df_players.name = "players"  
-            
-#         return df_events, df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players
-
-# async def gather_championship_matches(championship_id: str, faceit_data: FaceitData):
-#     """
-#     Gathers all the championship matches from a specific championship
-    
-#     Args:
-#         championship_id (str): The ID of the championship to gather matches from
-#         faceit_data (FaceitData): The FaceitData object to use for API calls
-    
-#     Returns:
-#         df_championship_matches: DataFrame containing match data with columns:
-#             - match_id: The ID of the match
-#             - match_time: The time the match was configured
-#     """
-#     tasks = [faceit_data.championship_matches(championship_id=championship_id, starting_item_position=i, return_items=100) for i in range(0, 1000, 100)]
-#     results = await gather_with_progress(tasks, desc="Fetching championship matches", unit='matches')
-#     extracted_matches = [match for result in results if isinstance(result, dict) and result['items'] for match in result['items']]
-    
-#     ## Getting df_championship_matches and df_championship_teams_matches
-#     match_list = []
-#     for match in extracted_matches:
-#         if match.get('status') != "CANCELLED":
-#             match_id = match.get('match_id')
-#             # Create a dictionary for the match
-#             match_dict = {
-#                 "match_id": match_id,
-#                 "match_time": match.get('configured_at', None),        
-#             }
-#             match_list.append(match_dict)
-                  
-#     df_championship_matches = pd.DataFrame(match_list)
-#     return df_championship_matches
-
-# async def gather_championship_hub_matches(championship_id: str) -> list:
-#     try:
-#         events = load_event_data_json()
-        
-#         match_ids = []
-#         found_event = False
-#         for event in events:
-#             if event['event_id'] == championship_id:
-#                 found_event = True
-#                 for stage in event.get('event_stages', []):
-#                     for group in stage.get('groups', []):
-#                         match_ids.extend(
-#                             [
-#                                 match.get('match_id', None) 
-#                                 for match in group.get('matches', [{}]) 
-#                                 if match.get('match_id', None) is not None and match.get('match_id', None) != ""
-#                             ]
-#                         )
-#                 return match_ids
-#         if not found_event:
-#             print(f"Event ID {championship_id} not found in the events data.")
-#         return []
-#     except Exception as e:
-#         print(f"Error gathering championship hub matches: {e}")
-#         return []
 
 if __name__ == "__main__":
     # Allow standalone execution
