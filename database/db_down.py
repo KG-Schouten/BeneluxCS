@@ -194,8 +194,8 @@ def gather_players(**kwargs) -> pd.DataFrame:
         close_database(db)
 
 def gather_league_teams(
-    team_id: str | list = "ALL",
-    season_number: str | int | list = "ALL"
+    team_ids: list = [],
+    season_numbers: list = []
     ) -> pd.DataFrame:
     
     """
@@ -210,27 +210,23 @@ def gather_league_teams(
     params = []
     
     try:
-        if team_id != "ALL":
-            if isinstance(team_id, str):
-                team_id = [team_id]
-            placeholders = ', '.join(['%s'] * len(team_id))
+        if team_ids and isinstance(season_numbers, list):
+            placeholders = ', '.join(['%s'] * len(team_ids))
             conditions.append(f"lt.team_id IN ({placeholders})")
-            params.extend(team_id)
-        if season_number != "ALL":
-            if isinstance(season_number, (str, int)):
-                season_number = [season_number]
-            
-            # Convert to digits only for safety
-            season_number = [int(sn) for sn in season_number if str(sn).isdigit()]
-            
-            placeholders = ', '.join(['%s'] * len(season_number))
+            params.extend(team_ids)
+        
+        if season_numbers and isinstance(season_numbers, list):
+            season_numbers = [sn for sn in season_numbers if str(sn).isdigit()]
+            placeholders = ', '.join(['%s'] * len(season_numbers))
             conditions.append(f"lt.season_number IN ({placeholders})")
-            params.extend(season_number)
+            params.extend(season_numbers)
+            
     except Exception as e:
         print("Error processing gather_league_teams parameters:", e)
+        return pd.DataFrame()
     
     query = f"""
-        SELECT *      
+        SELECT lt.team_id, lt.season_number, lt.team_name, lt.division_name      
         FROM league_teams lt
         {'WHERE ' + ' AND '.join(conditions) if conditions else ''}
     """
@@ -251,6 +247,28 @@ def gather_league_teams(
         return pd.DataFrame()
     finally:
         close_database(db)
+
+def gather_season_numbers_from_event_ids(event_ids: list = []) -> list:
+    db, cursor = start_database()
+    try:
+        if not event_ids:
+            return []
+        
+        placeholders = ', '.join(['%s'] * len(event_ids))
+        query = f"""
+            SELECT DISTINCT season_number
+            FROM seasons
+            WHERE event_id IN ({placeholders})
+        """
+        cursor.execute(query, event_ids)
+        rows = cursor.fetchall()
+        season_numbers = [row[0] for row in rows]
+        
+        return season_numbers
+    except Exception as e:
+        print(f"Error gathering season numbers from event IDs: {e}")
+        return []
+        
 
 if __name__ == "__main__":
     # Allow standalone execution
