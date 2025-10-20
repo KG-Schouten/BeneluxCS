@@ -1,8 +1,10 @@
 # app/webhook.py
+import hmac
+import hashlib
 import os
 import json
 from dotenv import load_dotenv
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort, Response
 from .scheduler import run_async_job
 from .update_logger import log_message
 from update import update_matches, update_esea_teams_benelux
@@ -82,5 +84,73 @@ def faceit_webhook():
             start_background_job(update_esea_teams_benelux, team_ids, event_id)
 
     return jsonify({"status": "Jobs triggered"}), 200
+
+# ========== Twitch Webhook ==========
+# Twitch Headers
+TWITCH_MESSAGE_ID = 'twitch-eventsub-message-id'
+TWITCH_MESSAGE_TIMESTAMP = 'twitch-eventsub-message-timestamp'
+TWITCH_MESSAGE_SIGNATURE = 'twitch-eventsub-message-signature'
+TWITCH_MESSAGE_TYPE = 'twitch-eventsub-message-type'
+
+# Twitch message types
+MESSAGE_TYPE_VERIFICATION = 'webhook_callback_verification'
+MESSAGE_TYPE_NOTIFICATION = 'notification'
+MESSAGE_TYPE_REVOCATION = 'revocation'
+
+# Prepend string for HMAC
+HMAC_PREFIX = 'sha256='
+
+# Twitch Secret
+TWITCH_SECRET = os.getenv("TWITCH_SECRET", '').encode('utf-8')
+
+def verify_twitch_signature(request):
+    message_id = request.headers.get(TWITCH_MESSAGE_ID, '')
+    timestamp = request.headers.get(TWITCH_MESSAGE_TIMESTAMP, '')
+    signature = request.headers.get(TWITCH_MESSAGE_SIGNATURE, '')
+    body = request.get_data()
+    
+    if not all([message_id, timestamp, signature]):
+        return False
+    
+    message = message_id + timestamp + body.decode('utf-8')
+    computed_hmac = HMAC_PREFIX + hmac.new(TWITCH_SECRET, message.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    return hmac.compare_digest(computed_hmac, signature)
+
+@webhook_bp.route("/webhook/twitch", methods=["POST"])
+def twitch_webhook():
+    if not verify_twitch_signature(request):
+        print("Signature verification failed.")
+        abort(403)
+    
+    print("Signatures match.")
+    
+    message_type = request.headers.get(TWITCH_MESSAGE_TYPE, '').lower()
+    data = request.get_json()
+    
+    # Handle different message types
+    if message_type == MESSAGE_TYPE_VERIFICATION:
+        challenge = data.get("challenge")
+        print(f"Received verification challenge: {challenge}")
+        return Response(challenge, status=200, content_type="text/plain")
+
+    elif message_type == MESSAGE_TYPE_NOTIFICATION:
+        subscription_type = data["subscription"]["type"]
+        event_data = data["event"]
+        print(f"Event type: {subscription_type}")
+        print(event_data)
+
+        # Respond quickly so Twitch doesn’t time out
+        return "", 204
+
+    elif message_type == MESSAGE_TYPE_REVOCATION:
+        print(f"{data['subscription']['type']} notifications revoked!")
+        print(f"Reason: {data['subscription']['status']}")
+        print(f"Condition: {data['subscription']['condition']}")
+        return "", 204
+
+    else:
+        print(f"Unknown message type: {message_type}")
+        return "", 204
     
     
