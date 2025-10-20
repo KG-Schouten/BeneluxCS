@@ -79,9 +79,9 @@ def faceit_webhook():
         match_id = payload['payload'].get('id')
         
         if payload['event'] in ['match_status_ready', 'match_status_configuring']:
-            start_background_job(update_matches, match_id, event_id)
+            start_background_job(update_matches, [match_id], [event_id])
         elif payload['event'] == 'match_status_finished':
-            start_background_job(update_esea_teams_benelux, team_ids, event_id)
+            start_background_job(update_esea_teams_benelux, team_ids, [event_id])
 
     return jsonify({"status": "Jobs triggered"}), 200
 
