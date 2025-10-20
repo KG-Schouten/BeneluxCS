@@ -18,7 +18,7 @@ import io
 from PIL import Image
 from datetime import date
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from BeneluxWebb.website.update_logger import log_message
 
 import os
 from dotenv import load_dotenv
@@ -65,6 +65,8 @@ async def update_ongoing_matches():
         if df_ongoing.empty:
             return
 
+        log_message("functions_scheduler", f"[update_ongoing_matches] [START] Updating ongoing matches. Found {len(df_ongoing)}", "info")
+        
         match_ids = df_ongoing['match_id'].tolist()
         event_ids = df_ongoing['event_id'].tolist()
         
@@ -74,9 +76,11 @@ async def update_ongoing_matches():
         
         await update_matches(match_ids, event_ids)
         
+        log_message("functions_scheduler", "[update_ongoing_matches] [END] Updated ongoing matches.", "info")
         
     except Exception as e:
         function_logger.error(f"An error occurred during the update ongoing matches process: {e}", exc_info=True)
+        log_message("functions_scheduler", f"[update_ongoing_matches] Error: {e}", "error")
         return
 
 # === 20 Minutes update interval ===
@@ -84,6 +88,8 @@ async def update_upcoming_matches():
     """ Update matches from the database """
     ## Main logic
     try:
+        log_message("functions_scheduler", "[update_upcoming_matches] [START] Updating upcoming matches.", "info")
+        
         df_upcoming = gather_upcoming_matches()
         
         match_ids = df_upcoming['match_id'].tolist()
@@ -98,12 +104,16 @@ async def update_upcoming_matches():
         
         await update_matches(match_ids, event_ids)
         
+        log_message("functions_scheduler", "[update_upcoming_matches] [END] Updated upcoming matches.", "info")
+        
     except Exception as e:
         function_logger.error(f"An error occurred during the update matches process: {e}", exc_info=True)
+        log_message("functions_scheduler", f"[update_upcoming_matches] Error: {e}", "error")
         return
 
 async def update_esea_teams_benelux(team_ids: list = [], event_ids: list = [], season_numbers: list = []):
     try:
+        log_message("functions_scheduler", "[update_esea_teams_benelux] [START] Updating ESEA Benelux teams.", "info")
         if team_ids or event_ids or season_numbers:
             clear = False  # Do not clear if specific IDs are provided
         else:
@@ -178,15 +188,20 @@ async def update_esea_teams_benelux(team_ids: list = [], event_ids: list = [], s
     
         if isinstance(df_teams_benelux, pd.DataFrame) and not df_teams_benelux.empty:
             upload_data("teams_benelux", df_teams_benelux, clear=clear)
-    
+
+        log_message("functions_scheduler", "[update_esea_teams_benelux] [END] Updated ESEA Benelux teams.", "info")
+        
     except Exception as e:
         function_logger.error(f"Error updating teams_benelux table: {e}", exc_info=True)
+        log_message("functions_scheduler", f"[update_esea_teams_benelux] Error: {e}", "error")
+        return
 
 # === Hourly update interval ===
 async def update_new_matches_hub():
     """ Gathers and updates new matches from the Benelux Hub """
     hub_id = "801f7e0c-1064-4dd1-a960-b2f54f8b5193"  # Benelux Hub ID
     try:
+        log_message("functions_scheduler", "[update_new_matches_hub] [START] Updating new matches from Benelux Hub.", "info")
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
             async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1:
                 ## Gathering matches in hub
@@ -221,20 +236,31 @@ async def update_new_matches_hub():
                     how='left'
                 )
         
-        upload_data("matches", df_matches)
-        upload_data("teams_matches", df_teams_matches)
-        upload_data("teams", df_teams)
-        upload_data("maps", df_maps)
-        upload_data("teams_maps", df_teams_maps)
-        upload_data("players_stats", df_players_stats)
-        upload_data("players", df_players)
-                
+        if not df_matches.empty:
+            upload_data("matches", df_matches)
+        if not df_teams_matches.empty:     
+            upload_data("teams_matches", df_teams_matches)
+        if not df_teams.empty:
+            upload_data("teams", df_teams)
+        if not df_maps.empty:
+            upload_data("maps", df_maps)
+        if not df_teams_maps.empty:
+            upload_data("teams_maps", df_teams_maps)
+        if not df_players_stats.empty:
+            upload_data("players_stats", df_players_stats)
+        if not df_players.empty:
+            upload_data("players", df_players)
+        
+        log_message("functions_scheduler", "[update_new_matches_hub] [END] Updated Benelux Hub matches.", "info")
+             
     except Exception as e:
         function_logger.error(f"Error updating Benelux Hub matches: {e}")
+        log_message("functions_scheduler", f"[update_new_matches_hub] Error: {e}", "error")
         return
 
 async def update_leaderboard(elo_cutoff=2000):
     try:
+        log_message("functions_scheduler", "[update_leaderboard] [START] Updating leaderboard players.", "info")
         # Gather the leaderboard data from the API
         df_leaderboard = await get_benelux_leaderboard_players(elo_cutoff=elo_cutoff)
 
@@ -245,20 +271,22 @@ async def update_leaderboard(elo_cutoff=2000):
         # Check if the dataframes are valid and not empty
         if df_leaderboard.empty:
             function_logger.warning("No leaderboard data found. Skipping update.")
-            raise ValueError("Leaderboard data is empty or not a DataFrame.")
+            return
         
         ## ----- For the players table -----
         await update_leaderboard_players(df_leaderboard=df_leaderboard, df_players=df_players)
             
         # ## ----- For the players_country table -----
         # await update_leaderboard_players_country(df_leaderboard=df_leaderboard)
-
+        log_message("functions_scheduler", "[update_leaderboard] [END] Updated leaderboard players.", "info")
     except Exception as e:
         function_logger.error(f"Error updating leaderboard: {e}")
-        raise
+        log_message("functions_scheduler", f"[update_leaderboard] Error: {e}", "error")
+        return
 
 async def update_leaderboard_players(df_leaderboard: pd.DataFrame, df_players: pd.DataFrame):
     try:
+        log_message("functions_scheduler", "[update_leaderboard_players] [START] Updating leaderboard players table.", "info")
         if df_players.empty:
             function_logger.warning("No players data found. Skipping update.")
             raise ValueError("Players data is empty or not a DataFrame.")
@@ -279,10 +307,14 @@ async def update_leaderboard_players(df_leaderboard: pd.DataFrame, df_players: p
             
         # Update the players table with the new players
         function_logger.info(f"Found {len(df_players_new)} players to upload to players table.")
-        upload_data('players', df_players_new)
+        if not df_players_new.empty:
+            upload_data('players', df_players_new)
+        
+        log_message("functions_scheduler", "[update_leaderboard_players] [END] Updated leaderboard players table.", "info")
     except Exception as e:
         function_logger.error(f"Error updating players table: {e}")
-        raise
+        log_message("functions_scheduler", f"[update_leaderboard_players] Error: {e}", "error")
+        return
 
 async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
     """ Update the players_country table with new players from the leaderboard """
@@ -380,6 +412,7 @@ async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
 async def update_elo_leaderboard():
     """ Update the elo_leaderboard_daily table with daily snapshots """
     try:
+        log_message("functions_scheduler", "[update_elo_leaderboard] [START] Updating elo_leaderboard_daily table.", "info")
         df_elo = gather_elo_snapshot()
         if df_elo.empty:
             function_logger.warning("No elo snapshot data found. Skipping update.")
@@ -390,13 +423,18 @@ async def update_elo_leaderboard():
         
         upload_data('elo_leaderboard_daily', df_elo)
         
+        log_message("functions_scheduler", "[update_elo_leaderboard] [END] Updated elo_leaderboard_daily table.", "info")
+        
     except Exception as e:
         function_logger.error(f"Error updating elo_leaderboard table: {e}", exc_info=True)
-        raise
+        log_message("functions_scheduler", f"[update_elo_leaderboard] Error: {e}", "error")
+        return
     
 async def update_new_matches_esea():
     """ Gathers and updates new matches from ESEA events """
     try:
+        log_message("functions_scheduler", "[update_new_matches_esea] [START] Updating new matches from ESEA events.", "info")
+        
         df_event_teams = gather_event_teams(ONGOING=True, ESEA=True)
         
         if df_event_teams.empty:
@@ -459,21 +497,35 @@ async def update_new_matches_esea():
                     on='event_id',
                     how='left'
                 )
-                
-        upload_data("matches", df_matches)
-        upload_data("teams_matches", df_teams_matches)
-        upload_data("teams", df_teams)
-        upload_data("maps", df_maps)
-        upload_data("teams_maps", df_teams_maps)
-        upload_data("players_stats", df_players_stats)
-        upload_data("players", df_players)
+               
+        if not df_matches.empty:
+            upload_data("matches", df_matches)
+        if not df_teams_matches.empty:     
+            upload_data("teams_matches", df_teams_matches)
+        if not df_teams.empty:
+            upload_data("teams", df_teams)
+        if not df_maps.empty:
+            upload_data("maps", df_maps)
+        if not df_teams_maps.empty:
+            upload_data("teams_maps", df_teams_maps)
+        if not df_players_stats.empty:
+            upload_data("players_stats", df_players_stats)
+        if not df_players.empty:
+            upload_data("players", df_players)
+            
+        log_message("functions_scheduler", "[update_new_matches_esea] [END] Updated ESEA matches.", "info")
         
     except Exception as e:
         function_logger.error(f"Error updating ESEA matches: {e}")
+        log_message("functions_scheduler", f"[update_new_matches_esea] Error: {e}", "error")
+        return
 
 # === Daily update interval ===
 async def update_league_teams():
     try:
+        log_message("functions_scheduler", "[update_league_teams] [START] Updating league_teams table.", "info")
+        
+        # Gather the league teams data from the API
         df_teams, team_names_updated = gather_league_teams_merged()
             
         if isinstance(team_names_updated, list) and team_names_updated:
@@ -488,13 +540,18 @@ async def update_league_teams():
             function_logger.info("No teams found for the league_teams update.")
             return
         
+        log_message("functions_scheduler", "[update_league_teams] [END] Updated league_teams table.", "info")
+        
         
     except Exception as e:
         function_logger.error(f"Error updating league_teams table: {e}")
+        log_message("functions_scheduler", f"[update_league_teams] Error: {e}", "error")
         return
 
 async def update_team_avatars():
     try:
+        log_message("functions_scheduler", "[update_team_avatars] [START] Updating team avatars.", "info")
+        
         df_avatars = gather_league_team_avatars()
         
         data = []
@@ -535,14 +592,19 @@ async def update_team_avatars():
             
             upload_data("league_teams", df_team_leagues)
         
+        log_message("functions_scheduler", "[update_team_avatars] [END] Updated team avatars.", "info")
+        
         return  
 
     except Exception as e:
         function_logger.error(f"Error updating team avatars: {e}")
+        log_message("functions_scheduler", f"[update_team_avatars] Error: {e}", "error")
         return
 
 def save_avatar(team_id, season_number, avatar_bytes, project_root, master=False):
     try:
+        log_message("functions_scheduler", f"[save_avatar] Saving avatar for {team_id}_{season_number}, master={master}", "info")
+        
         if master:
             save_folder = Path(project_root) / "BeneluxWebb" / "static" / "img" / "avatars_master"
             filename = f"{team_id}_{season_number}.png"
@@ -562,17 +624,25 @@ def save_avatar(team_id, season_number, avatar_bytes, project_root, master=False
             # Save the PNG bytes directly
             with open(file_path, "wb") as f:
                 f.write(avatar_bytes)
-            return f"Saved (master) {team_id}_{season_number}"
+            return_print = f"Saved (master) {team_id}_{season_number}"
         else:
             # Convert from avatar_bytes (PNG) to WebP
             image = Image.open(io.BytesIO(avatar_bytes)).convert("RGBA")
             image.save(file_path, "WEBP", quality=80, method=6)
-            return f"Saved {team_id}_{season_number}"
+            return_print = f"Saved {team_id}_{season_number}"
 
+        log_message("functions_scheduler", f"[save_avatar] Saved avatar for {team_id}_{season_number}", "info")
+        
+        return return_print
+        
     except Exception as e:
-        return f"Failed {team_id}_{season_number}: {e}"
+        function_logger.error(f"Error saving avatar for {team_id}_{season_number}: {e}")
+        log_message("functions_scheduler", f"[save_avatar] Error saving avatar for {team_id}_{season_number}: {e}", "error")
+        return
 
 async def update_local_team_avatars():
+    log_message("functions_scheduler", "[update_local_team_avatars] [START] Updating local team avatars.", "info")
+    
     df = gather_league_teams()
 
     # Determine project root (always BeneluxCS)
@@ -610,10 +680,14 @@ async def update_local_team_avatars():
 
         for future in as_completed(tasks):
             function_logger.info(future.result())
+    
+    log_message("functions_scheduler", "[update_local_team_avatars] [END] Updated local team avatars.", "info")
 
    
 # === Weekly update interval ===
 async def update_hub_events():
+    log_message("functions_scheduler", "[update_hub_events] [START] Updating hub events.", "info")
+    
     hub_id = "801f7e0c-1064-4dd1-a960-b2f54f8b5193"  # Benelux Hub ID
     try:
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
@@ -628,12 +702,18 @@ async def update_hub_events():
                     
                     if isinstance(df_events, pd.DataFrame) and not df_events.empty:
                         upload_data("events", df_events)
-         
+        
+        log_message("functions_scheduler", "[update_hub_events] [END] Updated hub events.", "info")
+        
     except Exception as e:
         function_logger.error(f"Error updating hub events: {e}")
+        log_message("functions_scheduler", f"[update_hub_events] Error: {e}", "error")
 
 async def update_esea_seasons_events():
     try:
+        log_message("functions_scheduler", "[update_esea_seasons_events] [START] Updating ESEA seasons and events tables.", "info")
+        
+        # Gather the seasons and events data from the API
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
             async with FaceitData_v1(dispatcher) as faceit_data_v1:
                 
@@ -650,9 +730,14 @@ async def update_esea_seasons_events():
                     upload_data("seasons", df_seasons)
                 
                 if isinstance(df_events, pd.DataFrame) and not df_events.empty:
-                    upload_data("events", df_events)    
+                    upload_data("events", df_events) 
+        
+        log_message("functions_scheduler", "[update_esea_seasons_events] [END] Updated ESEA seasons and events tables.", "info")
+           
     except Exception as e:
         function_logger.error(f"Error updating seasons and events tables: {e}")
+        log_message("functions_scheduler", f"[update_esea_seasons_events] Error: {e}", "error")
+        return
 
 if __name__ == "__main__":
     pass
