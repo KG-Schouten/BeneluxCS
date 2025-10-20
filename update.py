@@ -26,7 +26,7 @@ load_dotenv()
 FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 
 # === General functions ===
-async def update_matches(match_ids, event_ids):
+async def update_matches(match_ids: list, event_ids: list):
     try:
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
             async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1:
