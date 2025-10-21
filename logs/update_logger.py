@@ -1,5 +1,5 @@
 import logging
-from logging.handlers import RotatingFileHandler
+from concurrent_log_handler import ConcurrentRotatingFileHandler as RotatingFileHandler
 import os
 
 def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
@@ -22,7 +22,7 @@ def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
         os.makedirs("logs", exist_ok=True)
 
         file_handler = RotatingFileHandler(
-            f"logs/{name}.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding='utf-8'
+            f"logs/{name}.log", maxBytes=50 * 1024 * 1024, backupCount=3, encoding='utf-8'
         )
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
