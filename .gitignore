@@ -187,8 +187,8 @@ to_do.txt
 # Ignore .env files
 .env
 
-# Ignore every file in logs folder
-logs/*
+# Ignore every file in logs folder with .log extension
+logs/*.log
 
 # Ignore the database file
 BeneluxCS.db
