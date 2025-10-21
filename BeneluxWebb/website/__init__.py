@@ -3,6 +3,9 @@ from datetime import datetime
 import os
 from .scheduler import init_scheduler
 from .webhook import webhook_bp
+from logs.update_logger import get_logger
+
+scheduler_logger = get_logger("scheduler")
 
 def create_app():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -28,12 +31,10 @@ def create_app():
     
     # Initialize scheduler only if not in debug mode or in the main process
     if app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        from .update_logger import log_message
-        log_message("scheduler", f"Initializing scheduler in PID {os.getpid()}", "info")
+        scheduler_logger.info(f"Initializing scheduler in PID {os.getpid()}")
         init_scheduler(app)
     else:
-        from .update_logger import log_message
-        log_message("scheduler", f"Skipping scheduler init in reloader PID {os.getpid()}", "info")
+        scheduler_logger.info(f"Skipping scheduler init in reloader PID {os.getpid()}")
 
         
     # Register webhook blueprint

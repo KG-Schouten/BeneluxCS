@@ -14,7 +14,10 @@ import base64
 
 from database.db_manage import start_database, close_database
 from database.db_down import get_player_aliases
-from data_processing.faceit_api.logging_config import function_logger
+
+from logs.update_logger import get_logger
+
+function_logger = get_logger("functions")
 
 # =============================
 #       General functions

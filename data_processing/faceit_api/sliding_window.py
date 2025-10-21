@@ -2,7 +2,9 @@ import asyncio
 import time
 import random
 from collections import deque
-from data_processing.faceit_api.logging_config import api_logger
+
+from logs.update_logger import get_logger
+api_logger = get_logger("api")
 
 request_limit = 350  # Maximum number of calls allowed in the time window
 interval = 10        # Time window in seconds
@@ -104,7 +106,7 @@ class RequestDispatcher:
         for w in self.workers:
             w.cancel()
         await asyncio.gather(*self.workers, return_exceptions=True)
-        api_logger.info(f"[Dispatcher] Stopped all workers.")
+        api_logger.info("[Dispatcher] Stopped all workers.")
         self.workers = []
         self._running = False
 

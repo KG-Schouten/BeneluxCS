@@ -8,7 +8,9 @@ import pandas as pd
 from rapidfuzz import fuzz
 
 from database.db_manage import start_database, close_database
-from data_processing.faceit_api.logging_config import function_logger
+
+from logs.update_logger import get_logger
+function_logger = get_logger("functions")
 
 
 def gather_event_players(event_ids: list, team_ids: list, PAST: bool = False) -> pd.DataFrame:

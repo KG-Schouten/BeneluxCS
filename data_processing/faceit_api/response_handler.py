@@ -3,8 +3,10 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data_processing.faceit_api.logging_config import api_logger
 from data_processing.faceit_api.sliding_window import RateLimitException
+
+from logs.update_logger import get_logger
+api_logger = get_logger("api")
 
 async def check_response(response) -> dict | int:
     """ Checks the response from the API and returns the data or raises an exception """

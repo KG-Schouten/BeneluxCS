@@ -11,7 +11,8 @@ from typing import List, Union
 from data_processing.faceit_api.faceit_v4 import FaceitData
 from data_processing.faceit_api.faceit_v1 import FaceitData_v1
 from data_processing.faceit_api.async_progress import gather_with_progress
-from data_processing.faceit_api.logging_config import function_logger
+
+from logs.update_logger import get_logger
 
 # dp imports
 from data_processing.dp_general import modify_keys
@@ -24,6 +25,8 @@ from database.db_down import gather_league_teams, gather_season_numbers_from_eve
 from dotenv import load_dotenv
 load_dotenv()
 FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
+
+function_logger = get_logger("functions")
 
 ### -----------------------------------------------------------------
 ### ESEA Data Processing

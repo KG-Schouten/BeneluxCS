@@ -6,10 +6,11 @@ import json
 from dotenv import load_dotenv
 from flask import Blueprint, request, jsonify, abort, Response
 from .scheduler import run_async_job
-from .update_logger import log_message
+from logs.update_logger import get_logger
 from update import update_matches, update_esea_teams_benelux
 from database.db_down_update import gather_teams_benelux_primary
 
+webhook_logger = get_logger("webhook")
 
 # Load .env variables
 load_dotenv()
@@ -44,7 +45,7 @@ def faceit_webhook():
     # Verify security header
     received_header = request.headers.get(FACEIT_HEADER)
     if received_header != FACEIT_HEADER_VALUE:
-        log_message("webhook", "Unauthorized request blocked.", "warning")
+        webhook_logger.warning("Unauthorized request blocked.")
         return jsonify({"error": "Unauthorized"}), 401
     
     # Get payload
@@ -53,10 +54,10 @@ def faceit_webhook():
         try:
             payload = json.loads(request.data.decode('utf-8'))
         except Exception as e:
-            log_message("webhook", f"Invalid payload: {e}", "error")
+            webhook_logger.error(f"Invalid JSON payload received: {e}", exc_info=True)
             return jsonify({"error": "Invalid JSON"}), 400
 
-    log_message("webhook", f"Request received. Payload: {payload}", "info")
+    webhook_logger.debug(f"Payload received: {payload}")
     
     # Trigger placeholder job
     if isinstance(payload, dict):
@@ -67,20 +68,22 @@ def faceit_webhook():
         event_id = payload_data.get('entity', {}).get('id')
         
         if not team_ids:
-            log_message("webhook", "No teams found, skipping.", "info")
+            webhook_logger.debug("No teams found in payload, skipping.")
             return jsonify({"status": "No teams"}), 200
 
         team_ids = faceit_check_teams(team_ids, event_id)
         
         if not team_ids:
-            log_message("webhook", "No Benelux teams found after check, skipping.", "info")
+            webhook_logger.debug("No Benelux teams found after check, skipping.")
             return jsonify({"status": "No Benelux teams"}), 200
         
         match_id = payload['payload'].get('id')
         
         if payload['event'] in ['match_status_ready', 'match_status_configuring']:
+            webhook_logger.info(f"Triggering match update for match ID: {match_id}")
             start_background_job(update_matches, [match_id], [event_id])
         elif payload['event'] == 'match_status_finished':
+            webhook_logger.info(f"Triggering ESEA team update for teams: {team_ids}")
             start_background_job(update_esea_teams_benelux, team_ids, [event_id])
 
     return jsonify({"status": "Jobs triggered"}), 200
@@ -120,37 +123,38 @@ def verify_twitch_signature(request):
 @webhook_bp.route("/webhook/twitch", methods=["POST"])
 def twitch_webhook():
     if not verify_twitch_signature(request):
-        print("Signature verification failed.")
+        webhook_logger.warning("Twitch signature verification failed.")
         abort(403)
     
-    print("Signatures match.")
+    webhook_logger.debug("Twitch signature verified successfully.")
     
     message_type = request.headers.get(TWITCH_MESSAGE_TYPE, '').lower()
     data = request.get_json()
     
+    webhook_logger.debug(f"Twitch webhook payload: {data}")
+    
     # Handle different message types
     if message_type == MESSAGE_TYPE_VERIFICATION:
         challenge = data.get("challenge")
-        print(f"Received verification challenge: {challenge}")
+        webhook_logger.info("Received Twitch verification challenge.")
         return Response(challenge, status=200, content_type="text/plain")
 
     elif message_type == MESSAGE_TYPE_NOTIFICATION:
         subscription_type = data["subscription"]["type"]
         event_data = data["event"]
-        print(f"Event type: {subscription_type}")
-        print(event_data)
+        webhook_logger.info(f"Received Twitch notification for event type: {subscription_type} - data: {event_data}")
 
         # Respond quickly so Twitch doesn’t time out
         return "", 204
 
     elif message_type == MESSAGE_TYPE_REVOCATION:
-        print(f"{data['subscription']['type']} notifications revoked!")
-        print(f"Reason: {data['subscription']['status']}")
-        print(f"Condition: {data['subscription']['condition']}")
+        webhook_logger.info(f"Twitch notification revoked for type: {data['subscription']['type']}")
+        webhook_logger.info(f"Reason: {data['subscription']['status']}")
+        webhook_logger.info(f"Condition: {data['subscription']['condition']}")
         return "", 204
 
     else:
-        print(f"Unknown message type: {message_type}")
+        webhook_logger.error(f"Unknown Twitch message type received: {message_type}")
         return "", 204
     
     

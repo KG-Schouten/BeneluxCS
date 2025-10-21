@@ -10,7 +10,9 @@ from rapidfuzz import process, fuzz
 from collections import defaultdict
 
 from database.db_manage import start_database, close_database
-from data_processing.faceit_api.logging_config import function_logger
+
+from logs.update_logger import get_logger
+function_logger = get_logger("functions")
 
 ### ----------------------------
 ### GENERAL FUNCTIONS

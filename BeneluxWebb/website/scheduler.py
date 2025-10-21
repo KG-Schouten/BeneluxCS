@@ -23,7 +23,9 @@ from update import (
     update_esea_seasons_events
 )
 
-from .update_logger import log_message
+from logs.update_logger import get_logger
+
+scheduler_logger = get_logger("scheduler")
 
 load_dotenv()
 
@@ -52,13 +54,13 @@ def redis_lock(lock_name, timeout=60, wait=True):
                 redis_client.delete(lock_name)
             break
         elif not wait:
-            log_message("scheduler", f"[LOCK SKIPPED] {lock_name} is already locked", "info")
+            scheduler_logger.info( f"[LOCK SKIPPED] {lock_name} is already locked")
             break
         else:
             time.sleep(0.5)
             # optional: prevent infinite wait
             if time.time() - start > timeout:
-                log_message("scheduler", f"[LOCK TIMEOUT] {lock_name} waited too long", "warning")
+                scheduler_logger.warning( f"[LOCK TIMEOUT] {lock_name} waited too long")
                 break
 
 # ------------------
@@ -69,12 +71,12 @@ def run_async_job(job_func, lock_timeout=300):
     def wrapper(*args, **kwargs):
         async def runner():
             job_name = job_func.__name__
-            log_message("scheduler", f"[JOB START] {job_name}", "info")
+            scheduler_logger.info( f"[JOB START] {job_name}")
             try:
                 await job_func(*args, **kwargs)
-                log_message("scheduler", f"[JOB FINISH] {job_name}", "info")
+                scheduler_logger.info( f"[JOB FINISH] {job_name}")
             except Exception as e:
-                log_message("scheduler", f"[JOB ERROR] {job_name}: {e}", "error")
+                scheduler_logger.error( f"[JOB ERROR] {job_name}: {e}")
 
         with redis_lock(GLOBAL_SCHEDULER_LOCK, timeout=lock_timeout):
             asyncio.run(runner())
@@ -146,10 +148,10 @@ def init_scheduler(app):
             CronTrigger(day_of_week="sun", hour=0, minute=0)
         )
     except Exception as e:
-        log_message("scheduler", f"[INIT] Error adding jobs to scheduler: {e}", "error")
+        scheduler_logger.error(f"[INIT] Error adding jobs to scheduler: {e}")
     
     scheduler.start()
-    log_message("scheduler", "--- APScheduler placeholder started ---", "info")
+    scheduler_logger.info("--- APScheduler placeholder started ---")
     
     import atexit
     atexit.register(lambda: scheduler.shutdown(wait=False))

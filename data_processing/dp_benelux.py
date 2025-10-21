@@ -17,13 +17,16 @@ from data_processing.faceit_api.faceit_v1 import FaceitData_v1
 from data_processing.faceit_api.steam import SteamData
 from data_processing.faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
 from data_processing.faceit_api.async_progress import gather_with_progress
-from data_processing.faceit_api.logging_config import function_logger
+
+from logs.update_logger import get_logger
 
 # Load api keys from .env file
 from dotenv import load_dotenv
 load_dotenv()
 FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 STEAM_TOKEN = os.getenv("STEAM_TOKEN")
+
+function_logger = get_logger("functions")
 
 async def batch_process_players(players: list[dict]) -> pd.DataFrame:
     """

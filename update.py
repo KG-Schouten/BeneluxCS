@@ -5,7 +5,6 @@ from database.db_up import upload_data
 from data_processing.faceit_api.sliding_window import RequestDispatcher
 from data_processing.faceit_api.faceit_v4 import FaceitData
 from data_processing.faceit_api.faceit_v1 import FaceitData_v1
-from data_processing.faceit_api.logging_config import function_logger
 from data_processing.dp_general import process_matches, process_team_details_batch, process_player_details_batch, gather_event_details
 from data_processing.dp_events import process_teams_benelux_esea, gather_esea_matches, gather_hub_matches, process_esea_season_data, modify_keys
 from data_processing.dp_benelux import get_benelux_leaderboard_players
@@ -18,26 +17,29 @@ import io
 from PIL import Image
 from datetime import date
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from BeneluxWebb.website.update_logger import log_message
+from logs.update_logger import get_logger
 
 import os
 from dotenv import load_dotenv
 load_dotenv()
 FACEIT_TOKEN = os.getenv("FACEIT_TOKEN")
 
+update_logger = get_logger("update_logger")
+
 # === General functions ===
 async def update_matches(match_ids: list, event_ids: list):
+    update_logger.info(f"[START] Updating matches: {len(match_ids)} matches to process.")
     try:
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
             async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1:
                 df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(match_ids, event_ids, faceit_data, faceit_data_v1)
 
     except Exception as e:
-        function_logger.error(f"Error while fetching match details: {e}")
+        update_logger.error(f"Error while fetching match details: {e}")
         return 
     
     if not isinstance(df_matches, pd.DataFrame) or df_matches.empty:
-        function_logger.info("No match details found for upcoming matches.")
+        update_logger.info("No match details found for matches.")
         return
     
     event_ids = df_matches['event_id'].unique().tolist()
@@ -49,13 +51,23 @@ async def update_matches(match_ids: list, event_ids: list):
             how='left'
         )
     
-    upload_data("matches", df_matches)
-    upload_data("teams_matches", df_teams_matches)
-    upload_data("teams", df_teams)
-    upload_data("maps", df_maps)
-    upload_data("teams_maps", df_teams_maps)
-    upload_data("players_stats", df_players_stats)
-    upload_data("players", df_players)
+    dataframes = {
+        "matches": df_matches,
+        "teams_matches": df_teams_matches,
+        "teams": df_teams,
+        "maps": df_maps,
+        "teams_maps": df_teams_maps,
+        "players_stats": df_players_stats,
+        "players": df_players,
+    }
+    
+    for name, df in dataframes.items():
+        if not df.empty:
+            upload_data(name, df)
+        else:
+            update_logger.debug(f"No data to upload for {name}.")
+    
+    update_logger.info(f"[END] Updated matches: {len(match_ids)} matches processed.")
     
 # === Minute update interval ===
 async def update_ongoing_matches():
@@ -65,22 +77,21 @@ async def update_ongoing_matches():
         if df_ongoing.empty:
             return
 
-        log_message("functions_scheduler", f"[update_ongoing_matches] [START] Updating ongoing matches. Found {len(df_ongoing)}", "info")
+        update_logger.info(f"[START] Updating ongoing matches: Found {len(df_ongoing)} matches.")
         
         match_ids = df_ongoing['match_id'].tolist()
         event_ids = df_ongoing['event_id'].tolist()
         
         if not match_ids or not event_ids:
-            function_logger.error("No match_id or event_id found.")
+            update_logger.error("No match_id or event_id found.")
             return
         
         await update_matches(match_ids, event_ids)
         
-        log_message("functions_scheduler", "[update_ongoing_matches] [END] Updated ongoing matches.", "info")
+        update_logger.info(f"[END] Updating ongoing matches: Updated {len(df_ongoing)} matches.")
         
     except Exception as e:
-        function_logger.error(f"An error occurred during the update ongoing matches process: {e}", exc_info=True)
-        log_message("functions_scheduler", f"[update_ongoing_matches] Error: {e}", "error")
+        update_logger.error(f"An error occurred during the update ongoing matches process: {e}", exc_info=True)
         return
 
 # === 20 Minutes update interval ===
@@ -88,32 +99,35 @@ async def update_upcoming_matches():
     """ Update matches from the database """
     ## Main logic
     try:
-        log_message("functions_scheduler", "[update_upcoming_matches] [START] Updating upcoming matches.", "info")
-        
         df_upcoming = gather_upcoming_matches()
+        
+        if df_upcoming.empty:
+            return
+        
+        update_logger.info(f"[START] Updating upcoming matches: Found {len(df_upcoming)} matches.")
         
         match_ids = df_upcoming['match_id'].tolist()
         event_ids = df_upcoming['event_id'].tolist()
         
         if not match_ids:
-            function_logger.info("No upcoming matches found.")
+            update_logger.info("No upcoming matches found.")
             return 
         if not event_ids:
-            function_logger.info("No event IDs found for upcoming matches.")
+            update_logger.info("No event IDs found for upcoming matches.")
             return
         
         await update_matches(match_ids, event_ids)
         
-        log_message("functions_scheduler", "[update_upcoming_matches] [END] Updated upcoming matches.", "info")
+        update_logger.info(f"[END] Updating upcoming matches: Updated {len(df_upcoming)} matches.")
         
     except Exception as e:
-        function_logger.error(f"An error occurred during the update matches process: {e}", exc_info=True)
-        log_message("functions_scheduler", f"[update_upcoming_matches] Error: {e}", "error")
+        update_logger.error(f"An error occurred during the upcoming matches update: {e}", exc_info=True)
         return
 
 async def update_esea_teams_benelux(team_ids: list = [], event_ids: list = [], season_numbers: list = []):
     try:
-        log_message("functions_scheduler", "[update_esea_teams_benelux] [START] Updating ESEA Benelux teams.", "info")
+        update_logger.info("[START] Starting update of ESEA Benelux teams.")
+        
         if team_ids or event_ids or season_numbers:
             clear = False  # Do not clear if specific IDs are provided
         else:
@@ -150,7 +164,7 @@ async def update_esea_teams_benelux(team_ids: list = [], event_ids: list = [], s
             df_teams_benelux.reset_index(inplace=True)
         
         if not isinstance(df_teams_benelux, pd.DataFrame) or df_teams_benelux.empty:
-            function_logger.warning("No teams found for the Benelux ESEA events.")
+            update_logger.warning("No teams found for the Benelux ESEA events.")
             return
         
         # Gather team  and player data
@@ -177,23 +191,22 @@ async def update_esea_teams_benelux(team_ids: list = [], event_ids: list = [], s
                 df_players = await process_player_details_batch(player_ids=player_ids, faceit_data_v1=faceit_data_v1)
                 
                 if not isinstance(df_teams, pd.DataFrame) or df_teams.empty:
-                    function_logger.warning("No team details found for the Benelux ESEA teams.")
+                    update_logger.warning("No team details found for the Benelux ESEA teams.")
                 else:
                     upload_data("teams", df_teams)
                 
                 if not isinstance(df_players, pd.DataFrame) or df_players.empty:
-                    function_logger.warning("No player details found for the Benelux ESEA teams.")
+                    update_logger.warning("No player details found for the Benelux ESEA teams.")
                 else:
                     upload_data("players", df_players)
     
         if isinstance(df_teams_benelux, pd.DataFrame) and not df_teams_benelux.empty:
             upload_data("teams_benelux", df_teams_benelux, clear=clear)
 
-        log_message("functions_scheduler", "[update_esea_teams_benelux] [END] Updated ESEA Benelux teams.", "info")
+        update_logger.info("[END] Finished update of ESEA Benelux teams.")
         
     except Exception as e:
-        function_logger.error(f"Error updating teams_benelux table: {e}", exc_info=True)
-        log_message("functions_scheduler", f"[update_esea_teams_benelux] Error: {e}", "error")
+        update_logger.error(f"Error updating teams_benelux table: {e}", exc_info=True)
         return
 
 # === Hourly update interval ===
@@ -201,14 +214,15 @@ async def update_new_matches_hub():
     """ Gathers and updates new matches from the Benelux Hub """
     hub_id = "801f7e0c-1064-4dd1-a960-b2f54f8b5193"  # Benelux Hub ID
     try:
-        log_message("functions_scheduler", "[update_new_matches_hub] [START] Updating new matches from Benelux Hub.", "info")
+        update_logger.info("[START] Updating new matches from Benelux Hub.")
+        
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
             async with FaceitData(FACEIT_TOKEN, dispatcher) as faceit_data, FaceitData_v1(dispatcher) as faceit_data_v1:
                 ## Gathering matches in hub
                 df_hub_matches = await gather_hub_matches(hub_id, faceit_data=faceit_data)
                 
                 if df_hub_matches.empty:
-                    function_logger.info("No matches found for the hub.")
+                    update_logger.info("No matches found for the hub.")
                     return
                 
                 match_ids_database = gather_event_matches(event_ids=[hub_id])
@@ -220,7 +234,7 @@ async def update_new_matches_hub():
                 event_ids = [hub_id]*len(match_ids)
                 
                 if not match_ids or not event_ids:
-                    function_logger.info("No new matches found for Hub.")
+                    update_logger.info("No new matches found for Hub.")
                     return
                 
                 df_matches, df_teams_matches, df_teams, df_maps, df_teams_maps, df_players_stats, df_players = await process_matches(
@@ -235,32 +249,33 @@ async def update_new_matches_hub():
                     on='event_id',
                     how='left'
                 )
+            
+        dataframes = {
+            "matches": df_matches,
+            "teams_matches": df_teams_matches,
+            "teams": df_teams,
+            "maps": df_maps,
+            "teams_maps": df_teams_maps,
+            "players_stats": df_players_stats,
+            "players": df_players,
+        }
         
-        if not df_matches.empty:
-            upload_data("matches", df_matches)
-        if not df_teams_matches.empty:     
-            upload_data("teams_matches", df_teams_matches)
-        if not df_teams.empty:
-            upload_data("teams", df_teams)
-        if not df_maps.empty:
-            upload_data("maps", df_maps)
-        if not df_teams_maps.empty:
-            upload_data("teams_maps", df_teams_maps)
-        if not df_players_stats.empty:
-            upload_data("players_stats", df_players_stats)
-        if not df_players.empty:
-            upload_data("players", df_players)
+        for name, df in dataframes.items():
+            if not df.empty:
+                upload_data(name, df)
+            else:
+                update_logger.debug(f"No data to upload for {name}.")
         
-        log_message("functions_scheduler", "[update_new_matches_hub] [END] Updated Benelux Hub matches.", "info")
+        update_logger.info("[END] Finished updating new matches from Benelux Hub.")
              
     except Exception as e:
-        function_logger.error(f"Error updating Benelux Hub matches: {e}")
-        log_message("functions_scheduler", f"[update_new_matches_hub] Error: {e}", "error")
+        update_logger.error(f"Error updating Benelux Hub matches: {e}", exc_info=True)
         return
 
 async def update_leaderboard(elo_cutoff=2000):
     try:
-        log_message("functions_scheduler", "[update_leaderboard] [START] Updating leaderboard players.", "info")
+        update_logger.info("[START] Updating leaderboard players.")
+        
         # Gather the leaderboard data from the API
         df_leaderboard = await get_benelux_leaderboard_players(elo_cutoff=elo_cutoff)
 
@@ -270,33 +285,30 @@ async def update_leaderboard(elo_cutoff=2000):
         
         # Check if the dataframes are valid and not empty
         if df_leaderboard.empty:
-            function_logger.warning("No leaderboard data found. Skipping update.")
+            update_logger.warning("No leaderboard data found. Skipping update.")
             return
         
         ## ----- For the players table -----
         await update_leaderboard_players(df_leaderboard=df_leaderboard, df_players=df_players)
-            
-        # ## ----- For the players_country table -----
-        # await update_leaderboard_players_country(df_leaderboard=df_leaderboard)
-        log_message("functions_scheduler", "[update_leaderboard] [END] Updated leaderboard players.", "info")
+
+        update_logger.info("[END] Finished updating leaderboard players.")
     except Exception as e:
-        function_logger.error(f"Error updating leaderboard: {e}")
-        log_message("functions_scheduler", f"[update_leaderboard] Error: {e}", "error")
+        update_logger.error(f"Error updating leaderboard: {e}", exc_info=True)
         return
 
 async def update_leaderboard_players(df_leaderboard: pd.DataFrame, df_players: pd.DataFrame):
     try:
-        log_message("functions_scheduler", "[update_leaderboard_players] [START] Updating leaderboard players table.", "info")
+        update_logger.info("[START] Updating leaderboard players table.")
         if df_players.empty:
-            function_logger.warning("No players data found. Skipping update.")
-            raise ValueError("Players data is empty or not a DataFrame.")
+            update_logger.warning("No players data found. Skipping update.")
+            return
         
         # Check if there are new players in the leaderboard
         df_new_players = df_leaderboard[~df_leaderboard['player_id'].isin(df_players['player_id'])]
 
         # Gather player data from these new players and the players in df_players
         if df_new_players.empty:
-            function_logger.info("No new players found in the leaderboard for players table.")
+            update_logger.info("No new players found in the leaderboard for players table.")
             player_ids = df_players['player_id'].tolist()
         else:
             player_ids = df_players['player_id'].tolist() + df_new_players['player_id'].tolist()
@@ -306,139 +318,45 @@ async def update_leaderboard_players(df_leaderboard: pd.DataFrame, df_players: p
                 df_players_new = await process_player_details_batch(player_ids, faceit_data_v1)
             
         # Update the players table with the new players
-        function_logger.info(f"Found {len(df_players_new)} players to upload to players table.")
+        # update_logger.debug(f"Found {len(df_players_new)} players to upload to players table.")
         if not df_players_new.empty:
             upload_data('players', df_players_new)
         
-        log_message("functions_scheduler", "[update_leaderboard_players] [END] Updated leaderboard players table.", "info")
+        update_logger.info("[END] Finished updating leaderboard players table.")
     except Exception as e:
-        function_logger.error(f"Error updating players table: {e}")
-        log_message("functions_scheduler", f"[update_leaderboard_players] Error: {e}", "error")
+        update_logger.error(f"Error updating players table: {e}", exc_info=True)
         return
-
-async def update_leaderboard_players_country(df_leaderboard: pd.DataFrame):
-    """ Update the players_country table with new players from the leaderboard """
-    # try:
-    #     df_players_country = gather_players_country()
-            
-    #     if df_players_country.empty:
-    #         function_logger.warning("No players_country data found. Skipping update.")
-    #         raise ValueError("Players_country data is empty or not a DataFrame.")
-        
-    #     df_new_players_country = df_leaderboard[~df_leaderboard['player_id'].isin(df_players_country['player_id'])]
-        
-    #     if df_new_players_country.empty:
-    #         function_logger.info("No new players found in the leaderboard for players_country table.")
-    #         print("No new players found in the leaderboard for players_country table. Skipping update.")
-    #     else:
-    #         # Check benelux for the players in new_players_country
-    #         player_ids = df_new_players_country['player_id'].tolist()
-    #         df_players_country_details = run_async(process_player_country_details(player_ids))
-
-    #         if df_players_country_details.empty:
-    #             function_logger.warning("No player details found for the new players in the leaderboard.")
-    #             raise ValueError("Player details for new players are empty or not a DataFrame.")
-            
-    #         df_predict = predict(df_players_country_details)
-
-    #         if df_predict.empty:
-    #             function_logger.warning("No predictions made for the new players in the leaderboard.")
-    #             raise ValueError("Predictions for new players are empty or not a DataFrame.")
-            
-    #         # For the new players with a '1' prediction, update the players_country tabl        
-    #         df_predict = df_predict.merge(
-    #             df_leaderboard[['player_id', 'player_name']],
-    #             on='player_id',
-    #             how='left'
-    #         )
-            
-    #         df_predict_benelux = df_predict.loc[df_predict['prediction'] == 1].rename(columns={'bnlx_country': 'country'})[['player_id', 'player_name', 'country']]
-    #         df_predict_non_benelux = df_predict.loc[df_predict['prediction'] == 0].rename(columns={'all_country': 'country'})[['player_id', 'player_name', 'country']]
-            
-    #         df_predict_to_upload = pd.concat([df_predict_benelux, df_predict_non_benelux], ignore_index=True)
-            
-    #         if df_predict_to_upload.empty:
-    #             function_logger.warning("No players to upload to players_country table.")
-    #             raise ValueError("No players to upload to players_country table.")
-            
-    #         # Ask user for confirmation before uploading
-    #         confirm = False
-    #         print(f"Found {len(df_predict_to_upload)} new players to upload to players_country table.")
-            
-    #         # Simple regex for 2-letter lowercase country codes
-    #         valid_country_code = re.compile(r"^[a-zA-Z]{2}$")
-            
-    #         while not confirm:
-    #             isSure = input("Do you want to upload these players? (y/n/manual): ").strip().lower()
-    #             if isSure in ['y', 'yes']:
-    #                 print("Uploading new players to players_country table...")
-    #                 confirm = True
-    #             elif isSure in ['n', 'no']:
-    #                 print("Skipping upload of new players to players_country table.")
-    #                 return
-    #             elif isSure in ['manual']:
-                    
-    #                 for idx, row in df_predict_to_upload.iterrows():
-    #                     player_name = row['player_name']
-    #                     current_country = row['country']
-                        
-    #                     print(f"\nPlayer: {player_name} - [{idx}/{len(df_predict_to_upload)}]")
-    #                     print(f"Current Country: {current_country}")
-    #                     print(df_predict.loc[df_predict['player_id'] == row['player_id']][['benelux_sum', 'friend_frac', 'is_benelux_hub', 'InHub']].to_string(index=False))
-    #                     print(f"Faceit profile: https://www.faceit.com/en/players/{player_name}")
-    #                     sys.stdout.flush()  # Forces output
-                        
-    #                     while True:
-    #                         user_input = input("Press 'y' to confirm or type the correct country code: ").strip().lower()
-                            
-    #                         if user_input.lower() == 'y':
-    #                             print("✅ Country confirmed.")
-    #                             break
-    #                         elif valid_country_code.match(user_input):
-    #                             df_predict_to_upload.at[idx, 'country'] = user_input
-    #                             print(f"✅ Updated country to: {user_input}")
-    #                             break
-    #                         else:
-    #                             print("❌ Invalid input. Please enter 'y' or a valid 2-letter country code (e.g., us, de).")
-                    
-    #                 confirm = True
-        
-    #         # Update the players_country table with the new players
-    #         upload_data('players_country', df_predict_to_upload)
-    # except Exception as e:
-    #     function_logger.error(f"Error updating players_country table: {e}")
-    #     raise
 
 async def update_elo_leaderboard():
     """ Update the elo_leaderboard_daily table with daily snapshots """
     try:
-        log_message("functions_scheduler", "[update_elo_leaderboard] [START] Updating elo_leaderboard_daily table.", "info")
+        update_logger.info("[START] Updating elo_leaderboard_daily table.")
+        
         df_elo = gather_elo_snapshot()
         if df_elo.empty:
-            function_logger.warning("No elo snapshot data found. Skipping update.")
-            raise ValueError("Elo snapshot data is empty or not a DataFrame.")
+            update_logger.warning("No elo snapshot data found. Skipping update.")
+            return
         
         today = date.today()
         df_elo['date'] = today
         
         upload_data('elo_leaderboard_daily', df_elo)
         
-        log_message("functions_scheduler", "[update_elo_leaderboard] [END] Updated elo_leaderboard_daily table.", "info")
+        update_logger.info("[END] Finished updating elo_leaderboard_daily table.")
         
     except Exception as e:
-        function_logger.error(f"Error updating elo_leaderboard table: {e}", exc_info=True)
-        log_message("functions_scheduler", f"[update_elo_leaderboard] Error: {e}", "error")
+        update_logger.error(f"Error updating elo_leaderboard table: {e}", exc_info=True)
         return
     
 async def update_new_matches_esea():
     """ Gathers and updates new matches from ESEA events """
     try:
-        log_message("functions_scheduler", "[update_new_matches_esea] [START] Updating new matches from ESEA events.", "info")
+        update_logger.info("[START] Updating new matches from ESEA.")
         
         df_event_teams = gather_event_teams(ONGOING=True, ESEA=True)
         
         if df_event_teams.empty:
-            function_logger.warning("No teams found for ongoing ESEA events.")
+            update_logger.warning("No teams found for ongoing ESEA events.")
             return
         
         event_ids = df_event_teams['event_id'].tolist()
@@ -446,12 +364,12 @@ async def update_new_matches_esea():
         
         if not isinstance(event_ids, list):
             if event_ids is None:
-                function_logger.warning("No event IDs found for ongoing ESEA events.")
+                update_logger.warning("No event IDs found for ongoing ESEA events.")
                 return
             event_ids = [event_ids]
         if not isinstance(team_ids, list):
             if team_ids is None:
-                function_logger.warning("No team IDs found for ongoing ESEA events.")
+                update_logger.warning("No team IDs found for ongoing ESEA events.")
                 return
             team_ids = [team_ids]
         
@@ -467,7 +385,7 @@ async def update_new_matches_esea():
                 ) # Get the match ids from the teams
                 
                 if df_esea_matches.empty:
-                    function_logger.info("No matches found for ongoing ESEA events.")
+                    update_logger.info("No matches found for ongoing ESEA events.")
                     return
                 
                 # Create dataframe with match_id and event_id for unique match_ids
@@ -481,7 +399,7 @@ async def update_new_matches_esea():
                 event_ids = df_matches_events['event_id'].to_list()
 
                 if not match_ids or not event_ids:
-                    function_logger.info("No new matches found for ESEA events.")
+                    update_logger.info("No new matches found for ESEA events.")
                     return
                 
                 ## Processing matches in esea
@@ -498,59 +416,58 @@ async def update_new_matches_esea():
                     how='left'
                 )
                
-        if not df_matches.empty:
-            upload_data("matches", df_matches)
-        if not df_teams_matches.empty:     
-            upload_data("teams_matches", df_teams_matches)
-        if not df_teams.empty:
-            upload_data("teams", df_teams)
-        if not df_maps.empty:
-            upload_data("maps", df_maps)
-        if not df_teams_maps.empty:
-            upload_data("teams_maps", df_teams_maps)
-        if not df_players_stats.empty:
-            upload_data("players_stats", df_players_stats)
-        if not df_players.empty:
-            upload_data("players", df_players)
+        dataframes = {
+            "matches": df_matches,
+            "teams_matches": df_teams_matches,
+            "teams": df_teams,
+            "maps": df_maps,
+            "teams_maps": df_teams_maps,
+            "players_stats": df_players_stats,
+            "players": df_players,
+        }
+        
+        for name, df in dataframes.items():
+            if not df.empty:
+                upload_data(name, df)
+            else:
+                update_logger.debug(f"No data to upload for {name}.")
             
-        log_message("functions_scheduler", "[update_new_matches_esea] [END] Updated ESEA matches.", "info")
+        update_logger.info("[END] Finished updating new matches from ESEA.")
         
     except Exception as e:
-        function_logger.error(f"Error updating ESEA matches: {e}")
-        log_message("functions_scheduler", f"[update_new_matches_esea] Error: {e}", "error")
+        update_logger.error(f"Error updating ESEA matches: {e}", exc_info=True)
         return
 
 # === Daily update interval ===
 async def update_league_teams():
     try:
-        log_message("functions_scheduler", "[update_league_teams] [START] Updating league_teams table.", "info")
+        update_logger.info("[START] Updating league_teams table.")
         
         # Gather the league teams data from the API
         df_teams, team_names_updated = gather_league_teams_merged()
             
         if isinstance(team_names_updated, list) and team_names_updated:
-            function_logger.info(f"Found {len(team_names_updated)} teams with updated names.")
-            function_logger.info(team_names_updated)
+            update_logger.info(f"Found {len(team_names_updated)} teams with updated names.")
+            update_logger.info(team_names_updated)
         else:
-            function_logger.info("No teams found for the league_teams update.")
+            update_logger.info("No teams found for the league_teams update.")
             
         if isinstance(df_teams, pd.DataFrame) and not df_teams.empty:
             upload_data("league_teams", df_teams, clear=False)
         else:
-            function_logger.info("No teams found for the league_teams update.")
+            update_logger.info("No teams found for the league_teams update.")
             return
         
-        log_message("functions_scheduler", "[update_league_teams] [END] Updated league_teams table.", "info")
+        update_logger.info("[END] Finished updating league_teams table.")
         
         
     except Exception as e:
-        function_logger.error(f"Error updating league_teams table: {e}")
-        log_message("functions_scheduler", f"[update_league_teams] Error: {e}", "error")
+        update_logger.error(f"Error updating league_teams table: {e}", exc_info=True)
         return
 
 async def update_team_avatars():
     try:
-        log_message("functions_scheduler", "[update_team_avatars] [START] Updating team avatars.", "info")
+        update_logger.info("[START] Updating team avatars.")
         
         df_avatars = gather_league_team_avatars()
         
@@ -584,26 +501,24 @@ async def update_team_avatars():
                 })
             
             except Exception as e:
-                function_logger.error(f"Error downloading or processing avatar for team {team_id}: {e}")
+                update_logger.error(f"Error downloading or processing avatar for team {team_id}: {e}")
                 continue
         
         if data:
             df_team_leagues = pd.DataFrame(data)
-            
             upload_data("league_teams", df_team_leagues)
         
-        log_message("functions_scheduler", "[update_team_avatars] [END] Updated team avatars.", "info")
+        update_logger.info("[END] Finished updating team avatars.")
         
         return  
 
     except Exception as e:
-        function_logger.error(f"Error updating team avatars: {e}")
-        log_message("functions_scheduler", f"[update_team_avatars] Error: {e}", "error")
+        update_logger.error(f"Error updating team avatars: {e}", exc_info=True)
         return
 
 def save_avatar(team_id, season_number, avatar_bytes, project_root, master=False):
     try:
-        log_message("functions_scheduler", f"[save_avatar] Saving avatar for {team_id}_{season_number}, master={master}", "info")
+        update_logger.debug(f"Saving avatar for {team_id}_{season_number}, master={master}")
         
         if master:
             save_folder = Path(project_root) / "BeneluxWebb" / "static" / "img" / "avatars_master"
@@ -630,18 +545,15 @@ def save_avatar(team_id, season_number, avatar_bytes, project_root, master=False
             image = Image.open(io.BytesIO(avatar_bytes)).convert("RGBA")
             image.save(file_path, "WEBP", quality=80, method=6)
             return_print = f"Saved {team_id}_{season_number}"
-
-        log_message("functions_scheduler", f"[save_avatar] Saved avatar for {team_id}_{season_number}", "info")
         
         return return_print
         
     except Exception as e:
-        function_logger.error(f"Error saving avatar for {team_id}_{season_number}: {e}")
-        log_message("functions_scheduler", f"[save_avatar] Error saving avatar for {team_id}_{season_number}: {e}", "error")
+        update_logger.error(f"Error saving avatar for {team_id}_{season_number}: {e}", exc_info=True)
         return
 
 async def update_local_team_avatars():
-    log_message("functions_scheduler", "[update_local_team_avatars] [START] Updating local team avatars.", "info")
+    update_logger.info("[START] Updating local team avatars.")
     
     df = gather_league_teams()
 
@@ -658,14 +570,15 @@ async def update_local_team_avatars():
                 project_root = parent
                 break
         else:
-            raise RuntimeError("Cannot determine project root (BeneluxCS)")
+            update_logger.critical("Cannot determine project root (BeneluxCS).")
+            return
 
     tasks = []
     with ThreadPoolExecutor(max_workers=8) as executor:
         for _, row in df.iterrows():
             avatar_data = row["avatar"]
             if not avatar_data:
-                function_logger.info(f"No avatar for {row['team_id']}, season {row['season_number']}")
+                update_logger.debug(f"No avatar for {row['team_id']}, season {row['season_number']}")
                 continue
             
             avatar_bytes = bytes(avatar_data)
@@ -679,14 +592,14 @@ async def update_local_team_avatars():
             ))
 
         for future in as_completed(tasks):
-            function_logger.info(future.result())
+            update_logger.debug(future.result())
     
-    log_message("functions_scheduler", "[update_local_team_avatars] [END] Updated local team avatars.", "info")
+    update_logger.info("[END] Finished updating local team avatars.")
 
    
 # === Weekly update interval ===
 async def update_hub_events():
-    log_message("functions_scheduler", "[update_hub_events] [START] Updating hub events.", "info")
+    update_logger.info("[START] Updating hub events.")
     
     hub_id = "801f7e0c-1064-4dd1-a960-b2f54f8b5193"  # Benelux Hub ID
     try:
@@ -703,15 +616,14 @@ async def update_hub_events():
                     if isinstance(df_events, pd.DataFrame) and not df_events.empty:
                         upload_data("events", df_events)
         
-        log_message("functions_scheduler", "[update_hub_events] [END] Updated hub events.", "info")
+        update_logger.info("[END] Finished updating hub events.")
         
     except Exception as e:
-        function_logger.error(f"Error updating hub events: {e}")
-        log_message("functions_scheduler", f"[update_hub_events] Error: {e}", "error")
+        update_logger.error(f"Error updating hub events: {e}", exc_info=True)
 
 async def update_esea_seasons_events():
     try:
-        log_message("functions_scheduler", "[update_esea_seasons_events] [START] Updating ESEA seasons and events tables.", "info")
+        update_logger.info("[START] Updating ESEA seasons and events tables.")
         
         # Gather the seasons and events data from the API
         async with RequestDispatcher(request_limit=100, interval=10, concurrency=5) as dispatcher:
@@ -732,11 +644,10 @@ async def update_esea_seasons_events():
                 if isinstance(df_events, pd.DataFrame) and not df_events.empty:
                     upload_data("events", df_events) 
         
-        log_message("functions_scheduler", "[update_esea_seasons_events] [END] Updated ESEA seasons and events tables.", "info")
+        update_logger.info("[END] Finished updating ESEA seasons and events tables.")
            
     except Exception as e:
-        function_logger.error(f"Error updating seasons and events tables: {e}")
-        log_message("functions_scheduler", f"[update_esea_seasons_events] Error: {e}", "error")
+        update_logger.error(f"Error updating seasons and events tables: {e}", exc_info=True)
         return
 
 if __name__ == "__main__":
