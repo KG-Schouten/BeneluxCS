@@ -189,6 +189,8 @@ to_do.txt
 
 # Ignore every file in logs folder with .log extension
 logs/*.log
+logs/*.log.*
+logs/*.lock
 
 # Ignore the database file
 BeneluxCS.db
