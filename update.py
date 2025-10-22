@@ -651,7 +651,7 @@ async def update_esea_seasons_events():
         return
 
 # === Streamer updates ===
-def update_twitch_streams_benelux():
+async def update_twitch_streams_benelux():
     from database.db_up import upload_data
     from data_processing.api.twitch import get_twitch_streams_benelux
     from database.db_down_update import link_twitch_streamer_to_faceit
@@ -689,7 +689,7 @@ def update_twitch_streams_benelux():
         update_logger.error(f"Error updating Twitch streams for Benelux streamers: {e}", exc_info=True)
         return
 
-def update_live_streams():
+async def update_live_streams():
     from database.db_up import upload_data
     from database.db_down_update import gather_live_streams
     from data_processing.api.twitch import get_twitch_stream_info
@@ -728,7 +728,7 @@ def update_live_streams():
         update_logger.error(f"Error updating live streams: {e}", exc_info=True)
         return
 
-def update_eventsub_subscriptions():
+async def update_eventsub_subscriptions():
     from data_processing.api.twitch import get_twitch_eventSub_subscriptions, twitch_eventsub_subscribe, twitch_eventsub_unsubscribe
     from database.db_down_update import gather_streamers
     
