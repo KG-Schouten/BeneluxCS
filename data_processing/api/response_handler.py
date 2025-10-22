@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data_processing.faceit_api.sliding_window import RateLimitException
+from data_processing.api.sliding_window import RateLimitException
 
 from logs.update_logger import get_logger
 api_logger = get_logger("api")

@@ -5,8 +5,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import aiohttp
 
-from data_processing.faceit_api.response_handler import check_response
-from data_processing.faceit_api.sliding_window import RequestDispatcher
+from data_processing.api.response_handler import check_response
+from data_processing.api.sliding_window import RequestDispatcher
 
 class FaceitData_v1:
     """The Data API for Faceit"""

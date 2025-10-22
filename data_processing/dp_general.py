@@ -8,9 +8,9 @@ import numpy as np
 import re
 
 # API imports
-from data_processing.faceit_api.faceit_v4 import FaceitData
-from data_processing.faceit_api.faceit_v1 import FaceitData_v1
-from data_processing.faceit_api.async_progress import gather_with_progress
+from data_processing.api.faceit_v4 import FaceitData
+from data_processing.api.faceit_v1 import FaceitData_v1
+from data_processing.api.async_progress import gather_with_progress
 
 from logs.update_logger import get_logger
 
