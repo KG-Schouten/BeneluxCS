@@ -2,9 +2,9 @@
 from database.db_down import gather_players
 from database.db_down_update import gather_upcoming_matches, gather_event_players, gather_event_teams, gather_event_matches, gather_internal_event_ids, gather_elo_snapshot, gather_league_teams_merged, gather_league_team_avatars, gather_league_teams, gather_ongoing_matches
 from database.db_up import upload_data
-from data_processing.faceit_api.sliding_window import RequestDispatcher
-from data_processing.faceit_api.faceit_v4 import FaceitData
-from data_processing.faceit_api.faceit_v1 import FaceitData_v1
+from data_processing.api.sliding_window import RequestDispatcher
+from data_processing.api.faceit_v4 import FaceitData
+from data_processing.api.faceit_v1 import FaceitData_v1
 from data_processing.dp_general import process_matches, process_team_details_batch, process_player_details_batch, gather_event_details
 from data_processing.dp_events import process_teams_benelux_esea, gather_esea_matches, gather_hub_matches, process_esea_season_data, modify_keys
 from data_processing.dp_benelux import get_benelux_leaderboard_players
@@ -649,6 +649,128 @@ async def update_esea_seasons_events():
     except Exception as e:
         update_logger.error(f"Error updating seasons and events tables: {e}", exc_info=True)
         return
+
+# === Streamer updates ===
+def update_twitch_streams_benelux():
+    from database.db_up import upload_data
+    from data_processing.api.twitch import get_twitch_streams_benelux
+    from database.db_down_update import link_twitch_streamer_to_faceit
+    
+    update_logger.info("[START] Updating Twitch streams for Benelux streamers.")
+    
+    streams = get_twitch_streams_benelux()
+    
+    try:
+        if streams:
+            streamers = []
+            for stream in streams:
+                user_name = stream.get('user_login')
+                player_id = link_twitch_streamer_to_faceit(user_name)
+                
+                streamers.append(
+                    {
+                        'user_id': stream.get('user_id'),
+                        'user_name': stream.get('user_login'),
+                        'platform': 'twitch',
+                        'live': True,
+                        'viewer_count': stream.get('viewer_count'),
+                        'game': stream.get('game_name'),
+                        'player_id': player_id
+                    }
+                )
+            
+            if streamers:
+                df_streamers = pd.DataFrame(streamers)
+                upload_data('streams', df_streamers)
+        
+        update_logger.info(f"[END] Updated Twitch streams for Benelux streamers. Found {len(streams)} streamers.")
+        
+    except Exception as e:
+        update_logger.error(f"Error updating Twitch streams for Benelux streamers: {e}", exc_info=True)
+        return
+
+def update_live_streams():
+    from database.db_up import upload_data
+    from database.db_down_update import gather_live_streams
+    from data_processing.api.twitch import get_twitch_stream_info
+    
+    stream_ids = gather_live_streams()
+    
+    if not stream_ids:
+        return
+    
+    update_logger.info(f"[START] Updating live streams: Found {len(stream_ids)} streamers to check.")
+    
+    info = get_twitch_stream_info(streamer_ids=stream_ids)
+    
+    try:
+        if info:
+            streamers = []
+            for stream in info:
+                streamers.append(
+                    {
+                        'user_id': stream.get('user_id'),
+                        'user_name': stream.get('user_login'),
+                        'platform': 'twitch',
+                        'live': True,
+                        'viewer_count': stream.get('viewer_count'),
+                        'game': stream.get('game_name'),
+                    }
+                )
+            
+            if streamers:
+                df_streamers = pd.DataFrame(streamers)
+                upload_data('streams', df_streamers)
+    
+        update_logger.info(f"[END] Updated live streams: Processed {len(stream_ids)} streamers.")
+        
+    except Exception as e:
+        update_logger.error(f"Error updating live streams: {e}", exc_info=True)
+        return
+
+def update_eventsub_subscriptions():
+    from data_processing.api.twitch import get_twitch_eventSub_subscriptions, twitch_eventsub_subscribe, twitch_eventsub_unsubscribe
+    from database.db_down_update import gather_streamers
+    
+    update_logger.info("[START] Updating Twitch EventSub subscriptions.")
+    
+    try:
+        # Get existing subscriptions
+        existing_subscriptions = get_twitch_eventSub_subscriptions()
+        subscription_ids = [
+            {
+                'user_id': sub['condition']['broadcaster_user_id'],
+                'subscription_id': sub['id']
+            }
+            for sub in existing_subscriptions
+        ]
+        subscribed_streamer_ids_set = set([sub['condition']['broadcaster_user_id'] for sub in existing_subscriptions])
+        
+        # Get streamers from database
+        df_streamers = gather_streamers(platforms=['twitch'])
+        db_streamer_ids = df_streamers['user_id'].tolist()
+        streamer_ids_set = set(db_streamer_ids)
+        
+        # Get lists of new and removed streamer IDs
+        new_streamer_ids = list(streamer_ids_set - subscribed_streamer_ids_set)
+        removed_streamer_ids = list(subscribed_streamer_ids_set - streamer_ids_set)
+        removed_subscriptions = [sub['subscription_id'] for sub in subscription_ids if sub['user_id'] in removed_streamer_ids]
+        
+        # Subscribe to new streamers
+        update_logger.debug(f"New streamer IDs to subscribe: {new_streamer_ids}")
+        if new_streamer_ids:
+            twitch_eventsub_subscribe(streamer_ids=new_streamer_ids)
+        
+        # Unsubscribe from removed streamers
+        update_logger.debug(f"Subscription IDs to unsubscribe: {removed_subscriptions}")
+        if removed_subscriptions:
+            twitch_eventsub_unsubscribe(subscription_ids=removed_subscriptions)
+    
+        update_logger.info("[END] Updated Twitch EventSub subscriptions.")
+        
+    except Exception as e:
+        update_logger.error(f"An error occurred while updating EventSub subscriptions: {e}", exc_info=True)
+       
 
 if __name__ == "__main__":
     pass
