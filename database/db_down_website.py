@@ -100,7 +100,39 @@ def bytes_to_data_url(b: bytes, mime="image/png") -> str:
         return None
     encoded = base64.b64encode(b).decode("utf-8")
     return f"data:{mime};base64,{encoded}"
-            
+
+def gather_current_streams() -> list:
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT
+                user_name,
+                platform,
+                viewer_count
+            FROM streams
+            WHERE live = TRUE AND game = 'Counter-Strike'
+        """
+        cursor.execute(query)
+        res = cursor.fetchall()
+        current_streams = [
+            {
+                'user_name': row[0],
+                'platform': row[1],
+                'viewer_count': row[2]
+            }
+            for row in res
+        ]
+        
+        return current_streams
+        
+    except Exception as e:
+        function_logger.error(f"Error gathering current streams: {e}")
+        return []
+    
+    finally:
+        close_database(db)
+    
+    
 # =============================
 #           ESEA Page
 # =============================
@@ -509,17 +541,22 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     continue
                  
                 for team_id, group_team in group_division.groupby('team_id'):
+                    if not isinstance(group_team, pd.DataFrame) or group_team.empty:
+                        function_logger.warning(f"No data found for team {team_id} in division {division_name}, season {season_number}.")
+                        continue
+                    
                     team_name = group_team['team_name'].iloc[0]
                     nickname = group_team['nickname'].iloc[0]
                     # team_avatar = bytes_to_data_url(group_team['team_avatar'].iloc[0]) if group_team['team_avatar'].iloc[0] else None
                     region_name = group_team['region_name'].iloc[0]
                     
+                    
                     stages = [
                         {
                             'stage_name': stage,
-                            'placement': json.loads(group_team.loc[group_team['stage_name'] == stage, 'placement'].iloc[0]),
-                            'wins': group_team.loc[group_team['stage_name'] == stage, 'wins'].iloc[0],
-                            'losses': group_team.loc[group_team['stage_name'] == stage, 'losses'].iloc[0]
+                            'placement': json.loads(group_team.loc[group_team['stage_name'] == stage, 'placement'].iloc[0]), # type: ignore
+                            'wins': group_team.loc[group_team['stage_name'] == stage, 'wins'].iloc[0], # type: ignore
+                            'losses': group_team.loc[group_team['stage_name'] == stage, 'losses'].iloc[0] # type: ignore
                         }
                         for stage in group_team['stage_name'].unique().tolist()
                     ]
