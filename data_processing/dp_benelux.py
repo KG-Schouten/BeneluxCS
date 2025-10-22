@@ -12,11 +12,11 @@ import math
 import pycountry
 
 # API imports
-from data_processing.faceit_api.faceit_v4 import FaceitData
-from data_processing.faceit_api.faceit_v1 import FaceitData_v1
-from data_processing.faceit_api.steam import SteamData
-from data_processing.faceit_api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
-from data_processing.faceit_api.async_progress import gather_with_progress
+from data_processing.api.faceit_v4 import FaceitData
+from data_processing.api.faceit_v1 import FaceitData_v1
+from data_processing.api.steam import SteamData
+from data_processing.api.sliding_window import RequestDispatcher, request_limit, interval, concurrency
+from data_processing.api.async_progress import gather_with_progress
 
 from logs.update_logger import get_logger
 
