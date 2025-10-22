@@ -20,7 +20,10 @@ from update import (
     update_team_avatars,
     update_local_team_avatars,
     update_hub_events,
-    update_esea_seasons_events
+    update_esea_seasons_events,
+    update_twitch_streams_benelux,
+    update_live_streams,
+    update_eventsub_subscriptions
 )
 
 from logs.update_logger import get_logger
@@ -96,14 +99,18 @@ def init_scheduler(app):
             CronTrigger(minute="*")
         )
         
-        # --- Every 20 minutes ---
+        # --- Every 5 minutes ---
         scheduler.add_job(
-            run_async_job(update_upcoming_matches),
-            CronTrigger(minute="*/20")
+            run_async_job(update_live_streams),
+            CronTrigger(minute="*/5")
         )
         scheduler.add_job(
-            run_async_job(update_esea_teams_benelux),
-            CronTrigger(minute="*/20")
+            run_async_job(update_twitch_streams_benelux),
+            CronTrigger(minute="*/5")
+        )
+        scheduler.add_job(
+            run_async_job(update_eventsub_subscriptions),
+            CronTrigger(minute="*/5")
         )
         
         # --- Hourly ---
@@ -121,6 +128,14 @@ def init_scheduler(app):
         )
         scheduler.add_job(
             run_async_job(update_new_matches_esea),
+            CronTrigger(minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_upcoming_matches),
+            CronTrigger(minute=0)
+        )
+        scheduler.add_job(
+            run_async_job(update_esea_teams_benelux),
             CronTrigger(minute=0)
         )
 
