@@ -68,7 +68,44 @@ async def update_matches(match_ids: list, event_ids: list):
             update_logger.debug(f"No data to upload for {name}.")
     
     update_logger.info(f"[END] Updated matches: {len(match_ids)} matches processed.")
+
+async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
+    from data_processing.api.twitch import get_twitch_streamer_info, get_twitch_stream_info
     
+    update_logger.info("[START] Updating streamer information.")
+    
+    info_streamer = get_twitch_streamer_info(streamer_ids=streamer_ids, streamer_names=streamer_names)
+    info_streams = get_twitch_stream_info(streamer_ids=streamer_ids, streamer_names=streamer_names)
+    
+    streamers = []
+    try:
+        if info_streamer:
+            for streamer in info_streamer:
+                live = any(stream['user_id'] == streamer.get('id') for stream in info_streams) if info_streams else False
+                viewer_count = next((stream['viewer_count'] for stream in info_streams if stream['user_id'] == streamer.get('id')), 0) if info_streams else 0
+                game = next((stream['game_name'] for stream in info_streams if stream['user_id'] == streamer.get('id')), '') if info_streams else ''
+
+                streamers.append(
+                    {
+                        'user_id': streamer.get('id'),
+                        'user_name': streamer.get('display_name'),
+                        'user_login': streamer.get('login'),
+                        'platform': 'twitch',
+                        'live': live,
+                        'viewer_count': viewer_count,
+                        'game': game,
+                    }
+                )
+    except Exception as e:
+        update_logger.error(f"An error occurred while processing streamer data: {e}", exc_info=True)
+        
+    if streamers:
+        df_streamers = pd.DataFrame(streamers)
+        upload_data('streams', df_streamers)
+        update_logger.info(f"[END] Updated streamer information for {len(df_streamers)} streamers.")
+    else:
+        update_logger.info("No streamer data to update.")
+
 # === Minute update interval ===
 async def update_ongoing_matches():
     try:
@@ -670,7 +707,8 @@ async def update_twitch_streams_benelux():
                 streamers.append(
                     {
                         'user_id': stream.get('user_id'),
-                        'user_name': stream.get('user_login'),
+                        'user_name': stream.get('user_name'),
+                        'user_login': stream.get('user_login'),
                         'platform': 'twitch',
                         'live': True,
                         'viewer_count': stream.get('viewer_count'),
@@ -710,7 +748,8 @@ async def update_live_streams():
                 streamers.append(
                     {
                         'user_id': stream.get('user_id'),
-                        'user_name': stream.get('user_login'),
+                        'user_name': stream.get('user_name'),
+                        'user_login': stream.get('user_login'),
                         'platform': 'twitch',
                         'live': True,
                         'viewer_count': stream.get('viewer_count'),
