@@ -107,8 +107,10 @@ def gather_current_streams() -> list:
         query = """
             SELECT
                 user_name,
+                user_login,
                 platform,
-                viewer_count
+                viewer_count,
+                streamer_type
             FROM streams
             WHERE live = TRUE AND game = 'Counter-Strike'
             ORDER BY viewer_count DESC
@@ -116,14 +118,8 @@ def gather_current_streams() -> list:
         
         cursor.execute(query)
         res = cursor.fetchall()
-        current_streams = [
-            {
-                'user_name': row[0],
-                'platform': row[1],
-                'viewer_count': row[2]
-            }
-            for row in res
-        ]
+        cols = [desc[0] for desc in cursor.description]
+        current_streams = [dict(zip(cols, row)) for row in res]
         
         return current_streams
         
