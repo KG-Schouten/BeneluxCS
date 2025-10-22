@@ -59,7 +59,7 @@ def faceit_webhook():
     
     # Trigger placeholder job
     if isinstance(payload, dict):
-        if payload.get('region') != 'EU':
+        if payload.get('payload', {}).get('region', '') != 'EU':
             webhook_logger.debug("Non-EU region payload received, skipping.")
             return jsonify({"status": "Non-EU region"}), 200
         
