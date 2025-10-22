@@ -404,3 +404,89 @@ def gather_teams_benelux_primary():
         return pd.DataFrame()
     finally:
         close_database(db)
+        
+# =============================
+#       Streamer updates
+# =============================
+def gather_streamers(streamer_ids: list = [], streamer_names: list = [], platforms: list = []) -> pd.DataFrame:
+    from database.db_manage import start_database, close_database
+    
+    db, cursor = start_database()
+    try:
+        conditions = []
+        params = []
+        
+        if streamer_ids:
+            placeholders = ', '.join(['%s'] * len(streamer_ids))
+            conditions.append(f"user_id IN ({placeholders})")
+            params.extend(streamer_ids)
+        if streamer_names:
+            placeholders = ', '.join(['%s'] * len(streamer_names))
+            conditions.append(f"user_name IN ({placeholders})")
+            params.extend(streamer_names)
+        if platforms:
+            placeholders = ', '.join(['%s'] * len(platforms))
+            conditions.append(f"platform IN ({placeholders})")
+            params.extend(platforms)
+        
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        
+        query = f"""
+            SELECT user_id, user_name, platform
+            FROM streams
+            {where_clause}
+        """
+        cursor.execute(query, params)
+        res = cursor.fetchall()
+        
+        df_streamers = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
+        
+        return df_streamers
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return pd.DataFrame()
+    
+    finally:
+        close_database(db)
+
+def link_twitch_streamer_to_faceit(streamer_name: str):
+    from database.db_manage import start_database, close_database
+    
+    db, cursor = start_database()
+    try:
+        query = """
+            SELECT p.player_id
+            FROM players p
+            WHERE LOWER(p.player_name) = LOWER(%s)
+        """
+        cursor.execute(query, (streamer_name,))
+        res = cursor.fetchone()
+        
+        if res:
+            return res[0]
+        else:
+            return None
+        
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+    
+    finally:
+        close_database(db)
+
+def gather_live_streams() -> list:
+    from database.db_manage import start_database, close_database
+    
+    db, cursor = start_database()
+    try:
+        query = "SELECT user_id FROM streams WHERE live = TRUE AND platform = 'twitch' AND game = 'Counter-Strike';"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        live_streamer_ids = [row[0] for row in result]
+        return live_streamer_ids
+    except Exception as e:
+        print(f"An error occurred while gathering live streams: {e}")
+        return []
+    finally:
+        close_database(db)
