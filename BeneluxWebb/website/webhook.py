@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from flask import Blueprint, request, jsonify, abort, Response
 from .scheduler import run_async_job
 from logs.update_logger import get_logger
-from update import update_matches, update_esea_teams_benelux
+from update import update_matches, update_esea_teams_benelux, update_streamers
 from database.db_down_update import gather_teams_benelux_primary
 
 webhook_logger = get_logger("webhook")
@@ -147,6 +147,12 @@ def twitch_webhook():
         subscription_type = data["subscription"]["type"]
         event_data = data["event"]
         webhook_logger.info(f"Received Twitch notification for event type: {subscription_type} - data: {event_data}")
+        
+        if subscription_type.isin("stream.online", "stream.offline"):
+            # Handle stream online event
+            webhook_logger.info(f"Processing stream status change for user ID: {event_data.get('broadcaster_user_id')}")
+            user_id = event_data.get("broadcaster_user_id")
+            start_background_job(update_streamers, [user_id])   
 
         # Respond quickly so Twitch doesn’t time out
         return "", 204
