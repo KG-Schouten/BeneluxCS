@@ -1,23 +1,31 @@
-<div id="playerOfTheWeek" class="potw-carousel carousel slide" style="height: 150px;">
+<div id="playerOfTheWeek" class="potw-carousel carousel slide">
+    <div class="potw-inner carousel-inner">
+    {% for stat in top_stats %}
+        <div class="potw-item carousel-item {% if loop.first %}active{% endif %}">
+            <!-- <img src="{{ url_for('static', filename='img/esea/PlayerOfTheWeek.webp') }}" class="d-block w-100" alt="Player of the Week"/> -->
+            <div class="potw-top">
+                <!-- <img src="{{ stat.player['avatar'] }}"
+                    class="potw-avatar"
+                    alt="Player of the Week"
+                    data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
+                    onerror="this.onerror=null;this.src=this.dataset.placeholder;"/> -->
+                <img src="{{ url_for('static', filename='img/flags/' ~ stat.player['country']|lower ~ '.png') }}"
+                    alt="{{ stat.player['country']|lower }}" style="height:20px;">
+                
+                <span class="potw-player-name">{{ stat.player['player_name']}}</span>
+            </div>
+            <div class="potw-bottom">
+                <span class="potw-desc">{{ stat.description }}</span>
+                <span class="potw-stat-value">{{ stat.value}}</span>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+
     <div class="potw-indicators carousel-indicators">
         {% for stat in top_stats %}
         <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="{{ loop.index0 }}" class="{% if loop.first %}active{% endif %}" aria-current="{% if loop.first %}true{% else %}false{% endif %}" aria-label="Slide {{ loop.index }}"></button>
         {% endfor %}
     </div>
 
-    <div class="potw-inner carousel-inner">
-    {% for stat in top_stats %}
-        <div class="potw-item carousel-item {% if loop.first %}active{% endif %}">
-        <!-- <img src="{{ url_for('static', filename='img/esea/PlayerOfTheWeek.webp') }}" class="d-block w-100" alt="Player of the Week"/> -->
-        <img src="{{ stat.player['avatar'] }}"
-            class="potw-avatar"
-            alt="Player of the Week"
-            data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
-            onerror="this.onerror=null;this.src=this.dataset.placeholder;"/>
-        <span class="potw-desc">{{ stat.description }}</span>
-        <span class="potw-player-name">{{ stat.player['player_name']}}</span>
-        <span class="potw-stat-value">{{ stat.value}}</span>
-        </div>
-    {% endfor %}
-    </div>
 </div>
