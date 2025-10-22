@@ -4,7 +4,10 @@
             <a href="https://twitch.tv/{{ stream['user_name'] }}" target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-twitch"></i>
                 <span class="streamer-name"> {{ stream['user_name'] }}</span>
-                <span class="stream-viewers"> {{ stream['viewer_count'] }}</span>
+                <div class="stream-viewers">
+                    <i class="bi bi-eye-fill"></i>
+                    <span class="stream-viewers-val"> {{ stream['viewer_count'] }}</span>
+                </div>
             </a>
         </div>
     {% endfor %}

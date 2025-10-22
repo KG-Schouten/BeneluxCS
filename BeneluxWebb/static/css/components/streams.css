@@ -1,0 +1,33 @@
+.current-streams {
+  width: 100%;
+}
+
+.stream-item {
+  padding: 8px;
+  font-size: 0.9em;
+}
+
+.stream-item a {
+  display: inline-grid;
+  width: 100%;
+  grid-template-columns: min-content 1fr min-content;
+  vertical-align: middle;
+}
+
+.stream-item .bi.bi-twitch {
+  color: #9146ff;
+}
+
+.streamer-name {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin-inline: 5px;
+}
+
+.stream-viewers {
+  white-space: nowrap;
+}
+.stream-viewers .bi.bi-eye-fill {
+  color: var(--accent);
+}

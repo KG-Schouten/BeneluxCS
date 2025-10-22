@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_sidebar.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_potw.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/streams.css') }}">
 {% endblock %}
 
 {% block title %}{{ super() }} | ESEA{% endblock %}
@@ -42,10 +43,10 @@
 
     <div class="sidebar-content">
       <div class="sidebar-header">
-        <span> Current Streams </span>
+        <span> Streams </span>
       </div>
       <div class="sidebar-body">
-        {% include 'macros/streams_sidebar.html' %}
+        {% include 'macros/streams.html' %}
       </div>
     </div>
   </div>
