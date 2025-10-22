@@ -38,7 +38,7 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 # ------------------
 # Redis lock
 # ------------------
-redis_client = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0)
+redis_client = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 
 @contextmanager
 def redis_lock(lock_name, timeout=60, wait=True):
