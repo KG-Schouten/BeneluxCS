@@ -31,13 +31,15 @@ def create_app():
     app.register_blueprint(views, url_prefix='/')
     
     # Initialize scheduler only if not in debug mode or in the main process
-    if app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        scheduler_logger.info(f"Initializing scheduler in PID {os.getpid()}")
-        init_scheduler(app)
+    if os.environ.get("FLASK_ENV", "") != "development": 
+        if app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+            scheduler_logger.info(f"Initializing scheduler in PID {os.getpid()}")
+            init_scheduler(app)
+        else:
+            scheduler_logger.info(f"Skipping scheduler init in reloader PID {os.getpid()}")
     else:
-        scheduler_logger.info(f"Skipping scheduler init in reloader PID {os.getpid()}")
+        scheduler_logger.info(f"Not initializing scheduler in dev mode {os.getpid()}")
 
-        
     # Register webhook blueprint
     app.register_blueprint(webhook_bp)
 
