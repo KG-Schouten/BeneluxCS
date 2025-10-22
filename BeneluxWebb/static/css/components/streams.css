@@ -3,15 +3,34 @@
 }
 
 .stream-item {
-  padding: 8px;
   font-size: 0.9em;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.stream-item:hover {
+  background-color: var(--secondary-light1);
+}
+.stream-item + .stream-item {
+  border-top: 1px solid var(--border);
 }
 
-.stream-item a {
+.stream-header {
   display: inline-grid;
   width: 100%;
   grid-template-columns: min-content 1fr min-content;
   vertical-align: middle;
+  padding: 6px 8px;
+}
+
+.stream-link {
+  color: inherit;
+  text-decoration: none;
+}
+.stream-link:hover > .bi.bi-twitch {
+  color: var(--accent);
+}
+.stream-link:hover > .stream-item {
+  background-color: none !important;
 }
 
 .stream-item .bi.bi-twitch {

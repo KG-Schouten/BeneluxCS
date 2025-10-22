@@ -1,14 +1,46 @@
 <div id="currentStreams" class="current-streams">
     {% for stream in streams_info %}
-        <div class="stream-item">
-            <a href="https://twitch.tv/{{ stream['user_name'] }}" target="_blank" rel="noopener noreferrer">
-                <i class="bi bi-twitch"></i>
-                <span class="streamer-name"> {{ stream['user_name'] }}</span>
+        <div class="stream-item" data-user="{{ stream['user_name'] }}" data-userid="{{ stream['user_id'] }}">
+            <div class="stream-header">
+                <a href="https://twitch.tv/{{ stream['user_name'] }}" target="_blank" class="stream-link">
+                    <i class="bi bi-twitch"></i>
+                </a>
+                <span class="streamer-name">{{ stream['user_name'] }}</span>
                 <div class="stream-viewers">
                     <i class="bi bi-eye-fill"></i>
-                    <span class="stream-viewers-val"> {{ stream['viewer_count'] }}</span>
+                    <span class="stream-viewers-val">{{ stream['viewer_count'] }}</span>
                 </div>
-            </a>
+            </div>
+            <div id="twitch-embed-{{ stream['user_id'] }}" class="twitch-embed" style="display:none;"></div>
         </div>
     {% endfor %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const streamItems = document.querySelectorAll('.stream-item');
+    const activeEmbeds = {};
+
+    streamItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const userName = this.dataset.user;
+            const userId = this.dataset.userid;
+            const embedDiv = document.getElementById(`twitch-embed-${userId}`);
+
+            // Toggle visibility
+            const isVisible = embedDiv.style.display === 'block';
+            embedDiv.style.display = isVisible ? 'none' : 'block';
+
+            // Only create embed once
+            if (!activeEmbeds[userId]) {
+                activeEmbeds[userId] = new Twitch.Embed(`twitch-embed-${userId}`, {
+                    width: '100%',
+                    channel: userName,
+                    parent: [window.location.hostname],
+                    layout: 'video'
+                });
+            }
+        });
+    });
+});
+</script>
