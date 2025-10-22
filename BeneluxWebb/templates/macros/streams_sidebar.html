@@ -1,0 +1,11 @@
+<div id="currentStreams" class="current-streams">
+    {% for stream in streams_info %}
+        <div class="stream-item">
+            <a href="https://twitch.tv/{{ stream['user_name'] }}" target="_blank" rel="noopener noreferrer">
+                <i class="bi bi-twitch"></i>
+                <span class="streamer-name"> {{ stream['user_name'] }}</span>
+                <span class="stream-viewers"> {{ stream['viewer_count'] }}</span>
+            </a>
+        </div>
+    {% endfor %}
+</div>

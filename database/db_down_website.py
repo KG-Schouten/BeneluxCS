@@ -111,7 +111,9 @@ def gather_current_streams() -> list:
                 viewer_count
             FROM streams
             WHERE live = TRUE AND game = 'Counter-Strike'
+            ORDER BY viewer_count DESC
         """
+        
         cursor.execute(query)
         res = cursor.fetchall()
         current_streams = [
