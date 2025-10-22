@@ -432,7 +432,7 @@ def gather_streamers(streamer_ids: list = [], streamer_names: list = [], platfor
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         
         query = f"""
-            SELECT user_id, user_name, platform
+            SELECT *
             FROM streams
             {where_clause}
         """
