@@ -12,7 +12,7 @@ from typing import cast
 from database.db_down import gather_players_country
 from data_processing.model.model_utils import preprocess_data
 # from data_processing.dp_benelux import process_player_country_details
-from data_processing.faceit_api.async_progress import run_async
+from data_processing.api.async_progress import run_async
 
 def train_and_save_model(model_path: str = 'data_processing/model/model.pkl') -> None:
     """
