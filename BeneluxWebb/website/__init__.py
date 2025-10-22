@@ -4,7 +4,8 @@ import os
 from .scheduler import init_scheduler
 from .webhook import webhook_bp
 from logs.update_logger import get_logger
-
+from dotenv import load_dotenv
+load_dotenv()
 scheduler_logger = get_logger("scheduler")
 
 def create_app():
@@ -16,7 +17,7 @@ def create_app():
         template_folder=os.path.join(base_dir, 'templates')
     )
 
-    app.config['SECRET_KEY'] = 'pqwerutyiryrwqer'
+    app.config['SECRET_KEY'] = os.getenv('APP_SECRET_KEY')
 
     # Register custom Jinja filter
     @app.template_filter("datetimeformat")
