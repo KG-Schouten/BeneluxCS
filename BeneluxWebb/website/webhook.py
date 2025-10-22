@@ -56,11 +56,15 @@ def faceit_webhook():
         except Exception as e:
             webhook_logger.error(f"Invalid JSON payload received: {e}", exc_info=True)
             return jsonify({"error": "Invalid JSON"}), 400
-
-    webhook_logger.debug(f"Payload received: {payload}")
     
     # Trigger placeholder job
     if isinstance(payload, dict):
+        if payload.get('region') != 'EU':
+            webhook_logger.debug("Non-EU region payload received, skipping.")
+            return jsonify({"status": "Non-EU region"}), 200
+        
+        webhook_logger.debug(f"Payload received: {payload}")
+        
         # --- Check if any of the teams are Benelux ---
         payload_data = payload.get('payload') or {}
         teams = payload_data.get('teams', [])
