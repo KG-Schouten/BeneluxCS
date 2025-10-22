@@ -22,6 +22,20 @@ function_logger = get_logger("functions")
 # =============================
 #       General functions
 # =============================
+def safe_load_json(value):
+    # Handle PostgreSQL jsonb format
+    if value is None:
+        return []
+    if isinstance(value, (list, dict)):
+        return value if isinstance(value, list) else []
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, list) else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+    return []
+
 def compute_division_rank(division_name):
     division_order = {"Advanced": 0, "Main": 1, "Intermediate": 2, "Entry": 3}
     if division_name in division_order:
@@ -102,10 +116,21 @@ def bytes_to_data_url(b: bytes, mime="image/png") -> str:
     return f"data:{mime};base64,{encoded}"
 
 def gather_current_streams() -> list:
+    """ Gathers current live streams from the database """
+    load_dotenv()
+    use_fake = os.getenv("USE_FAKE_DATA", "false").lower() == "true"
+    
+    if use_fake:
+        with open("database/fake_data/fake_streamers.json", "r", encoding="utf-8") as f:
+            fake_data = json.load(f)
+            print("Using fake upcoming matches data")
+            return fake_data
+    
     db, cursor = start_database()
     try:
         query = """
             SELECT
+                user_id,
                 user_name,
                 user_login,
                 platform,
@@ -119,7 +144,13 @@ def gather_current_streams() -> list:
         cursor.execute(query)
         res = cursor.fetchall()
         cols = [desc[0] for desc in cursor.description]
-        current_streams = [dict(zip(cols, row)) for row in res]
+        current_streams = [
+            {
+                col: (safe_load_json(val) if col == "streamer_type" else val)
+                for col, val in zip(cols, row)
+            }
+            for row in res
+        ]
         
         return current_streams
         
@@ -129,8 +160,7 @@ def gather_current_streams() -> list:
     
     finally:
         close_database(db)
-    
-    
+        
 # =============================
 #           ESEA Page
 # =============================
@@ -201,20 +231,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
         # Batch load all player data
         all_player_ids = set()
         for _, row in df_teams_benelux.iterrows():
-            def safe_load_json(value):
-                # Handle PostgreSQL jsonb format
-                if value is None:
-                    return []
-                if isinstance(value, (list, dict)):
-                    return value if isinstance(value, list) else []
-                if isinstance(value, str):
-                    try:
-                        parsed = json.loads(value)
-                        return parsed if isinstance(parsed, list) else []
-                    except (json.JSONDecodeError, TypeError):
-                        return []
-                return []
-            
             if pd.notna(row['stage_name']) and 'regular' in str(row['stage_name']).lower():
                 players_main = safe_load_json(row['players_main'])
                 players_sub = safe_load_json(row['players_sub'])
@@ -560,20 +576,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     ]
                     
                     stages.sort(key=lambda x: (1 if 'regular' in x['stage_name'].lower() else 0, x['stage_name']))
-
-                    def safe_load_json(value):
-                        # Handle PostgreSQL jsonb format
-                        if value is None:
-                            return []
-                        if isinstance(value, (list, dict)):
-                            return value if isinstance(value, list) else []
-                        if isinstance(value, str):
-                            try:
-                                parsed = json.loads(value)
-                                return parsed if isinstance(parsed, list) else []
-                            except (json.JSONDecodeError, TypeError):
-                                return []
-                        return []
 
                     # Get all rows in the group as a list of dicts
                     players_main_all = group_team.loc[
@@ -1067,7 +1069,7 @@ def get_esea_player_of_the_week() -> list:
         top_stats = []
         stats_to_check = {
             "hltv": "HLTV Rating",
-            "headshot_percentage": "Headshot %",
+            "headshot_percentage": "Headshots",
             "adr": "ADR",
             "knife_kills": "Knife Kills",
             "penta_kills": "Aces",
@@ -1084,7 +1086,7 @@ def get_esea_player_of_the_week() -> list:
                         {
                             "stat": stat,
                             "description": desc,
-                            "value": value,
+                            "value": f"{int(value)} %" if stat == "headshot_percentage" else value,
                             "player": row.to_dict()
                         }
                     )
