@@ -5,7 +5,7 @@ import os
 import json
 from dotenv import load_dotenv
 from flask import Blueprint, request, jsonify, abort, Response
-from .scheduler import run_async_job
+from .scheduler import run_async_job, redis_client
 from logs.update_logger import get_logger
 from update import update_matches, update_esea_teams_benelux, update_streamers
 from database.db_down_update import gather_teams_benelux_primary
@@ -124,6 +124,21 @@ def verify_twitch_signature(request):
     
     return hmac.compare_digest(computed_hmac, signature)
 
+def is_duplicate_message(message_id):
+    if not message_id:
+        return False
+    
+    key = f"twitch:eventsub:{message_id}"
+    
+    # SETNX = set only if not exists → True means this is the first time
+    was_new = redis_client.setnx(key, 1)
+    
+    if was_new:
+        redis_client.expire(key, 60)  # Expire after 1 minutes
+        return False
+    else:
+        return True
+
 @webhook_bp.route("/webhook/twitch", methods=["POST"])
 def twitch_webhook():
     if not verify_twitch_signature(request):
@@ -133,9 +148,14 @@ def twitch_webhook():
     webhook_logger.debug("Twitch signature verified successfully.")
     
     message_type = request.headers.get(TWITCH_MESSAGE_TYPE, '').lower()
+    message_id = request.headers.get("Twitch-Eventsub-Message-Id")
     data = request.get_json()
     
     webhook_logger.debug(f"Twitch webhook payload: {data}")
+    
+    if is_duplicate_message(message_id):
+        webhook_logger.debug(f"Ignoring duplicate Twitch message: {message_id}")
+        return "", 204
     
     # Handle different message types
     if message_type == MESSAGE_TYPE_VERIFICATION:
@@ -146,9 +166,9 @@ def twitch_webhook():
     elif message_type == MESSAGE_TYPE_NOTIFICATION:
         subscription_type = data["subscription"]["type"]
         event_data = data["event"]
-        webhook_logger.info(f"Received Twitch notification for event type: {subscription_type} - data: {event_data}")
+        webhook_logger.info(f"Received Twitch notification for event type: {subscription_type}")
         
-        if subscription_type.isin(["stream.online", "stream.offline"]):
+        if subscription_type in ("stream.online", "stream.offline"):
             # Handle stream online event
             webhook_logger.info(f"Processing stream status change for user ID: {event_data.get('broadcaster_user_id')}")
             user_id = event_data.get("broadcaster_user_id")
