@@ -135,7 +135,9 @@ def gather_current_streams() -> list:
                 user_login,
                 platform,
                 viewer_count,
-                streamer_type
+                streamer_type,
+                thumbnail_url,
+                stream_title
             FROM streams
             WHERE live = TRUE AND game = 'Counter-Strike'
             ORDER BY viewer_count DESC

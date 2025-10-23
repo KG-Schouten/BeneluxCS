@@ -4,14 +4,37 @@
 }
 
 .potw-indicators.carousel-indicators {
-    position: relative;
-    margin: 0;
-    margin-bottom: 5px;
+  margin: 0;
+  margin-inline: 8px;
+}
+.potw-indicators .potw-indicator-btn {
+    background-color: var(--secondary-light2);
+    opacity: 1 !important;
+}
+.potw-indicators .potw-indicator-btn.active {
+    background-color: var(--accent);
+}
+.potw-indicators .potw-indicator-btn:hover {
+    background-color: var(--accent);
+    transform: scale(1.1);
+}
+
+.potw-inner {
+    height: 115px;
 }
 
 .potw-item {
     padding: 5px;
     width: 100%;
+}
+
+.icon-bg {
+    position: absolute;
+    width: 120px;
+    top: -15px;
+    right: -31px;
+    z-index: 0;
+    filter: invert(14%) sepia(48%) saturate(2223%) hue-rotate(310deg) brightness(91%) contrast(93%);
 }
 
 .potw-top {
@@ -20,6 +43,7 @@
     width: 100%;
     overflow: hidden;
     gap: 5px;
+    position: relative;
 }
 .potw-player-name {
     overflow: hidden;
@@ -45,6 +69,8 @@
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px solid var(--border);
+    position: relative;
+    width: 60%;
 }
 .potw-desc {
     font-weight: bold;
