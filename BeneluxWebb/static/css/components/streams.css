@@ -1,40 +1,46 @@
+/* Sidebar body wrapper */
 .current-streams {
   width: 100%;
 }
 
+/* Stream item general styling */
 .stream-item {
   font-size: 0.9em;
   cursor: pointer;
   transition: background 0.2s ease;
 }
-.stream-item:hover {
-  background-color: var(--secondary-light1);
-}
 .stream-item + .stream-item {
   border-top: 1px solid var(--border);
 }
 
+/* Stream item header */
 .stream-header {
   display: inline-grid;
   width: 100%;
-  grid-template-columns: min-content 1fr min-content;
+  grid-template-columns: 15px 1fr min-content;
   vertical-align: middle;
   padding: 6px 8px;
+  height: 33px;
+  transition: background-color 0.2s ease;
 }
-
+.stream-header:hover {
+  background-color: var(--secondary-light1);
+}
 .stream-link {
   color: inherit;
   text-decoration: none;
 }
 .stream-link:hover > .bi.bi-twitch {
   color: var(--accent);
+  font-size: 1.1em;
 }
-.stream-link:hover > .stream-item {
-  background-color: none !important;
-}
-
 .stream-item .bi.bi-twitch {
   color: #9146ff;
+  transition: all 0.2s ease;
+}
+.twitch-team-icon {
+  width: 15px;
+  border-radius: 3px;
 }
 
 .streamer-name {
@@ -43,10 +49,99 @@
   overflow: hidden;
   margin-inline: 5px;
 }
-
 .stream-viewers {
   white-space: nowrap;
 }
 .stream-viewers .bi.bi-eye-fill {
   color: var(--accent);
+}
+
+/* Twitch embed/thumbnail expandable section */
+.twitch-embed-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  opacity: 0;
+  visibility: hidden;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  height: 0;
+  transition: .2s ease
+}
+.twitch-embed-wrapper.visible {
+  opacity: 1;
+  visibility: visible;
+  height: auto;
+  transition: width 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+}
+.twitch-embed-wrapper.visible.active {
+  width: 400px;
+}
+
+.twitch-embed-wrapper iframe, 
+.twitch-embed-wrapper .twitch-embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--border-radius);
+  box-shadow: 8px 0px 8px rgba(0,0,0,0.1);
+  border: 1px solid var(--border);
+}
+.embed-close-button {
+  position: absolute;
+  right: 0;
+  border: 1px solid var(--border);
+  width: 30px;
+  height: 30px;
+  background-color: var(--secondary-light2);
+  border-radius: 50%;
+  text-align: center;
+  font-size: 1.6em;
+  z-index: 999;
+  top: 0;
+  transform: translate(25%, -25%);
+  transition: background-color 0.2s ease;
+}
+.embed-close-button:hover {
+  background-color: var(--accent);
+}
+.embed-icon {
+  font-size: 1.2rem;
+  vertical-align: text-bottom;
+}
+
+.thumbnail-wrapper {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.thumbnail-wrapper:hover > .thumbnail-icon {
+  visibility: visible;
+}
+.thumbnail-wrapper:hover > .thumbnail-image {
+  filter: brightness(40%);
+}
+
+.thumbnail-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: all 0.4s ease;
+}
+.thumbnail-icon {
+  visibility: hidden;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2em;
+  color: white;
+  z-index: 10;
+}
+.twitch-embed-wrapper.active > .thumbnail-image {
+  opacity: 0.5;
 }

@@ -3,15 +3,28 @@
         <div class="stream-item" data-user="{{ stream['user_name'] }}" data-userid="{{ stream['user_id'] }}">
             <div class="stream-header">
                 <a href="https://twitch.tv/{{ stream['user_name'] }}" target="_blank" class="stream-link">
-                    <i class="bi bi-twitch"></i>
+                    {% if "team" in stream['streamer_type'] %}
+                        <img src="{{ url_for('static', filename='img/esea/esea_logo.png') }}" alt="Team Stream" class="twitch-team-icon"/>
+                    {% else %}
+                        <i class="bi bi-twitch"></i>
+                    {% endif %}
                 </a>
-                <span class="streamer-name">{{ stream['user_name'] }}</span>
+                <span class="streamer-name noselect">{{ stream['user_name'] }}</span>
                 <div class="stream-viewers">
                     <i class="bi bi-eye-fill"></i>
                     <span class="stream-viewers-val">{{ stream['viewer_count'] }}</span>
                 </div>
             </div>
-            <div id="twitch-embed-{{ stream['user_id'] }}" class="twitch-embed" style="display:none;"></div>
+            <div class="twitch-embed-wrapper">
+                <div id="twitch-embed-{{ stream['user_id'] }}" class="twitch-embed"></div>
+                
+                <div class="thumbnail-wrapper">
+                    <img src="{{ stream['thumbnail_url'].replace('{width}', '320').replace('{height}', '180') }}"
+                        class="thumbnail-image" 
+                        alt="Stream thumbnail for {{ stream['user_name'] }}">
+                    <i class="thumbnail-icon bi bi-eye"></i>
+                </div>
+            </div>
         </div>
     {% endfor %}
 </div>
@@ -22,23 +35,64 @@ document.addEventListener('DOMContentLoaded', function() {
     const activeEmbeds = {};
 
     streamItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const userName = this.dataset.user;
-            const userId = this.dataset.userid;
-            const embedDiv = document.getElementById(`twitch-embed-${userId}`);
+        const header = item.querySelector('.stream-header');
 
-            // Toggle visibility
-            const isVisible = embedDiv.style.display === 'block';
-            embedDiv.style.display = isVisible ? 'none' : 'block';
+        const userId = item.dataset.userid;
+        const userName = item.dataset.user;
 
-            // Only create embed once
-            if (!activeEmbeds[userId]) {
-                activeEmbeds[userId] = new Twitch.Embed(`twitch-embed-${userId}`, {
-                    width: '100%',
-                    channel: userName,
-                    parent: [window.location.hostname],
-                    layout: 'video'
+        const embedWrapper = item.querySelector('.twitch-embed-wrapper');
+        const embedDiv = item.querySelector(`#twitch-embed-${userId}`);
+
+        const thumbnailWrapper = item.querySelector('.thumbnail-wrapper');
+
+        // Toggle visibility (show/hide)
+        header.addEventListener('click', function() {
+            embedWrapper.classList.toggle('visible');
+            embedWrapper.classList.remove('active'); // Also deactivate if hiding
+            activeEmbeds[userId] = false;
+            thumbnailWrapper.style.display = 'block';
+            embedDiv.innerHTML = ''; // Clear embed to stop streaming
+        });
+
+        // Activate (expand/shrink)
+        embedWrapper.addEventListener('click', function() {
+            // Get current state
+            const isActive = activeEmbeds[userId];
+
+            // Toggle state and save it
+            embedWrapper.classList.toggle('active', !isActive);
+            activeEmbeds[userId] = !isActive;
+
+            if (!isActive) {
+                // Add close button inside embed when activating
+                const closeBtn = document.createElement('div');
+                closeBtn.className = 'embed-close-button';
+                closeBtn.innerHTML = '<i class="embed-icon bi bi-x-lg"></i>';
+                closeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent triggering the embedWrapper click
+                    embedWrapper.classList.remove('active');
+                    activeEmbeds[userId] = false;
+                    thumbnailWrapper.style.display = 'block';
+                    embedDiv.innerHTML = ''; // Clear embed to stop streaming
                 });
+                embedDiv.appendChild(closeBtn);
+
+                setTimeout(() => {
+                    thumbnailWrapper.style.display = 'none';
+                    new Twitch.Embed(`twitch-embed-${userId}`, {
+                        width: '100%',
+                        height: '100%',
+                        channel: userName,
+                        autoplay: false,
+                        muted: false,
+                        layout: 'video'
+                    });
+                }); // Delay to allow for animation
+            } else {
+                // If deactivating, show thumbnail again
+                thumbnailWrapper.style.display = 'block';
+                embedDiv.innerHTML = ''; // Clear embed to stop streaming
+                embedDiv.removeChild(embedDiv.querySelector('.embed-close-button'));
             }
         });
     });
