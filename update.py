@@ -103,6 +103,8 @@ async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
                         'live': True,
                         'viewer_count': stream['viewer_count'],
                         'game': stream['game_name'],
+                        'thumbnail_url': stream['thumbnail_url'],
+                        'stream_title': stream['title'],
                     }
                 )
             except Exception as e:
