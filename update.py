@@ -74,34 +74,65 @@ async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
     
     update_logger.info("[START] Updating streamer information.")
     
-    info_streamer = get_twitch_streamer_info(streamer_ids=streamer_ids, streamer_names=streamer_names)
     info_streams = get_twitch_stream_info(streamer_ids=streamer_ids, streamer_names=streamer_names)
     
-    streamers = []
-    try:
-        if info_streamer:
-            for streamer in info_streamer:
-                live = any(stream['user_id'] == streamer.get('id') for stream in info_streams) if info_streams else False
-                viewer_count = next((stream['viewer_count'] for stream in info_streams if stream['user_id'] == streamer.get('id')), 0) if info_streams else 0
-                game = next((stream['game_name'] for stream in info_streams if stream['user_id'] == streamer.get('id')), '') if info_streams else ''
+    remaining_names = []
+    remaining_ids = []
+    
+    live_ids = {s['user_id'] for s in info_streams}
+    live_logins = {s['user_login'].lower() for s in info_streams}
 
+    remaining_ids = [sid for sid in streamer_ids if sid not in live_ids]
+    remaining_names = [sname for sname in streamer_names if sname.lower() not in live_logins]
+    
+    if not remaining_ids and not remaining_names:
+        info_streamer = []
+    else:
+        info_streamer = get_twitch_streamer_info(streamer_ids=remaining_ids, streamer_names=remaining_names)
+    
+    streamers = []
+    if info_streams:
+        for stream in info_streams:
+            try:
                 streamers.append(
                     {
-                        'user_id': streamer.get('id'),
-                        'user_name': streamer.get('display_name'),
-                        'user_login': streamer.get('login'),
+                        'user_id': stream['user_id'],
+                        'user_name': stream['user_name'],
+                        'user_login': stream['user_login'],
                         'platform': 'twitch',
-                        'live': live,
-                        'viewer_count': viewer_count,
-                        'game': game,
+                        'live': True,
+                        'viewer_count': stream['viewer_count'],
+                        'game': stream['game_name'],
+                        'thumbnail_url': stream['thumbnail_url'],
+                        'stream_title': stream['title'],
                     }
                 )
-    except Exception as e:
-        update_logger.error(f"An error occurred while processing streamer data: {e}", exc_info=True)
+            except Exception as e:
+                update_logger.error(f"Error processing stream data: {stream} - {e}", exc_info=True)
+                continue
+    
+    if info_streamer:
+        for streamer in info_streamer:
+            try:
+                if not any(s['user_id'] == streamer.get('id') for s in streamers):
+                    streamers.append(
+                        {
+                            'user_id': streamer.get('id'),
+                            'user_name': streamer.get('display_name'),
+                            'user_login': streamer.get('login'),
+                            'platform': 'twitch',
+                            'live': False,
+                            'viewer_count': 0,
+                            'game': '',
+                        }
+                    )
+            except Exception as e:
+                update_logger.error(f"Error processing streamer data: {streamer} - {e}", exc_info=True)
+                continue
         
     if streamers:
         df_streamers = pd.DataFrame(streamers)
-        upload_data('streams', df_streamers)
+        upload_data('streams', df_streamers, preserve_existing=True)
         update_logger.info(f"[END] Updated streamer information for {len(df_streamers)} streamers.")
     else:
         update_logger.info("No streamer data to update.")
@@ -689,9 +720,7 @@ async def update_esea_seasons_events():
 
 # === Streamer updates ===
 async def update_twitch_streams_benelux():
-    from database.db_up import upload_data
     from data_processing.api.twitch import get_twitch_streams_benelux
-    from database.db_down_update import link_twitch_streamer_to_faceit
     
     update_logger.info("[START] Updating Twitch streams for Benelux streamers.")
     
@@ -699,27 +728,12 @@ async def update_twitch_streams_benelux():
     
     try:
         if streams:
-            streamers = []
-            for stream in streams:
-                user_name = stream.get('user_login')
-                player_id = link_twitch_streamer_to_faceit(user_name)
-                
-                streamers.append(
-                    {
-                        'user_id': stream.get('user_id'),
-                        'user_name': stream.get('user_name'),
-                        'user_login': stream.get('user_login'),
-                        'platform': 'twitch',
-                        'live': True,
-                        'viewer_count': stream.get('viewer_count'),
-                        'game': stream.get('game_name'),
-                        'player_id': player_id
-                    }
-                )
+            streamer_ids = [stream['user_id'] for stream in streams]
             
-            if streamers:
-                df_streamers = pd.DataFrame(streamers)
-                upload_data('streams', df_streamers)
+            if streamer_ids:
+                await update_streamers(streamer_ids=streamer_ids)
+            else:
+                update_logger.error(f"Issue gathering streamer IDs: {streams}")    
         
         update_logger.info(f"[END] Updated Twitch streams for Benelux streamers. Found {len(streams)} streamers.")
         
@@ -728,43 +742,22 @@ async def update_twitch_streams_benelux():
         return
 
 async def update_live_streams():
-    from database.db_up import upload_data
     from database.db_down_update import gather_live_streams
-    from data_processing.api.twitch import get_twitch_stream_info
-    
-    stream_ids = gather_live_streams()
-    
-    if not stream_ids:
-        return
-    
-    update_logger.info(f"[START] Updating live streams: Found {len(stream_ids)} streamers to check.")
-    
-    info = get_twitch_stream_info(streamer_ids=stream_ids)
     
     try:
-        if info:
-            streamers = []
-            for stream in info:
-                streamers.append(
-                    {
-                        'user_id': stream.get('user_id'),
-                        'user_name': stream.get('user_name'),
-                        'user_login': stream.get('user_login'),
-                        'platform': 'twitch',
-                        'live': True,
-                        'viewer_count': stream.get('viewer_count'),
-                        'game': stream.get('game_name'),
-                    }
-                )
-            
-            if streamers:
-                df_streamers = pd.DataFrame(streamers)
-                upload_data('streams', df_streamers)
-    
+        stream_ids = gather_live_streams()
+        
+        if not stream_ids:
+            return
+        
+        update_logger.info(f"[START] Updating live streams: Found {len(stream_ids)} streamers to check.")
+        
+        await update_streamers(streamer_ids=stream_ids)
+        
         update_logger.info(f"[END] Updated live streams: Processed {len(stream_ids)} streamers.")
         
     except Exception as e:
-        update_logger.error(f"Error updating live streams: {e}", exc_info=True)
+        update_logger.error(f"An error occurred while updating live streams: {e}", exc_info=True)
         return
 
 async def update_eventsub_subscriptions():

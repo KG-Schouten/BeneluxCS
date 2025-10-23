@@ -59,9 +59,9 @@ def faceit_webhook():
     
     # Trigger placeholder job
     if isinstance(payload, dict):
-        if payload.get('payload', {}).get('region', '') != 'EU':
-            webhook_logger.debug("Non-EU region payload received, skipping.")
-            return jsonify({"status": "Non-EU region"}), 200
+        # if payload.get('region') != 'EU':
+        #     webhook_logger.debug("Non-EU region payload received, skipping.")
+        #     return jsonify({"status": "Non-EU region"}), 200
         
         webhook_logger.debug(f"Payload received: {payload}")
         
@@ -168,12 +168,14 @@ def twitch_webhook():
         event_data = data["event"]
         webhook_logger.info(f"Received Twitch notification for event type: {subscription_type}")
         
-        if subscription_type in ("stream.online", "stream.offline"):
+        if subscription_type in ["stream.online", "stream.offline"]:
             # Handle stream online event
             webhook_logger.info(f"Processing stream status change for user ID: {event_data.get('broadcaster_user_id')}")
             user_id = event_data.get("broadcaster_user_id")
             start_background_job(update_streamers, [user_id])   
-
+        else:
+            webhook_logger.warning(f"Unhandled Twitch subscription type: {subscription_type}")
+            
         # Respond quickly so Twitch doesn’t time out
         return "", 204
 

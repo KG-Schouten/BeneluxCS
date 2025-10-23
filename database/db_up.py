@@ -21,7 +21,7 @@ function_logger = get_logger("functions")
 ### General Functions
 ### -----------------------------------------------------------------
 
-def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
+def upload_data(table_name, df: pd.DataFrame, clear=False, preserve_existing=False) -> None:
     """ 
     Upload data from the provided dictionaries to their corresponding database tables
 
@@ -49,7 +49,7 @@ def upload_data(table_name, df: pd.DataFrame, clear=False) -> None:
             function_logger.info(f"No keys found for table {table_name}. Skipping upload.")
             return
         
-        sql = upload_data_query(table_name, keys, primary_keys)
+        sql = upload_data_query(table_name, keys, primary_keys, preserve_existing=preserve_existing)
         
         df = clean_invalid_foreign_keys(df, table_name)
         
@@ -116,7 +116,7 @@ def gather_keys(table_name: str) -> tuple[list[str], list[str]]:
 
     return all_keys, primary_keys
 
-def upload_data_query(table_name: str, keys: list[str], primary_keys: list[str]) -> str:
+def upload_data_query(table_name: str, keys: list[str], primary_keys: list[str], preserve_existing: bool = False) -> str:
     """
     Create the SQL insert (with optional upsert) query for PostgreSQL using execute_values.
 
@@ -124,6 +124,7 @@ def upload_data_query(table_name: str, keys: list[str], primary_keys: list[str])
         table_name (str)    : Name of the table
         keys (list)         : List of all column keys
         primary_keys (list) : List of primary key columns
+        preserve_existing (bool) : If True, keep existing DB values for columns when EXCLUDED value is NULL
 
     Returns:
         str : SQL query string compatible with psycopg2.extras.execute_values()
@@ -143,16 +144,24 @@ def upload_data_query(table_name: str, keys: list[str], primary_keys: list[str])
             VALUES %s;
         """
     else:
-        # INSERT with ON CONFLICT DO UPDATE
-        update_clause = ', '.join([
-            f'{key} = EXCLUDED.{key}' for key in escaped_keys if key not in escaped_pks
-        ])
+        # Build ON CONFLICT DO UPDATE clause
+        if preserve_existing:
+            update_clause = ', '.join([
+                f'{key} = COALESCE(EXCLUDED.{key}, "{table_name}".{key})'
+                for key in escaped_keys if key not in escaped_pks
+            ])
+        else:
+            update_clause = ', '.join([
+                f'{key} = EXCLUDED.{key}'
+                for key in escaped_keys if key not in escaped_pks
+            ])
+
         query = f"""
             INSERT INTO "{table_name}" ({', '.join(escaped_keys)})
             VALUES %s
             ON CONFLICT ({', '.join(escaped_pks)})
             DO UPDATE SET {update_clause}
-            RETURNING {', '.join(escaped_keys)}
+            RETURNING {', '.join(escaped_keys)};
         """
     return query.strip()
 
