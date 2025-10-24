@@ -5,7 +5,7 @@ import os
 import json
 from dotenv import load_dotenv
 from flask import Blueprint, request, jsonify, abort, Response
-from .scheduler import run_async_job, redis_client
+from .scheduler import redis_client
 from logs.update_logger import get_logger
 from update import update_matches, update_esea_teams_benelux, update_streamers
 from database.db_down_update import gather_teams_benelux_primary
@@ -34,11 +34,9 @@ def faceit_check_teams(team_ids, event_id) -> list:
     except Exception:
         return []
 
-def start_background_job(func, *args, lock_name=None):
-    import threading
-    wrapper = run_async_job(func)
-    threading.Thread(target=wrapper, args=args, daemon=True).start()
-
+def start_background_job(func, *args):
+    from .scheduler import run_async_job
+    run_async_job(func, *args)
 
 @webhook_bp.route(FACEIT_WEBHOOK_URL, methods=["POST"])
 def faceit_webhook():
