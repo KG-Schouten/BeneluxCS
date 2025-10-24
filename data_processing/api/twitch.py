@@ -100,22 +100,40 @@ def get_twitch_streams_benelux():
         return []
 
 # --- Twitch EventSub Management Functions ---
-def get_twitch_eventSub_subscriptions():
-    try:
+def get_twitch_eventSub_subscriptions(user_id: str = "") -> list:
+    subscriptions = []
+    params = {}
+    if user_id:
+        params["user_id"] = user_id
+
+    url = "https://api.twitch.tv/helix/eventsub/subscriptions"
+
+    while True:
         response = requests.get(
-            "https://api.twitch.tv/helix/eventsub/subscriptions",
+            url,
             headers={
                 "Client-ID": os.getenv("TWITCH_CLIENT_ID"),
                 "Authorization": f"Bearer {os.getenv('TWITCH_ACCESS_TOKEN')}"
-            }
+            },
+            params=params
         )
-        
+
+        if response.status_code != 200:
+            print(f"Error fetching subscriptions: {response.status_code}, {response.text}")
+            break
+
         data = response.json()
-        
-        return data.get("data", [])
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return []
+        subscriptions.extend(data.get("data", []))
+
+        # Check if there's a next page
+        pagination = data.get("pagination", {})
+        cursor = pagination.get("cursor")
+        if cursor:
+            params["after"] = cursor
+        else:
+            break
+
+    return subscriptions
 
 def twitch_eventsub_subscribe(streamer_ids: list):
     callback_url = "https://beneluxcs.nl" + str(os.getenv("TWITCH_WEBHOOK_URL"))
