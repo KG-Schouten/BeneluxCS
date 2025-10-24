@@ -52,10 +52,13 @@ def create_app():
     from .webhook import webhook_bp
     app.register_blueprint(webhook_bp)
     
-    # Initialize scheduler
+    # Initialize scheduler only when running on the vps
     from .scheduler import init_scheduler
-    scheduler_logger.info(f"====== Initializing scheduler in PID {os.getpid()} ======")
-    init_scheduler(app)
+    if os.getenv("FLASK_ENV") == "development":
+        scheduler_logger.info("Development environment detected; skipping scheduler initialization.")
+    else:
+        scheduler_logger.info(f"====== Initializing scheduler in PID {os.getpid()} ======")
+        init_scheduler(app)
     
     # Register custom Jinja filter
     @app.template_filter("datetimeformat")
