@@ -17,7 +17,8 @@ def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
         level = logging.DEBUG
     else:
         level = level if level else logging.INFO
-        
+    
+    logger.setLevel(level)
     logger.propagate = False  # Prevent duplicate logs from root logger
 
     # Avoid adding handlers multiple times
