@@ -1,6 +1,8 @@
 import logging
 from concurrent_log_handler import ConcurrentRotatingFileHandler as RotatingFileHandler
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
     """
@@ -8,6 +10,14 @@ def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
     Creates a log file named '<name>.log' in the 'logs' directory.
     """
     logger = logging.getLogger(name)
+    
+    debug_env = os.getenv("DEBUG", "").lower() == "true"
+    
+    if debug_env:
+        level = logging.DEBUG
+    else:
+        level = level if level else logging.INFO
+    
     logger.setLevel(level)
     logger.propagate = False  # Prevent duplicate logs from root logger
 

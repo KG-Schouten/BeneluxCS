@@ -11,8 +11,12 @@ def create_app():
     import os
     load_dotenv()
     
+    scheduler_logger.debug("Creating Flask app")
+    
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
+    scheduler_logger.debug(f"Base directory set to {base_dir}")
+    
     app = Flask(
         __name__,
         static_folder=os.path.join(base_dir, 'static'),
@@ -23,6 +27,10 @@ def create_app():
     env = os.getenv("FLASK_ENV", "production")
     if env == "development":
         app.config["DEBUG"] = True
+        scheduler_logger.debug("App running in development mode")
+    else:
+        app.config["DEBUG"] = False
+        scheduler_logger.debug("App running in production mode")
     
     app.config['SECRET_KEY'] = os.getenv('APP_SECRET_KEY')
 
@@ -30,6 +38,8 @@ def create_app():
     cors_origins = os.getenv("SOCKETIO_CORS_ORIGINS", "*")
     if cors_origins != "*":
         cors_origins = cors_origins.split(",")  # allow comma-separated list
+    
+    scheduler_logger.debug(f"SocketIO CORS origins set to: {cors_origins}")
 
     # Initialize SocketIO with dynamic CORS
     socketio.init_app(app, cors_allowed_origins=cors_origins)
@@ -44,7 +54,7 @@ def create_app():
     
     # Initialize scheduler
     from .scheduler import init_scheduler
-    scheduler_logger.info(f"Initializing scheduler in PID {os.getpid()}")
+    scheduler_logger.info(f"====== Initializing scheduler in PID {os.getpid()} ======")
     init_scheduler(app)
     
     # Register custom Jinja filter
