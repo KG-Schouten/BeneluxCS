@@ -1,0 +1,95 @@
+<div id="streams-container" style="width: 100%;">
+    {% include 'macros/streams/streams_partial.html'%}
+</div>
+
+<script> 
+function refreshStreams() {
+    console.log("Refreshing streams...");
+    fetch('/api/streams')
+        .then(res => res.text())
+        .then(html => {
+            const container = document.getElementById('streams-container');
+            if (container) {
+                container.innerHTML = html;
+                initStreamEmbeds(); // Re-wire event listeners
+            }
+        })
+        .catch(err => console.error('Error refreshing streams:', err));
+}
+
+function initStreamEmbeds() {
+    const streamItems = document.querySelectorAll('.stream-item');
+    const activeEmbeds = {};
+
+    streamItems.forEach(item => {
+        const header = item.querySelector('.stream-header');
+        const userId = item.dataset.userid;
+        const userName = item.dataset.user;
+        const embedWrapper = item.querySelector('.twitch-embed-wrapper');
+        const embedDiv = item.querySelector(`#twitch-embed-${userId}`);
+        const thumbnailWrapper = item.querySelector('.thumbnail-wrapper');
+
+        // Re-attach all event listeners (same logic as before)
+        header.addEventListener('click', function() {
+            embedWrapper.classList.toggle('visible');
+            embedWrapper.classList.remove('active');
+            activeEmbeds[userId] = false;
+            thumbnailWrapper.style.display = 'block';
+            embedDiv.innerHTML = '';
+        });
+
+        embedWrapper.addEventListener('click', function() {
+            const isActive = activeEmbeds[userId];
+            embedWrapper.classList.toggle('active', !isActive);
+            activeEmbeds[userId] = !isActive;
+
+            if (!isActive) {
+                const closeBtn = document.createElement('div');
+                closeBtn.className = 'embed-close-button';
+                closeBtn.innerHTML = '<i class="embed-icon bi bi-x-lg"></i>';
+                closeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    embedWrapper.classList.remove('active');
+                    activeEmbeds[userId] = false;
+                    thumbnailWrapper.style.display = 'block';
+                    embedDiv.innerHTML = '';
+                });
+                embedDiv.appendChild(closeBtn);
+
+                setTimeout(() => {
+                    thumbnailWrapper.style.display = 'none';
+                    new Twitch.Embed(`twitch-embed-${userId}`, {
+                        width: '100%',
+                        height: '100%',
+                        channel: userName,
+                        autoplay: false,
+                        muted: false,
+                        layout: 'video'
+                    });
+                });
+            } else {
+                thumbnailWrapper.style.display = 'block';
+                embedDiv.innerHTML = '';
+                const btn = embedDiv.querySelector('.embed-close-button');
+                if (btn) embedDiv.removeChild(btn);
+            }
+        });
+    });
+}
+
+// Initialize on first load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial refresh
+    refreshStreams();
+
+    // --- SocketIO listener ---
+    if (typeof socket !== 'undefined') {
+        socket.on('streamer_update', (data) => {
+            console.log("Twitch event received", data);
+            refreshStreams(); // call the function defined in streams.html
+        });
+    } else {
+        console.warn("SocketIO not initialized yet!");
+    }
+});
+</script>
