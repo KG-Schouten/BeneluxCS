@@ -59,8 +59,6 @@ def faceit_webhook():
             webhook_logger.debug("Non-EU region payload received, skipping.")
             return jsonify({"status": "Non-EU region"}), 200
         
-        webhook_logger.debug(f"Payload received: {payload}")
-        
         # --- Check if any of the teams are Benelux ---
         payload_data = payload.get('payload') or {}
         teams = payload_data.get('teams', [])
@@ -74,8 +72,10 @@ def faceit_webhook():
         team_ids = faceit_check_teams(team_ids, event_id)
         
         if not team_ids:
-            webhook_logger.debug("No Benelux teams found after check, skipping.")
+            webhook_logger.debug("No Benelux teams found after check, skipping. ")
             return jsonify({"status": "No Benelux teams"}), 200
+        
+        webhook_logger.info(f"Correct payload received: {payload}")
         
         match_id = payload['payload'].get('id')
         

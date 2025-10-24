@@ -15,25 +15,42 @@ USE_REDIS_LOCK = False
 try:
     r = redis.Redis.from_url("redis://localhost:6379/0")
     USE_REDIS_LOCK = True
+    
+    scheduler_logger.info("Redis detected, distributed lock enabled.")
+    
 except ImportError:
     scheduler_logger.warning("Redis not installed, distributed lock disabled.")
 
 def run_async(func, *args, **kwargs):
-    """
-    Wrap an async function to run in an Eventlet green thread.
-    """
+    """ Wrap an async function to run in an Eventlet green thread"""
     def wrapper():
-        scheduler_logger.info(f"Attempting to acquire lock for {func.__name__}")
+        scheduler_logger.debug(f"[{func.__name__}] Attempting to acquire local lock")
 
-        # Acquire local process lock
-        with job_lock:
+        # Try to acquire the local lock non-blocking first
+        got_lock = job_lock.acquire(blocking=False)
+        if not got_lock:
+            scheduler_logger.warning(f"[{func.__name__}] Waiting for lock — another job is running")
+            job_lock.acquire()  # Block until available
+        try:
+            scheduler_logger.debug(f"[{func.__name__}] Acquired local lock")
+
             if USE_REDIS_LOCK:
                 lock_name = f"flask_task_lock:{func.__name__}"
-                with Lock(r, lock_name, timeout=3600):
-                    scheduler_logger.info(f"Acquired Redis lock for {func.__name__}")
-                    _run(func, *args, **kwargs)
+                scheduler_logger.debug(f"[{func.__name__}] Attempting Redis lock")
+
+                with Lock(r, lock_name, timeout=3600, blocking_timeout=10) as redis_lock:
+                    if redis_lock.locked():
+                        scheduler_logger.debug(f"[{func.__name__}] Acquired Redis lock, starting task")
+                        _run(func, *args, **kwargs)
+                    else:
+                        scheduler_logger.warning(f"[{func.__name__}] Could not acquire Redis lock, skipping")
             else:
+                scheduler_logger.debug(f"[{func.__name__}] Running with local lock only")
                 _run(func, *args, **kwargs)
+
+        finally:
+            job_lock.release()
+            scheduler_logger.debug(f"[{func.__name__}] Released local lock")
 
     return wrapper
 
@@ -42,9 +59,9 @@ def _run(func, *args, **kwargs):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        scheduler_logger.info(f"Starting async task {func.__name__}")
+        scheduler_logger.info(f"[START] Starting task {func.__name__}")
         loop.run_until_complete(func(*args, **kwargs))
-        scheduler_logger.info(f"Finished async task {func.__name__}")
+        scheduler_logger.debug(f"[END] Finished task {func.__name__}")
     except Exception as e:
         scheduler_logger.error(f"Error running task {func.__name__}: {e}")
     finally:
@@ -58,6 +75,8 @@ def init_scheduler(app):
     Initialize APScheduler and schedule your jobs.
     """
     import update
+    
+    scheduler_logger.info("Initializing scheduler...")
 
     scheduler = BackgroundScheduler()
     scheduler.start()
@@ -132,6 +151,8 @@ def init_scheduler(app):
             run_async(update.update_esea_seasons_events),
             trigger=CronTrigger(day_of_week="sun", hour=0, minute=0)
         )
+        
+        scheduler_logger.debug(f"All jobs added to scheduler successfully. {scheduler.get_jobs()}")
         
     except Exception as e:
         scheduler_logger.error(f"[INIT] Error adding jobs: {e}", exc_info=True)
