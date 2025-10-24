@@ -3,9 +3,11 @@ import hmac
 import hashlib
 import os
 import json
+import eventlet
+
+from .scheduler import run_async
 from dotenv import load_dotenv
 from flask import Blueprint, request, jsonify, abort, Response
-from .scheduler import redis_client
 from logs.update_logger import get_logger
 from update import update_matches, update_esea_teams_benelux, update_streamers
 from database.db_down_update import gather_teams_benelux_primary
@@ -33,10 +35,6 @@ def faceit_check_teams(team_ids, event_id) -> list:
 
     except Exception:
         return []
-
-def start_background_job(func, *args):
-    from .scheduler import run_async_job
-    run_async_job(func, *args)
 
 @webhook_bp.route(FACEIT_WEBHOOK_URL, methods=["POST"])
 def faceit_webhook():
@@ -82,11 +80,11 @@ def faceit_webhook():
         match_id = payload['payload'].get('id')
         
         if payload['event'] in ['match_status_ready', 'match_status_configuring']:
+            eventlet.spawn(run_async(update_matches, [match_id], [event_id]))
             webhook_logger.info(f"Triggering match update for match ID: {match_id}")
-            start_background_job(update_matches, [match_id], [event_id])
         elif payload['event'] == 'match_status_finished':
+            eventlet.spawn(run_async(update_esea_teams_benelux, team_ids, [event_id]))
             webhook_logger.info(f"Triggering ESEA team update for teams: {team_ids}")
-            start_background_job(update_esea_teams_benelux, team_ids, [event_id])
 
     return jsonify({"status": "Jobs triggered"}), 200
 
@@ -122,21 +120,6 @@ def verify_twitch_signature(request):
     
     return hmac.compare_digest(computed_hmac, signature)
 
-def is_duplicate_message(message_id):
-    if not message_id:
-        return False
-    
-    key = f"twitch:eventsub:{message_id}"
-    
-    # SETNX = set only if not exists → True means this is the first time
-    was_new = redis_client.setnx(key, 1)
-    
-    if was_new:
-        redis_client.expire(key, 60)  # Expire after 1 minutes
-        return False
-    else:
-        return True
-
 @webhook_bp.route("/webhook/twitch", methods=["POST"])
 def twitch_webhook():
     if not verify_twitch_signature(request):
@@ -146,14 +129,9 @@ def twitch_webhook():
     webhook_logger.debug("Twitch signature verified successfully.")
     
     message_type = request.headers.get(TWITCH_MESSAGE_TYPE, '').lower()
-    message_id = request.headers.get("Twitch-Eventsub-Message-Id")
     data = request.get_json()
     
     webhook_logger.debug(f"Twitch webhook payload: {data}")
-    
-    if is_duplicate_message(message_id):
-        webhook_logger.debug(f"Ignoring duplicate Twitch message: {message_id}")
-        return "", 204
     
     # Handle different message types
     if message_type == MESSAGE_TYPE_VERIFICATION:
@@ -170,7 +148,8 @@ def twitch_webhook():
             # Handle stream online event
             webhook_logger.info(f"Processing stream status change for user ID: {event_data.get('broadcaster_user_id')}")
             user_id = event_data.get("broadcaster_user_id")
-            start_background_job(update_streamers, [user_id])   
+            eventlet.spawn(run_async(update_streamers, [user_id]))
+   
         else:
             webhook_logger.warning(f"Unhandled Twitch subscription type: {subscription_type}")
             
