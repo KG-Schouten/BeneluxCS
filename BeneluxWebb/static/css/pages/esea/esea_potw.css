@@ -30,9 +30,9 @@
 
 .icon-bg {
     position: absolute;
-    width: 120px;
-    top: -15px;
-    right: -31px;
+    width: 115px;
+    top: 0px;
+    right: 0px;
     z-index: 0;
     filter: invert(14%) sepia(48%) saturate(2223%) hue-rotate(310deg) brightness(91%) contrast(93%);
 }
