@@ -197,3 +197,5 @@ BeneluxCS.db
 ai_data.json
 ai_data_players.json
 
+# Ignore xcf files
+*.xcf
