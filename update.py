@@ -9,6 +9,8 @@ from data_processing.dp_general import process_matches, process_team_details_bat
 from data_processing.dp_events import process_teams_benelux_esea, gather_esea_matches, gather_hub_matches, process_esea_season_data, modify_keys
 from data_processing.dp_benelux import get_benelux_leaderboard_players
 
+from BeneluxWebb.website import socketio
+
 import pandas as pd
 import requests
 from pathlib import Path
@@ -64,6 +66,13 @@ async def update_matches(match_ids: list, event_ids: list):
     for name, df in dataframes.items():
         if not df.empty:
             upload_data(name, df)
+            
+            if name == "matches":
+                try:
+                    socketio.emit('match_update', {'match_ids': match_ids})
+                except Exception:
+                    pass
+            
         else:
             update_logger.debug(f"No data to upload for {name}.")
     
@@ -133,6 +142,12 @@ async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
     if streamers:
         df_streamers = pd.DataFrame(streamers)
         upload_data('streams', df_streamers, preserve_existing=True)
+        
+        try:
+            socketio.emit('streamer_update', {'streamer_ids': streamer_ids, 'streamer_names': streamer_names})
+        except Exception:
+            pass
+        
         update_logger.info(f"[END] Updated streamer information for {len(df_streamers)} streamers.")
     else:
         update_logger.info("No streamer data to update.")
