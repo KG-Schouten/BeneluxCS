@@ -1,8 +1,8 @@
-from BeneluxWebb.website import create_app, socketio
 import eventlet
-import os
-
 eventlet.monkey_patch()
+
+from BeneluxWebb.website import create_app, socketio
+import os
 
 app = create_app()
 
