@@ -54,7 +54,7 @@ def create_app():
     
     # Initialize scheduler
     from .scheduler import init_scheduler
-    scheduler_logger.info(f"Initializing scheduler in PID {os.getpid()}")
+    scheduler_logger.info(f"====== Initializing scheduler in PID {os.getpid()} ======")
     init_scheduler(app)
     
     # Register custom Jinja filter
