@@ -3,6 +3,14 @@ import re
 
 views = Blueprint('views', __name__, template_folder='../templates')
 
+# General routes
+@views.route('api/streams')
+def api_streams():
+    from database.db_down_website import gather_current_streams
+    streams_info = gather_current_streams()
+    
+    return render_template('macros/streams/streams_partial.html', streams_info=streams_info)
+
 # Redirect root URL to the ESEA page
 @views.route('/')
 def home_redirect():
