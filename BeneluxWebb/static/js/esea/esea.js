@@ -23,8 +23,19 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // Initial fetch of matches
   refreshMatches();
-  // Refresh matches every 30 seconds
-  setInterval(refreshMatches, 30000);
+  // Refresh matches every 5 minutes
+  setInterval(refreshMatches, 5 * 60 * 1000);
+
+  // Listen for WebSocket updates
+  socket.on('match_update', (data) => {
+      console.log('Received match update:', data);
+      // Call your refresh function
+      refreshMatches();
+  });
+
+  socket.on('streamer_update', (data) => {
+      console.log('Received streamer update:', data);
+  });
 
   // --- ESEA TABS LOGIC ---
   let currentFetchController = null;
