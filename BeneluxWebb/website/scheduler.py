@@ -1,174 +1,142 @@
-# app/scheduler.py
+import eventlet
+import asyncio
+from redis.lock import Lock
+import redis
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-import redis
-from contextlib import contextmanager
-import os
-from dotenv import load_dotenv
-import time
-
-import asyncio
-from update import (
-    update_ongoing_matches,
-    update_upcoming_matches,
-    update_esea_teams_benelux,
-    update_new_matches_hub,
-    update_new_matches_esea,
-    update_leaderboard,
-    update_elo_leaderboard,
-    update_league_teams,
-    update_team_avatars,
-    update_local_team_avatars,
-    update_hub_events,
-    update_esea_seasons_events,
-    update_twitch_streams_benelux,
-    update_live_streams,
-    update_eventsub_subscriptions
-)
-
 from logs.update_logger import get_logger
-
 scheduler_logger = get_logger("scheduler")
 
-load_dotenv()
+# Semaphore to ensure only one task runs at a time (per process)
+job_lock = eventlet.semaphore.Semaphore(1)
 
-# ------------------
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+# Redis-based distributed lock
+USE_REDIS_LOCK = False
+try:
+    r = redis.Redis.from_url("redis://localhost:6379/0")
+    USE_REDIS_LOCK = True
+except ImportError:
+    scheduler_logger.warning("Redis not installed, distributed lock disabled.")
 
-# ------------------
-# Redis lock
-# ------------------
-redis_client = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
+def run_async(func, *args, **kwargs):
+    """
+    Wrap an async function to run in an Eventlet green thread.
+    """
+    def wrapper():
+        scheduler_logger.info(f"Attempting to acquire lock for {func.__name__}")
 
-@contextmanager
-def redis_lock(lock_name, timeout=60, wait=True):
-    if REDIS_HOST == "localhost":
-        yield
-        return
-    
-    got_lock = False
-    start = time.time()
-    while not got_lock:
-        got_lock = redis_client.set(lock_name, "1", nx=True, ex=timeout)
-        if got_lock:
-            try:
-                yield
-            finally:
-                redis_client.delete(lock_name)
-            break
-        elif not wait:
-            scheduler_logger.info( f"[LOCK SKIPPED] {lock_name} is already locked")
-            break
-        else:
-            time.sleep(0.5)
-            # optional: prevent infinite wait
-            if time.time() - start > timeout:
-                scheduler_logger.warning( f"[LOCK TIMEOUT] {lock_name} waited too long")
-                break
-
-# ------------------
-# Wrapper for async jobs with optional lock
-# ------------------
-GLOBAL_SCHEDULER_LOCK = "scheduler_global_lock"
-def run_async_job(job_func, lock_timeout=300):
-    def wrapper(*args, **kwargs):
-        async def runner():
-            job_name = job_func.__name__
-            scheduler_logger.info( f"[JOB START] {job_name}")
-            try:
-                await job_func(*args, **kwargs)
-                scheduler_logger.info( f"[JOB FINISH] {job_name}")
-            except Exception as e:
-                scheduler_logger.error( f"[JOB ERROR] {job_name}: {e}")
-
-        with redis_lock(GLOBAL_SCHEDULER_LOCK, timeout=lock_timeout):
-            asyncio.run(runner())
+        # Acquire local process lock
+        with job_lock:
+            if USE_REDIS_LOCK:
+                lock_name = f"flask_task_lock:{func.__name__}"
+                with Lock(r, lock_name, timeout=3600):
+                    scheduler_logger.info(f"Acquired Redis lock for {func.__name__}")
+                    _run(func, *args, **kwargs)
+            else:
+                _run(func, *args, **kwargs)
 
     return wrapper
 
+def _run(func, *args, **kwargs):
+    """Helper to run the async function in a new asyncio loop."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        scheduler_logger.info(f"Starting async task {func.__name__}")
+        loop.run_until_complete(func(*args, **kwargs))
+        scheduler_logger.info(f"Finished async task {func.__name__}")
+    except Exception as e:
+        scheduler_logger.error(f"Error running task {func.__name__}: {e}")
+    finally:
+        loop.close()
+        
 # ------------------
 # Scheduler initialization
 # ------------------
-def init_scheduler(app):    
-    scheduler = BackgroundScheduler(timezone="UTC")
+def init_scheduler(app):
+    """
+    Initialize APScheduler and schedule your jobs.
+    """
+    import update
+
+    scheduler = BackgroundScheduler()
+    scheduler.start()
 
     try:
         # --- Every minute ---
         scheduler.add_job(
-            run_async_job(update_ongoing_matches),
-            CronTrigger(minute="*")
+            run_async(update.update_ongoing_matches),
+            trigger=CronTrigger(minute="*"),
         )
         
         # --- Every 5 minutes ---
         scheduler.add_job(
-            run_async_job(update_live_streams),
-            CronTrigger(minute="*/5")
+            run_async(update.update_live_streams),
+            trigger=CronTrigger(minute="*/5")
         )
         scheduler.add_job(
-            run_async_job(update_twitch_streams_benelux),
-            CronTrigger(minute="*/5")
+            run_async(update.update_twitch_streams_benelux),
+            trigger=CronTrigger(minute="*/5")
         )
         scheduler.add_job(
-            run_async_job(update_eventsub_subscriptions),
-            CronTrigger(minute="*/5")
+            run_async(update.update_eventsub_subscriptions),
+            trigger=CronTrigger(minute="*/5")
         )
         
         # --- Hourly ---
         scheduler.add_job(
-            run_async_job(update_leaderboard),
-            CronTrigger(minute=0)
+            run_async(update.update_leaderboard),
+            trigger=CronTrigger(minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_elo_leaderboard),
-            CronTrigger(minute=0)
+            run_async(update.update_elo_leaderboard),
+            trigger=CronTrigger(minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_new_matches_hub),
-            CronTrigger(minute=0)
+            run_async(update.update_new_matches_hub),
+            trigger=CronTrigger(minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_new_matches_esea),
-            CronTrigger(minute=0)
+            run_async(update.update_new_matches_esea),
+            trigger=CronTrigger(minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_upcoming_matches),
-            CronTrigger(minute=0)
+            run_async(update.update_upcoming_matches),
+            trigger=CronTrigger(minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_esea_teams_benelux),
-            CronTrigger(minute=0)
+            run_async(update.update_esea_teams_benelux),
+            trigger=CronTrigger(minute=0)
         )
 
         # --- Daily (00:00 UTC) ---
         scheduler.add_job(
-            run_async_job(update_league_teams),
-            CronTrigger(hour=0, minute=0)
+            run_async(update.update_league_teams),
+            trigger=CronTrigger(hour=0, minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_team_avatars),
-            CronTrigger(hour=0, minute=0)
+            run_async(update.update_team_avatars),
+            trigger=CronTrigger(hour=0, minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_local_team_avatars),
-            CronTrigger(hour=0, minute=0)
+            run_async(update.update_local_team_avatars),
+            trigger=CronTrigger(hour=0, minute=0)
         )
 
         # --- Weekly (Sunday 00:00 UTC) ---
         scheduler.add_job(
-            run_async_job(update_hub_events),
-            CronTrigger(day_of_week="sun", hour=0, minute=0)
+            run_async(update.update_hub_events),
+            trigger=CronTrigger(day_of_week="sun", hour=0, minute=0)
         )
         scheduler.add_job(
-            run_async_job(update_esea_seasons_events),
-            CronTrigger(day_of_week="sun", hour=0, minute=0)
+            run_async(update.update_esea_seasons_events),
+            trigger=CronTrigger(day_of_week="sun", hour=0, minute=0)
         )
+        
     except Exception as e:
-        scheduler_logger.error(f"[INIT] Error adding jobs to scheduler: {e}")
+        scheduler_logger.error(f"[INIT] Error adding jobs: {e}", exc_info=True)
     
-    scheduler.start()
-    scheduler_logger.info("--- APScheduler placeholder started ---")
-    
-    import atexit
-    atexit.register(lambda: scheduler.shutdown(wait=False))
-    
+    # Store scheduler on app for optional later access
     app.scheduler = scheduler
+    scheduler_logger.info("Scheduler initialized and jobs scheduled.")
+    return scheduler
