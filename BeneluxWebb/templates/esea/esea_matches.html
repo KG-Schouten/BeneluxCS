@@ -9,7 +9,7 @@
   <div class="sidebar-header">
     <span> Benelux Clashes </span>
   </div>
-  <div class="sidebar-body">
+  <div class="sidebar-body" id="benelux-matches">
     {% for match in benelux_matches %}
       {% if match.match_time < end_of_day %}
         {{ match_box(match.division_name, match, today=true) }}
@@ -25,7 +25,7 @@
   <div class="sidebar-header">
     <span> Today's Matches </span>
   </div>
-  <div class="sidebar-body">
+  <div class="sidebar-body" id="todays-matches">
     {% if todays_matches %}
       {% for match in todays_matches %}
         {{ match_box(match.division_name, match) }}
