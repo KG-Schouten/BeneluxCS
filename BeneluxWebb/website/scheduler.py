@@ -70,21 +70,19 @@ def redis_lock(lock_name, timeout=60, wait=True):
 # Wrapper for async jobs with optional lock
 # ------------------
 GLOBAL_SCHEDULER_LOCK = "scheduler_global_lock"
-def run_async_job(job_func, lock_timeout=300):
-    def wrapper(*args, **kwargs):
-        async def runner():
-            job_name = job_func.__name__
-            scheduler_logger.info( f"[JOB START] {job_name}")
-            try:
-                await job_func(*args, **kwargs)
-                scheduler_logger.info( f"[JOB FINISH] {job_name}")
-            except Exception as e:
-                scheduler_logger.error( f"[JOB ERROR] {job_name}: {e}")
+def run_async_job(job_func, *args, **kwargs):
+    def wrapper():
+        job_name = job_func.__name__
+        scheduler_logger.info(f"[JOB START] {job_name}")
+        try:
+            job_func(*args, **kwargs)
+            scheduler_logger.info(f"[JOB FINISH] {job_name}")
+        except Exception as e:
+            scheduler_logger.error(f"[JOB ERROR] {job_name}: {e}")
 
-        with redis_lock(GLOBAL_SCHEDULER_LOCK, timeout=lock_timeout):
-            asyncio.run(runner())
-
-    return wrapper
+    # Run as a green thread
+    import eventlet
+    eventlet.spawn(wrapper)
 
 # ------------------
 # Scheduler initialization
