@@ -80,8 +80,16 @@ async def update_matches(match_ids: list, event_ids: list):
 
 async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
     from data_processing.api.twitch import get_twitch_streamer_info, get_twitch_stream_info
+    from database.db_down_update import gather_streamers
+    from database.db_down import gather_players, fuzzy_search
     
     update_logger.info("[START] Updating streamer information.")
+    
+    # Gather streamers
+    df_streamers = gather_streamers(streamer_ids=streamer_ids, streamer_names=streamer_names)
+    
+    # Gather players
+    df_players = gather_players(benelux=True)
     
     info_streams = get_twitch_stream_info(streamer_ids=streamer_ids, streamer_names=streamer_names)
     
@@ -99,14 +107,35 @@ async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
     else:
         info_streamer = get_twitch_streamer_info(streamer_ids=remaining_ids, streamer_names=remaining_names)
     
+    def get_player_id(user_id, user_name):
+        player_id = None
+        # Try to get player_id directly by user_id
+        match = df_streamers.loc[df_streamers['user_id'] == user_id, 'player_id']
+        player_id = match.squeeze() if not match.empty else None #type: ignore
+
+        # If no player_id found, try fuzzy search by name
+        if player_id is None:
+            matches = fuzzy_search(user_name, df_players['player_name'].tolist(), threshold=75)
+            if matches:
+                matched_name = matches[0][0]
+                match = df_players.loc[df_players['player_name'] == matched_name, 'player_id']
+                player_id = match.squeeze() if not match.empty else None #type: ignore
+        
+        return player_id
+    
     streamers = []
     if info_streams:
         for stream in info_streams:
             try:
+                user_id = stream['user_id']
+                user_name = stream['user_name']
+
+                player_id = get_player_id(user_id, user_name)
+                     
                 streamers.append(
                     {
-                        'user_id': stream['user_id'],
-                        'user_name': stream['user_name'],
+                        'user_id': user_id,
+                        'user_name': user_name,
                         'user_login': stream['user_login'],
                         'platform': 'twitch',
                         'live': True,
@@ -114,6 +143,7 @@ async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
                         'game': stream['game_name'],
                         'thumbnail_url': stream['thumbnail_url'],
                         'stream_title': stream['title'],
+                        'player_id': player_id,
                     }
                 )
             except Exception as e:
@@ -124,15 +154,21 @@ async def update_streamers(streamer_ids: list = [], streamer_names: list = []):
         for streamer in info_streamer:
             try:
                 if not any(s['user_id'] == streamer.get('id') for s in streamers):
+                    user_id = streamer.get('id')
+                    user_name = streamer.get('display_name')
+                    
+                    player_id = get_player_id(user_id, user_name)
+                    
                     streamers.append(
                         {
-                            'user_id': streamer.get('id'),
-                            'user_name': streamer.get('display_name'),
+                            'user_id': user_id,
+                            'user_name': user_name,
                             'user_login': streamer.get('login'),
                             'platform': 'twitch',
                             'live': False,
                             'viewer_count': 0,
                             'game': '',
+                            'player_id': player_id,
                         }
                     )
             except Exception as e:
