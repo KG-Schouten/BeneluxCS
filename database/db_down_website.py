@@ -1649,3 +1649,88 @@ def gather_player_stats_esea(
         return [], []
     finally:
         close_database(db)
+             
+# =============================
+#       Matches Page
+# =============================
+def gather_website_matches(
+        event_type: list=[], # 'esea', 'hub', 'championship'
+        timestamp=None
+    ):
+    
+    if not isinstance(timestamp, list):
+        if timestamp:
+            timestamp = get_date_range(timestamp)
+        else:
+            timestamp = []
+    
+    db, cursor = start_database()
+    try:
+        # Set up WHERE-conditions
+        conditions = []
+        params = []
+        
+        event_options = ['hub', 'esea', 'championship', 'lan']        
+        if event_type:
+            for et in event_type:
+                if et in event_options:
+                    conditions.append("e.event_type = %s")
+                    params.append(et)
+        
+        if timestamp and len(timestamp) == 2:
+            start_date, end_date = timestamp
+            conditions.append("m.match_time >= %s")
+            params.append(int(start_date))
+            
+            conditions.append("m.match_time <= %s")
+            params.append(int(end_date))
+            
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        
+        # Gather matches
+        query = f"""
+            SELECT
+                m.match_id,
+                m.match_time,
+                m.best_of,
+                m.winner_id,
+                m.status,
+                m.score,
+                m.map_veto,
+                e.event_id,
+                e.event_name,
+                e.event_type,
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'team_id', tm.team_id,
+                        'team_name', COALESCE(tb.team_name, t.team_name)
+                    )
+                ) AS teams
+            FROM matches m
+            JOIN events e ON m.internal_event_id = e.internal_event_id
+            LEFT JOIN teams_matches tm ON tm.match_id = m.match_id
+            LEFT JOIN teams t ON tm.team_id = t.team_id
+            LEFT JOIN teams_benelux tb 
+                ON tm.team_id = tb.team_id 
+                AND m.event_id = tb.event_id
+            {where_clause}
+            GROUP BY 
+                m.match_id, m.match_time, m.best_of, m.winner_id, m.status, m.score, m.map_veto,
+                e.event_id, e.event_name, e.event_type
+            ORDER BY m.match_time DESC;      
+        """
+        cursor.execute(query, params)
+        df_matches = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])    
+        
+        return df_matches.to_dict(orient='records')
+        
+    except Exception as e:
+        function_logger.error(f"Error gathering upcoming matches: {e}", exc_info=True)
+        return []
+    finally:
+        close_database(db)
+        
+        
+        
+    
+    

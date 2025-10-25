@@ -16,12 +16,9 @@ def api_streams():
 def home_redirect():
     return redirect(url_for('views.esea'))
 
-# Some random redirects lol because soon™
+# Some random redirects because soon™
 @views.route('/hub')
 def hub_redirect():
-    return redirect(url_for('views.why_are_you_here'))
-@views.route('/matches')
-def matches_redirect():
     return redirect(url_for('views.why_are_you_here'))
 @views.route('/events')
 def events_redirect():
@@ -30,6 +27,13 @@ def events_redirect():
 def why_are_you_here():
     return render_template('whyAreYouHere.html')
 
+
+# Matches routes
+@views.route('/matches')
+def matches():
+    return render_template('matches/matches.html')
+
+@views.route('/api/matches')
 
 # Stats routes
 @views.route('/stats')
