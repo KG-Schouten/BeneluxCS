@@ -97,6 +97,7 @@
 }
 .sidebar-button:hover {
     background-image: linear-gradient(rgba(0, 0, 0, 0.2));
+    cursor: pointer;
 }
 
 .button-wrapper .sidebar-input:checked + .sidebar-button {

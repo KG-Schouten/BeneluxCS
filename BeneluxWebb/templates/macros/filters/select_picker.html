@@ -1,45 +1,115 @@
-{% macro select_picker(name, values, multiselect=False, init_selected=None) %}
-{% set init_selected = init_selected if init_selected is not none else ([] if multiselect else []) %}
-<div class="filter-container select-picker-container sidebar-button" data-filter-name="{{ name }}" data-default='{{ init_selected | tojson }}'>
-    <select class="selectpicker" 
-            id="{{ name }}-select"
-            {% if multiselect %}multiple data-size="5"{% endif %}>
-        {% for val in values %}
-            <option value="{{ val }}"
-                {% if multiselect and val in init_selected %}selected{% elif not multiselect and init_selected and val == init_selected[0] %}selected{% endif %}>
-                {{ val }}
-            </option>
-        {% endfor %}
-    </select>
+{% macro select_picker(name, values, multiselect=False, init_selected=[]) %}
+{% set init_selected = [] if init_selected is none else (init_selected if init_selected is iterable and init_selected is not string else [init_selected]) %}
+<div class="filter-container select-picker-container" 
+    id="{{name}}-select" data-filter-name="{{ name }}" 
+    data-default='{{ init_selected | tojson }}' 
+    data-multiselect="{{ 'true' if multiselect else 'false' }}">
+
+    <div class="select-button noselect">
+        <div class="select-placeholder-text">
+            Select some
+        </div>
+        <div class="select-button-icon">
+            <i class="fas fa-caret-down"></i>
+        </div>
+    </div>
+    <div class="select-dropdown">
+        <div class="select-options-list">
+            {% for val in values %}
+            <div class="select-option-item {% if val in init_selected %}selected{% endif %}" data-value="{{ val }}">
+                <label class="select-option-label noselect">{{ val }}</label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 </div>
 
 <script>
 (function() {
-    const container = document.currentScript.previousElementSibling;
-    const select = container.querySelector('select');
+    const container = document.getElementById('{{name}}-select');
 
-    // Initialize Bootstrap Select
+    console.log('Initializing select picker for filter "{{ name }}"');
+
+    const button = container.querySelector('.select-button');
+    const dropdown = container.querySelector('.select-dropdown');
+    const options = dropdown.querySelectorAll('.select-option-item');
+
+    const multiselect = container.dataset.multiselect === 'true';
+
     function updateValue() {
-        const selected = Array.from(select.selectedOptions).map(opt => opt.value);
-        container.dataset.value = JSON.stringify(selected);
+        const selectedOptions = Array.from(container.querySelectorAll('.select-option-item.selected'));
+        const selectedValues = selectedOptions.map(opt => opt.dataset.value);
+
+        console.log('Selected values for filter "{{ name }}":', selectedValues);
+
+        container.dataset.value = JSON.stringify(selectedValues);
+
+        updateVisuals(selectedValues);
     }
 
-    // Initialize value
-    updateValue();
+    function updateVisuals(values) {
+        // Update the dropdown
+        options.forEach(option => {
+            const value = option.dataset.value;
+            if (values.includes(value)) {
+                option.classList.add('selected');
+            }
+            else {
+                option.classList.remove('selected');
+            }
+        });
 
-    // Listen for external apply
+        // Update the button text
+        const placeholderText = container.querySelector('.select-placeholder-text');
+        if (values.length === 0) {
+            placeholderText.textContent = 'Select {{ name }}';
+        }
+        else if (values.length === 1) {
+            placeholderText.textContent = values[0];
+        }
+        else {
+            placeholderText.textContent = values.length + ' selected';
+        }
+    }
+
     container.addEventListener('applyValuesFromUrl', (e) => {
         const values = e.detail || [];
-        Array.from(select.options).forEach(option => {
-            option.selected = values.includes(option.value);
-        });
-        // Refresh the selectpicker to reflect the new selection
-        $(select).selectpicker('refresh');
+        console.log('Applying values from URL for filter "{{ name }}":', values);
+        updateVisuals(values);
         updateValue();
-    }); 
+    })
 
-    // Listen for changes
-    select.addEventListener('change', updateValue);
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            dropdown.classList.remove('show');
+        }
+    });
+    button.addEventListener('click', () => {
+        dropdown.classList.toggle('show');
+    });
+    
+
+    options.forEach(option => {
+        option.addEventListener('click', () => {
+            if (multiselect) {
+                option.classList.toggle('selected');
+            }
+            else {
+                option.classList.toggle('selected');
+                options.forEach(opt => {
+                    if (opt !== option) {
+                        opt.classList.remove('selected');
+                    }
+                });
+            }
+            updateValue();
+        });
+    });
+
+    // Initialize
+    updateValue();
+
+
 })();
 </script>
 {% endmacro %}

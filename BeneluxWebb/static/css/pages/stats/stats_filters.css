@@ -12,3 +12,8 @@
 .flag-img {
   width: 38px !important;
 }
+
+/* Custom Select Picker */
+.select-button {
+  justify-content: space-between;
+}
