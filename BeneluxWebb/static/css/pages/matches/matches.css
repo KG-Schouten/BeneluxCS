@@ -1,0 +1,26 @@
+:root {
+    --max-width-content: 1200px;
+    --sidebar-width: 168px;
+}
+
+.matches-page-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    min-height: 100vh;
+    flex-shrink: 0;
+}
+
+.matches-wrapper {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: flex-start;
+    margin: 10px auto;
+    padding-top: 0;
+    background-color: var(--background-light1);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    min-width: 0;
+}
