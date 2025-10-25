@@ -1066,7 +1066,43 @@ def get_esea_player_of_the_week() -> list:
     
     db, cursor = start_database()
     try:
-        start_of_week = int((datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        now = datetime.now(timezone.utc)
+        
+        start_of_last_week = int(
+            (now - timedelta(days=now.weekday() + 7))
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .timestamp()
+        )
+        start_of_week = int(
+            (now - timedelta(days=now.weekday()))
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .timestamp()
+        )
+        
+        # Determine start time
+        try:
+            query = """
+                SELECT
+                    match_id, 
+                    match_time,
+                    status
+                FROM matches
+                WHERE match_time >= %s
+                AND status = 'FINISHED'
+                ORDER BY match_time DESC
+            """
+            cursor.execute(query, (start_of_last_week,))
+            rows = cursor.fetchall()
+            if not rows:
+                return []
+            
+            if rows[0][1] < start_of_week:
+                start_time = start_of_last_week
+            else:
+                start_time = start_of_week
+        except Exception as e:
+            function_logger.error(f"Error determining start of week for POTW: {e}", exc_info=True)
+            start_time = start_of_week
         
         stats_to_check = {
             "hltv": "HLTV Rating",
@@ -1092,7 +1128,7 @@ def get_esea_player_of_the_week() -> list:
             WHERE ma.match_time >= %s
             AND COALESCE(pc.country, p.country) IN ('nl', 'be', 'lu')
         """
-        cursor.execute(query_avg, (start_of_week,))
+        cursor.execute(query_avg, (start_time,))
         rows = cursor.fetchall()
         avg_dict = dict(zip([desc[0] for desc in cursor.description], rows[0])) if rows else {}
         
@@ -1138,7 +1174,7 @@ def get_esea_player_of_the_week() -> list:
                 adr DESC
 
         """
-        cursor.execute(query, (start_of_week,))
+        cursor.execute(query, (start_time,))
         rows = cursor.fetchall()
         df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
         
