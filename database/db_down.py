@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from psycopg2 import Error as PostgresError
 import pandas as pd
 import re
-from rapidfuzz import process, fuzz
 from collections import defaultdict
 
 from database.db_manage import start_database, close_database
@@ -86,10 +85,11 @@ def normalize_name(name):
     return name
 
 def are_names_similar(name1: str, name2: str, threshold: int = 75) -> bool:
+    from rapidfuzz import fuzz
     n1, n2 = normalize_name(name1), normalize_name(name2)
     return fuzz.ratio(n1, n2) >= threshold
 
-def fuzzy_search(query: str, choices: list, scorer=fuzz.WRatio, limit=5, threshold=60) -> list:
+def fuzzy_search(query: str, choices: list, limit=5, threshold=60) -> list:
     """
     Perform fuzzy search on a list of strings.
 
@@ -103,8 +103,22 @@ def fuzzy_search(query: str, choices: list, scorer=fuzz.WRatio, limit=5, thresho
     Returns:
         List of matched strings (only those scoring >= threshold), sorted by score descending.
     """
+    from rapidfuzz import process, fuzz
+    
+    # Normalize the names
+    query = normalize_name(query)
+    choices = [normalize_name(choice) for choice in choices]
+    
+    scorer = fuzz.QRatio
+    
     results = process.extract(query, choices, scorer=scorer, limit=limit)
-    filtered = [match for match, score, _ in results if score >= threshold]
+    
+    filtered = [
+        (choices[idx], score, idx) 
+        for (match, score, idx) in results 
+        if score >= threshold
+    ]
+    
     return filtered
 
 ### ----------------------------
