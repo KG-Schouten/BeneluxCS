@@ -2,7 +2,7 @@
     <div id="playerOfTheWeek" class="potw-carousel carousel slide" data-bs-ride="carousel" data-bs-interval="20000">
         <div class="potw-inner carousel-inner">
         {% for stat in top_stats %}
-            <div class="potw-item carousel-item {% if loop.first %}active{% endif %}" style="transition-duration: 1s;">
+            <div class="potw-item carousel-item {% if loop.first %}active{% endif %}" style="transition-duration: .8s;">
                 <!-- <img src="{{ url_for('static', filename='img/esea/PlayerOfTheWeek.webp') }}" class="d-block w-100" alt="Player of the Week"/> -->
                 <img src="{{ url_for('static', filename='img/potw/' ~ stat.stat ~ '.png') }}"
                     class="icon-bg"
