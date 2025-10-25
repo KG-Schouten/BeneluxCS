@@ -128,6 +128,44 @@ def gather_current_streams() -> list:
     
     db, cursor = start_database()
     try:
+        try:
+            # Gather matches for which the current time is within 1 hour before and 3 hours after match time
+            now = int(datetime.now(timezone.utc).timestamp())
+            before = now - (1 * 60 * 60)
+            after = now + (3 * 60 * 60)
+            
+            query = """
+                SELECT
+                    tm.match_id,
+                    tm.team_id,
+                    m.match_time,
+                    m.event_id,
+                    tb.players_main,
+                    tb.players_sub,
+                    tb.players_coach
+                FROM teams_matches tm
+                LEFT JOIN matches m ON tm.match_id = m.match_id
+                INNER JOIN teams_benelux tb ON tm.team_id = tb.team_id AND m.event_id = tb.event_id
+                WHERE m.match_time BETWEEN %s AND %s
+            """
+            
+            cursor.execute(query, (before, after))
+            res = cursor.fetchall()
+            cols = [desc[0] for desc in cursor.description]
+            
+            player_ids = [
+                p['player_id']
+                for row in res
+                for col in ['players_main', 'players_sub', 'players_coach']
+                for p in safe_load_json(row[cols.index(col)])
+                if isinstance(p, dict) and 'player_id' in p
+            ]
+            
+            # print("player_ids:", player_ids)
+        except Exception as e:
+            function_logger.error(f"Error gathering matches for close players: {e}")
+            player_ids = []
+        
         query = """
             SELECT
                 user_id,
@@ -137,7 +175,8 @@ def gather_current_streams() -> list:
                 viewer_count,
                 streamer_type,
                 thumbnail_url,
-                stream_title
+                stream_title,
+                player_id
             FROM streams
             WHERE live = TRUE AND game = 'Counter-Strike'
             ORDER BY viewer_count DESC
@@ -153,6 +192,15 @@ def gather_current_streams() -> list:
             }
             for row in res
         ]
+        
+        # Add "esea" to streamer_type if player_id matches
+        for stream in current_streams:
+            if stream.get("player_id") in player_ids:
+                if isinstance(stream.get("streamer_type"), list):
+                    if "esea" not in stream["streamer_type"]:
+                        stream["streamer_type"].append("esea")
+                else:
+                    stream["streamer_type"] = ["esea"]
         
         return current_streams
         
