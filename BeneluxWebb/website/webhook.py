@@ -142,12 +142,12 @@ def twitch_webhook():
     elif message_type == MESSAGE_TYPE_NOTIFICATION:
         subscription_type = data["subscription"]["type"]
         event_data = data["event"]
-        webhook_logger.info(f"Received Twitch notification for event type: {subscription_type}")
+        user_id = event_data.get("broadcaster_user_id")
+        webhook_logger.info(f"Received Twitch notification for event type: {subscription_type} | id: {user_id}")
         
         if subscription_type in ["stream.online", "stream.offline"]:
             # Handle stream online event
             webhook_logger.info(f"Processing stream status change for user ID: {event_data.get('broadcaster_user_id')}")
-            user_id = event_data.get("broadcaster_user_id")
             eventlet.spawn(run_async(update_streamers, [user_id]))
    
         else:

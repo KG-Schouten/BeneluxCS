@@ -422,8 +422,8 @@ def gather_streamers(streamer_ids: list = [], streamer_names: list = [], platfor
             params.extend(streamer_ids)
         if streamer_names:
             placeholders = ', '.join(['%s'] * len(streamer_names))
-            conditions.append(f"user_name IN ({placeholders})")
-            params.extend(streamer_names)
+            conditions.append(f"LOWER(user_login) IN ({placeholders})")
+            params.extend([name.lower() for name in streamer_names])
         if platforms:
             placeholders = ', '.join(['%s'] * len(platforms))
             conditions.append(f"platform IN ({placeholders})")

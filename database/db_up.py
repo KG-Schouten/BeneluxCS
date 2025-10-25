@@ -197,7 +197,7 @@ def clean_invalid_foreign_keys(df: pd.DataFrame, table_name: str) -> pd.DataFram
         fk_info = cursor.fetchall()
 
         if not fk_info:
-            function_logger.info(f"No foreign keys found for table {table_name}. Skipping foreign key validation.")
+            function_logger.debug(f"No foreign keys found for table {table_name}. Skipping foreign key validation.")
             return df
 
         # Build a DataFrame from the results
