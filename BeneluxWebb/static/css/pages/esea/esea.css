@@ -1,11 +1,5 @@
-/* esea.css */
 :root {
-  /* Main wrapper (ESEA wrapper) ratios */
   --sidebar-width: 168px;
-
-  /* Spacing & sizing */
-  --gap-small: 5px;
-  --border-radius-small: 3px;
 }
 
 /* === ESEA Content Wrapper === */
