@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
+def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     """
     Returns a rotating logger instance for a given name (e.g. 'daily').
     Creates a log file named '<name>.log' in the 'logs' directory.
