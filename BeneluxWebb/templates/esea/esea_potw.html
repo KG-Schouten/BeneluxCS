@@ -1,31 +1,35 @@
-<div id="playerOfTheWeek" class="potw-carousel carousel slide">
-    <div class="potw-inner carousel-inner">
-    {% for stat in top_stats %}
-        <div class="potw-item carousel-item {% if loop.first %}active{% endif %}">
-            <!-- <img src="{{ url_for('static', filename='img/esea/PlayerOfTheWeek.webp') }}" class="d-block w-100" alt="Player of the Week"/> -->
-            <img src="{{ url_for('static', filename='img/potw/' ~ stat.stat ~ '.png') }}"
-                class="icon-bg"
-                data-placeholder="{{ url_for('static', filename='img/potw/penta_kills.png') }}"
-                onerror="this.onerror=null;this.src=this.dataset.placeholder;"/>
-
-            <div class="potw-top">
-                <img src="{{ url_for('static', filename='img/flags/' ~ stat.player['country']|lower ~ '.png') }}"
-                    alt="{{ stat.player['country']|lower }}" style="height:20px;">
-                
-                <span class="potw-player-name">{{ stat.player['player_name']}}</span>
-            </div>
-            <div class="potw-bottom">
-                <span class="potw-desc">{{ stat.description }}</span>
-                <span class="potw-stat-value">{{ stat.value}}</span>
-            </div>
-        </div>
-    {% endfor %}
-    </div>
-
-    <div class="potw-indicators carousel-indicators">
+{% if top_stats %}
+    <div id="playerOfTheWeek" class="potw-carousel carousel slide" data-bs-ride="carousel" data-bs-interval="20000">
+        <div class="potw-inner carousel-inner">
         {% for stat in top_stats %}
-        <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="{{ loop.index0 }}" class="potw-indicator-btn {% if loop.first %}active{% endif %}" aria-current="{% if loop.first %}true{% else %}false{% endif %}" aria-label="Slide {{ loop.index }}"></button>
-        {% endfor %}
-    </div>
+            <div class="potw-item carousel-item {% if loop.first %}active{% endif %}" style="transition-duration: 1s;">
+                <!-- <img src="{{ url_for('static', filename='img/esea/PlayerOfTheWeek.webp') }}" class="d-block w-100" alt="Player of the Week"/> -->
+                <img src="{{ url_for('static', filename='img/potw/' ~ stat.stat ~ '.png') }}"
+                    class="icon-bg"
+                    data-placeholder="{{ url_for('static', filename='img/potw/penta_kills.png') }}"
+                    onerror="this.onerror=null;this.src=this.dataset.placeholder;"/>
 
-</div>
+                <div class="potw-top">
+                    <img src="{{ url_for('static', filename='img/flags/' ~ stat.player['country']|lower ~ '.png') }}"
+                        alt="{{ stat.player['country']|lower }}" style="height:20px;">
+                    
+                    <span class="potw-player-name">{{ stat.player['player_name']}}</span>
+                </div>
+                <div class="potw-bottom">
+                    <span class="potw-desc">{{ stat.description }}</span>
+                    <span class="potw-stat-value">{{ stat.value}}</span>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+
+        <div class="potw-indicators carousel-indicators">
+            {% for stat in top_stats %}
+            <button type="button" data-bs-target="#playerOfTheWeek" data-bs-slide-to="{{ loop.index0 }}" class="potw-indicator-btn {% if loop.first %}active{% endif %}" aria-current="{% if loop.first %}true{% else %}false{% endif %}" aria-label="Slide {{ loop.index }}"></button>
+            {% endfor %}
+        </div>
+
+    </div>
+{% else %}
+    <span class="text-muted">No matches played</span>
+{% endif %}
