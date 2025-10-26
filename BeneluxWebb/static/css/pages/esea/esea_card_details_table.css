@@ -1,8 +1,8 @@
-div[id^="player_stats_table_"][id$="_wrapper"] {
-    padding: 0px;
+div[id^="player-stats-table"][id$="_wrapper"] {
+  padding: 0px;
 }
 
-div[id^="player_stats_table_"][id$="_wrapper"] table.dataTable .player-cell {
+div[id^="player-stats-table"][id$="_wrapper"] table.dataTable .player-cell {
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -10,11 +10,11 @@ div[id^="player_stats_table_"][id$="_wrapper"] table.dataTable .player-cell {
   width: 100%; /* Ensure proper responsive behavior */
 }
 
-div[id^="player_stats_table_"][id$="_wrapper"] table.dataTable .player-cell img {
+div[id^="player-stats-table"][id$="_wrapper"] table.dataTable .player-cell img {
   flex-shrink: 0;
 }
 
-div[id^="player_stats_table_"][id$="_wrapper"] table.dataTable .player-cell .player-name {
+div[id^="player-stats-table"][id$="_wrapper"] table.dataTable .player-cell .player-name {
   display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -24,17 +24,17 @@ div[id^="player_stats_table_"][id$="_wrapper"] table.dataTable .player-cell .pla
 }
 
 /* Player type styling */
-div[id^="player_stats_table_"][id$="_wrapper"] table.dataTable .main-player-cell {
+div[id^="player-stats-table"][id$="_wrapper"] table.dataTable .main-player-cell {
   font-weight: bold;
 }
-div[id^="player_stats_table_"][id$="_wrapper"] table.dataTable .sub-player-cell {
+div[id^="player-stats-table"][id$="_wrapper"] table.dataTable .sub-player-cell {
   background-color: var(--background-dark1);
   color: gray;
   font-size: 0.9em;
 }
 
 @media screen and (max-width: 992px) {
-  div[id^="player_stats_table_"][id$="_wrapper"] tbody tr td {
+  div[id^="player-stats-table"][id$="_wrapper"] tbody tr td {
     font-size: 0.85em !important;
   }
 }
