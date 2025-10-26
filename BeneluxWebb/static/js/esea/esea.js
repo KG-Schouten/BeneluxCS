@@ -44,10 +44,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       currentFetchController = new AbortController();
       const { signal } = currentFetchController;
-
       const content = document.getElementById('season-content');
 
-      content.innerHTML = '<div class="spinner-border text-muted" role="status"><span class="visually-hidden">Loading...</span></div>';
+      content.innerHTML = '<div class="loader" style="width: 45px;"></div>';
 
       fetch(`/esea/season/${season}`, { signal })
           .then(res => {
@@ -98,13 +97,13 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
   
   // --- COMPONENT INITIALIZATION FUNCTIONS ---
-  // Initialize all tooltips
+  // Initialize team card tooltips
   function initTooltips(context = document) {
     const tooltipTriggerList = [].slice.call(context.querySelectorAll('.esea-wrapper [data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
   }
 
-  // Initialize button listeners
+  // Initialize team card button listeners
   function initButtonListeners(context = document) {
     const teamCards = context.querySelectorAll(".team-card");
 

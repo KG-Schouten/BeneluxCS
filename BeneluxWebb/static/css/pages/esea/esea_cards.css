@@ -47,7 +47,7 @@
   width: 100%;
 
   padding-inline: 10px;
-  margin-bottom: 20px;
+  margin-top: 8px;
 }
 
 /* === Team Card Styles === */
@@ -59,7 +59,7 @@
 
   height: auto;
   position: relative;
-  margin: 1rem auto;
+  margin: 8px auto 0px auto;
   padding: 8px;
   background-color: var(--background-dark1);
   color: var(--text);
