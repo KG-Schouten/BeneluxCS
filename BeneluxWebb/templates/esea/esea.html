@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_potw.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/streams.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/loader.css') }}">
 {% endblock %}
 
 {% block title %}{{ super() }} | ESEA{% endblock %}
@@ -59,31 +60,22 @@
                 {% set label = "Starting Soon" %}
               {% endif %}
             {% endif %}
-            <li class="nav-item" role="presentation">
-              <button 
-                class="nav-link season-nav-link {% if loop.first %}active{% endif %}" 
-                id="season-tab-{{ season.season_number }}"
-                data-season="{{ season.season_number }}"
-                data-banner="{{ season.event_banner }}"
-                type="button"
-                role="tab">
-
-                <span>S-{{ season.season_number }}</span>
-                {% if label %}
-                  <span class="badge nav-badge">{{ label }}</span>
-                {% endif %}
-              </button>
+            <li class="nav-item {% if loop.first %}active{% endif %}" role="presentation" data-season="{{ season.season_number }}">
+              <span>S-{{ season.season_number }}</span>
+              {% if label %}
+                <span class="badge nav-badge">{{ label }}</span>
+              {% endif %}
             </li>
           {% endfor %}
         </ul>
 
-        <div class="nav-item dropdown d-none">
-          <button class="nav-link dropdown-toggle" id="DropdownMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            More
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="DropdownMenu">
+        <div class="nav-item d-none" id="eseaDropdown">
+          <div class="nav-link" id="DropdownBtn">
+            <i class="bi bi-three-dots"></i>
+          </div>
+          <div id="DropdownMenu">
             <!-- Dropdown items will be added dynamically -->
-          </ul>
+          </div>
         </div>
 
       </div>
@@ -93,7 +85,9 @@
     <div class="tab-content mt-4" id="season-content">
       <div class="text-muted">Loading...</div>
     </div>
+    
   </div>
+
   <div class="sidebar right">
     
     <!-- Discord link -->
@@ -121,5 +115,5 @@
 
 {% block javascript %}
   {{ super() }}
-  <script src="{{ url_for('static', filename='js/esea/esea.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/esea/esea.js') }}"></script>
 {% endblock %}
