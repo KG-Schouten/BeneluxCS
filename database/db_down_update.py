@@ -244,6 +244,7 @@ def gather_league_teams() -> pd.DataFrame:
         close_database(db)
 
 def gather_league_teams_merged():
+    """Gathers league teams with merged names from teams_matches and league_teams."""
     db, cursor = start_database()
     try:
         query = """
@@ -310,28 +311,6 @@ def gather_league_teams_merged():
         
         df_league_teams = pd.DataFrame(league_teams)
         
-        # Gather avatars for the teams
-        pk_values = [(lt['team_id'], lt['season_number']) for lt in league_teams]
-        
-        query = """
-            SELECT
-                lt.team_id,
-                lt.season_number,
-                lt.avatar
-            FROM league_teams lt
-            WHERE (lt.team_id, lt.season_number) IN ({})
-        """
-        
-        placeholders = ', '.join(['(%s, %s)'] * len(pk_values))
-        query = query.format(placeholders)
-        flat_params = [item for sublist in pk_values for item in sublist]
-        cursor.execute(query, flat_params)
-        res = cursor.fetchall()
-        df_avatars = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
-        
-        if not df_avatars.empty and not df_league_teams.empty:
-            df_league_teams = df_league_teams.merge(df_avatars, on=['team_id', 'season_number'], how='left')
-        
         return df_league_teams, team_names_updated
     except Exception as e:
         function_logger.error(f"Error gathering league teams merged: {e}")
@@ -359,8 +338,6 @@ def gather_league_team_avatars():
         cursor.execute(query)
         res = cursor.fetchall()
         df_avatars = pd.DataFrame(res, columns=[desc[0] for desc in cursor.description])
-        
-        
         return df_avatars
     except Exception as e:
         function_logger.error(f"Error gathering league team avatars: {e}")
