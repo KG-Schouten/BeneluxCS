@@ -215,12 +215,12 @@ def esea():
 
 @views.route('/api/esea')
 def api_esea():
-    from database.db_down_website import gather_columns_mapping
+    from database.db_down_website import gather_columns_mapping, gather_esea_team_players
     columns_mapping = gather_columns_mapping()
     return jsonify({
         "columns_mapping": columns_mapping
     })
-      
+
 @views.route('/esea/matches')
 def esea_matches():
     from database.db_down_website import get_upcoming_matches
@@ -253,3 +253,38 @@ def esea_season_partial(season_number):
     # Extract teams for the specified season
     divisions = esea_data.get(season_number, {})
     return render_template('esea/_esea_season.html', divisions=divisions, season=season_number)
+
+@views.route('/esea/season/<season_number>/team/<team_id>/stats')
+def esea_team_stats(season_number, team_id):
+    from flask import request
+    from database.db_down_website import gather_esea_team_stats, gather_esea_team_players
+    import json
+
+    team_name = request.args.get('team_name')
+
+    try:
+        recent_matches, upcoming_matches, map_stats, player_stats = gather_esea_team_stats(team_id, season_number)
+        
+        players = gather_esea_team_players(team_id, season_number)
+        players_json = json.dumps(players)
+        
+        return render_template(
+            'esea/esea_team_stats.html',
+            recent_matches=recent_matches,
+            upcoming_matches=upcoming_matches,
+            map_stats=map_stats,
+            player_stats=player_stats,
+            players=players_json,
+            team_id=team_id,
+            team_name=team_name,  # <-- pass it to the template
+            season_number=season_number
+        )
+    except Exception as e:
+        return f"""
+        <div class="alert alert-danger">
+            <h4 class="alert-heading">Error</h4>
+            <p>There was an error processing your request: {e}</p>
+            <hr>
+            <p class="mb-0">Please try refreshing the page.</p>
+        </div>
+        """
