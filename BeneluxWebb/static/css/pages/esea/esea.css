@@ -49,7 +49,7 @@
 .season-nav {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding-left: 0;
   list-style-type: none;
   margin-block: 0;
@@ -58,40 +58,34 @@
 .nav-item {
   display: flex;
   justify-content: center; 
+  align-items: center;
+  flex-wrap: nowrap;
+  flex-direction: row;
+
   height: 35px;
+
+  cursor: pointer;
+
+  gap: 0.5rem;
+  padding-inline: 10px;
 
   border-inline: 1px solid var(--border);
 
   background-color: var(--secondary-dark4);
-}
-
-.nav-link {
-  height: 100%;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
 
   transition: background 0.2s ease;
-
-  gap: 0.5rem;
-  padding-inline: 10px;
 }
-
-.nav-link.active {
-  background-color: var(--accent);
-  color: var(--text);
-}
-.nav-link.active:hover {
-  background-color: var(--accent);
-  color: var(--text);
-}
-.nav-link:hover {
+.nav-item:hover {
   background-color: var(--secondary);
-  color: var(--text);
+}
+.nav-item.active {
+  background-color: var(--accent) !important;
+}
+.nav-item.active:hover {
+  background-color: var(--accent);
 }
 
-.nav-link span {
+.nav-item span {
   white-space: nowrap;
 }
 
@@ -101,29 +95,38 @@
   font-size: 0.675em;
 }
 
-.nav-item.dropdown {
+#eseaDropdown {
   flex-grow: 1;
+  position: relative;
 }
-.nav-item.dropdown .dropdown-toggle {
-  padding-inline: 6px;
+
+#DropdownBtn {
   width: 80px;
   flex-shrink: 0;
 }
-.dropdown-menu {
-  position: absolute;
-  min-width: 0;
-  background-color: var(--secondary-dark5);
-  background-clip: padding-box;
+
+#DropdownMenu {
+  display: block;
+  background-color: var(--background);
   border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  z-index: 1010;
-  padding: 0;
-  width: inherit;
+  width: 100%;
+  min-width: 0;
+  max-height: 0;
+  border-bottom-left-radius: var(--border-radius);
+  border-bottom-right-radius: var(--border-radius);
+  position: absolute;
+  top: 100%;
+  overflow: hidden;
+  box-shadow: none;
+  z-index: 10;
+  transition: max-height 0.2s ease;
+}
+#DropdownMenu.show {
+  max-height: 500px;
+  box-shadow: 0px 5px 5px rgba(0,0,0,0.2);
 }
 
-.dropdown-menu li {
-  color: var(--text);
-  background-color: transparent;
+#DropdownMenu li {
   border: 0;
   width: 100%;
 }
