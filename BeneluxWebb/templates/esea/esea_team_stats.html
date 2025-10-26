@@ -1,0 +1,210 @@
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_card_details.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/esea/esea_card_details_table.css') }}">
+{% endblock %}
+
+<div class="details-box col">
+
+    <div class="details-box-header">
+        Recent Matches
+    </div>
+
+    <div class="matches-box recent">
+        {% if recent_matches %}
+            {% for match in recent_matches %}
+            <a href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" 
+                class="match-info-box {{ 'highlight-border' if match.opponent_id in teams | map(attribute='team_id') | list else '' }}" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onclick="plausible('Match Clicked', { props: { 
+                    location: 'Team Card',
+                    match_id: '{{ match.match_id }}', 
+                    team: '{{ team_name }}', 
+                    season: '{{ season_number }}',
+                    division: '{{ division_name }}' } })">
+                
+                <div class="match-info-time">
+                    {% if match.match_time %}
+                        <span>{{ match.match_time | datetimeformat('%d/%m') }}<span>
+                    {% else %}
+                        <span>TBA</span>
+                    {% endif %}
+                </div>
+
+                <div class="match-info-team-wrapper">
+
+                    <img class="match-info-team-avatar"
+                        src="{{ url_for('static', filename='img/avatars/' ~ team_id ~ '_' ~ season_number ~ '.webp') }}"
+                        alt="{{ team_name }}"
+                        loading="lazy"
+                        data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+
+                    <div class="match-score">
+                        {% if match.score == 'FFW' %}
+                            <span class="fst-italic text-success">{{ match.score }}</span>
+                        {% elif match.score == 'FFL' %}
+                            <span class="fst-italic text-danger">{{ match.score }}</span>
+                        {% else %}
+                            {% set parts = match.score.split('/') %}
+                            {% set score1 = parts[0] | trim | int %}
+                            {% set score2 = parts[1] | trim | int %}
+                            {% set is_win = match.result == 'W' %}
+                            {% set left = score1 if is_win and score1 > score2 or not is_win and score1 < score2 else score2 %}
+                            {% set right = score2 if left == score1 else score1 %}
+
+                            <span class="match-score-full">
+                                <span class="match-score-left {{ 'text-success' if is_win else 'text-danger' }}">
+                                    {{ left }}
+                                </span>
+                                <span class="match-score-divider">-</span>
+                                <span class="match-score-right {{ 'text-danger' if is_win else 'text-success' }}">
+                                    {{ right }}
+                                </span>
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="match-info-team opponent">
+                        <div class="match-info-avatar">
+                            <img src="{{ match.opponent_avatar }}"
+                                alt="{{ match.opponent }}"
+                                loading="lazy"
+                                data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                        </div>
+                        <span class="match-info-name opponent">{{ match.opponent }}</span>
+                    </div>
+                </div>
+
+                <div class="match-info-maps">
+                    {% if match.maps_played %}
+                        {% for map in match.maps_played %}
+                            <img src="{{ url_for('static', filename='img/maps/' ~ map ~ '.png') }}"
+                                alt="{{ map }}"
+                                loading="lazy">
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <p class="d-flex align-items-center text-muted mb-0">No recent matches.</p>
+        {% endif %}
+    </div>
+
+    <div class="details-box-header">
+        Upcoming Matches
+    </div>
+
+    <div class="matches-box upcoming">
+        {% if upcoming_matches %}
+            {% for match in upcoming_matches %}
+            <a href="https://www.faceit.com/en/cs2/room/{{ match.match_id }}" 
+                class="match-info-box {{ 'highlight-border' if match.opponent_id in teams | map(attribute='team_id') | list else '' }}" 
+                target="_blank" 
+                rel="noopener noreferrer">
+
+                <div class="match-info-time upcoming">
+                    {% if match.match_time %}
+                        <span>{{ match.match_time | datetimeformat('%d/%m %H:%M') }}<span>
+                    {% else %}
+                        <span>TBA</span>
+                    {% endif %}
+                </div>
+
+                <div class="match-info-team-wrapper">
+                    <img class="match-info-team-avatar"
+                        src="{{ url_for('static', filename='img/avatars/' ~ team_id ~ '_' ~ season_number ~ '.webp') }}"
+                        alt="{{ team_name }}"
+                        loading="lazy"
+                        data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                        onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+
+                    <div class="match-score">
+                        <span> vs. </span>
+                    </div>
+
+                    <div class="match-info-team opponent">
+                        <div class="match-info-avatar">
+                            <img src="{{ match.opponent_avatar }}"
+                                alt="{{ match.opponent }}"
+                                loading="lazy"
+                                data-placeholder="{{ url_for('static', filename='img/faceit/team_avatar_placeholder.jpg') }}"
+                                onerror="this.onerror=null;this.src=this.dataset.placeholder;">
+                        </div>
+                        <span class="match-info-name opponent">{{ match.opponent }}</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <p class="d-flex align-items-center text-muted mb-0">No upcoming matches.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="details-box col">
+
+    <div class="details-box-header">
+        Map Statistics
+    </div>
+
+    {% if map_stats %}
+        <div class="maps-box">
+            {% for map in map_stats %}
+                <div class="map-stat-box"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="bottom"
+                    title="Played: {{ map.played }}, Won: {{ map.won }}">
+                    
+                    <img src="{{ url_for('static', filename='img/maps/' ~ map.map_name ~ '.png') }}"
+                        alt="{{ map.map_name }}"
+                        loading="lazy"
+                        data-placeholder="{{ url_for('static', filename='img/faceit/player_avatar_placeholder.jpg') }}"
+                    >
+                    <div class="map-name">
+                        {{ map.map_name | replace('de_', '')}}
+                    </div>
+                    <span class="map-badge badge
+                        {% if map.played == 0 %}{% elif map.winrate >= 50 %}bg-success{% else %}bg-danger{% endif %}">
+                        {% if map.played == 0 %}
+                            -
+                        {% else %}
+                            {{ map.winrate }} 
+                        {% endif %}
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="stats-box unavailable">
+            <p class="text-muted">No map stats available.</p>
+        </div>
+    {% endif %}
+
+    <!-- Player statistics -->
+    <div class="details-box-header">
+        Player Statistics
+        <a class="details-refer btn btn-custom"
+            href="/stats/player?events=esea&seasons={{ season_number }}&teams={{ team_name }}">
+            View All Stats
+        </a>
+    </div>
+
+    {% if player_stats %}
+        <div class="player-stats-box">
+            <input type="hidden"
+                id="player-stats-data-{{team_id}}"
+                data-stats='{{ player_stats | tojson | safe }}'
+                data-players="{{ players }}">
+            <table id="player-stats-table-{{team_id}}" class="table custom-data-table align-middle table-sm">
+                <!-- DataTable will be initialized here -->
+            </table>
+        </div>
+    {% else %}
+        <div class="stats-box unavailable">
+            <p class="text-muted">No player stats available.</p>
+        </div>
+    {% endif %}
+</div>
