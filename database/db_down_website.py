@@ -210,7 +210,7 @@ def gather_current_streams() -> list:
     
     finally:
         close_database(db)
-        
+
 # =============================
 #           ESEA Page
 # =============================
@@ -272,11 +272,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
             return {}
         
         df_teams_benelux["division_sort_rank"] = df_teams_benelux["division_name"].apply(compute_division_rank)
-
-        
-        # Pre-load all team names, player data, matches, and map stats for efficiency
-        all_team_ids = df_teams_benelux['team_id'].unique().tolist()
-        all_season_numbers = df_teams_benelux['season_number'].unique().tolist()
         
         # Batch load all player data
         all_player_ids = set()
@@ -315,283 +310,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     'player_faceit_level': row[5]
                 }
         
-        # Batch load all matches data
-        matches_data = {}
-        if all_team_ids and all_season_numbers:            
-            
-            cursor.execute("""
-                CREATE TEMPORARY TABLE temp_season_teams (
-                    season_number INTEGER,
-                    team_id TEXT
-                ) ON COMMIT DROP
-            """)
-            
-            cursor.execute("""
-                INSERT INTO temp_season_teams (season_number, team_id)
-                SELECT DISTINCT s.season_number, tm.team_id
-                FROM matches m
-                JOIN seasons s ON m.event_id = s.event_id
-                JOIN teams_matches tm ON tm.match_id = m.match_id
-                WHERE tm.team_id = ANY(%s) 
-                AND s.season_number = ANY(%s)
-            """, (list(all_team_ids), list(all_season_numbers)))
-            
-            cursor.execute("""
-                WITH team_matches AS (
-                    SELECT 
-                        m.match_id, m.match_time, m.winner_id, m.status, m.score,
-                        tm.team_id AS our_id, tm.team_name AS our_name,
-                        opp.team_id AS opp_id, opp.team_name AS opp_name, opp.avatar AS opp_avatar,
-                        s.season_number
-                    FROM matches m
-                    JOIN seasons s ON m.event_id = s.event_id
-                    JOIN teams_matches tm ON tm.match_id = m.match_id
-                    JOIN teams_matches opp ON opp.match_id = m.match_id AND opp.team_id != tm.team_id
-                    JOIN temp_season_teams tst ON s.season_number = tst.season_number AND tm.team_id = tst.team_id
-                ),
-                map_counts AS (
-                    SELECT match_id, COUNT(DISTINCT match_round) AS map_count FROM maps GROUP BY match_id
-                ),
-                map_scores AS (
-                    SELECT match_id, team_id, SUM(COALESCE(team_win, 0)) AS win_count
-                    FROM teams_maps
-                    GROUP BY match_id, team_id
-                ),
-                bo1_scores AS (
-                    SELECT match_id, score FROM maps WHERE match_round = 1
-                ),
-                match_maps AS (
-                    SELECT match_id, ARRAY_AGG(map ORDER BY match_round) AS maps_played
-                    FROM maps
-                    GROUP BY match_id
-                )
-                SELECT
-                    t.season_number,
-                    t.our_id AS team_id,
-                    t.match_id,
-                    t.match_time,
-                    t.status,
-                    t.opp_id,
-                    t.opp_name,
-                    t.opp_avatar,
-                    CASE
-                        WHEN t.status = 'FINISHED' THEN
-                            CASE
-                                WHEN t.our_id = t.winner_id THEN 'W'
-                                ELSE 'L'
-                            END
-                        ELSE NULL
-                    END AS result,
-                    COALESCE(mc.map_count, 1) AS map_count,
-                    COALESCE(ms.win_count, 0) AS our_score,
-                    COALESCE(ms_opp.win_count, 0) AS opp_score,
-                    bs.score AS bo1_score,
-                    mm.maps_played
-                FROM team_matches t
-                LEFT JOIN map_counts mc ON t.match_id = mc.match_id
-                LEFT JOIN map_scores ms ON t.match_id = ms.match_id AND ms.team_id = t.our_id
-                LEFT JOIN map_scores ms_opp ON t.match_id = ms_opp.match_id AND ms_opp.team_id = t.opp_id
-                LEFT JOIN bo1_scores bs ON t.match_id = bs.match_id
-                LEFT JOIN match_maps mm ON t.match_id = mm.match_id
-                ORDER BY t.season_number, t.our_id, t.match_time DESC
-            """)
-            
-            all_match_rows = cursor.fetchall()
-            for row in all_match_rows:
-                season_num = row[0]
-                team_id = row[1]
-                if (team_id, season_num) not in matches_data:
-                    matches_data[(team_id, season_num)] = []
-                matches_data[(team_id, season_num)].append(row[2:])
-
-            for key in matches_data:
-                if matches_data[key]:
-                    cols = [desc[0] for desc in cursor.description][2:]
-                    matches_data[key] = pd.DataFrame(matches_data[key], columns=cols)
-        
-        # Batch load player stats data
-        player_stats_data = {}
-        if all_team_ids and all_season_numbers:  
-            cursor.execute("""
-                CREATE TEMPORARY TABLE temp_season_teams_players (
-                    season_number INTEGER,
-                    team_id TEXT,
-                    player_id TEXT
-                ) ON COMMIT DROP
-            """)
-            
-            cursor.execute("""
-                INSERT INTO temp_season_teams_players (season_number, team_id, player_id)
-                SELECT DISTINCT s.season_number, tm.team_id, ps.player_id
-                FROM players_stats ps
-                JOIN matches m ON ps.match_id = m.match_id
-                JOIN seasons s ON m.event_id = s.event_id
-                JOIN teams_matches tm ON tm.match_id = m.match_id
-                WHERE tm.team_id = ANY(%s) 
-                AND s.season_number = ANY(%s)
-            """, (list(all_team_ids), list(all_season_numbers)))
-            
-            cursor.execute("""
-                WITH player_match_stats AS (
-                    SELECT
-                        s.season_number,
-                        ps.team_id,
-                        ps.player_id,
-                        p.player_name,
-                        COALESCE(pc.country, p.country) AS country,
-                        ps.match_id,
-                        ps.match_round,
-                        ps.adr,
-                        ps.headshots,
-                        ps.kills,
-                        ps.deaths,
-                        ps.hltv
-                    FROM players_stats ps
-                    JOIN players p ON ps.player_id = p.player_id
-                    JOIN matches m ON ps.match_id = m.match_id
-                    JOIN seasons s ON m.event_id = s.event_id
-                    LEFT JOIN players_country pc ON p.player_id = pc.player_id
-                    JOIN temp_season_teams_players t 
-                        ON s.season_number = t.season_number
-                    AND ps.team_id = t.team_id
-                    AND ps.player_id = t.player_id
-                )
-                SELECT
-                    season_number,
-                    team_id,
-                    player_id,
-                    player_name,
-                    country,
-                    COUNT(DISTINCT (match_id, match_round)) AS maps_played,
-                    AVG(adr) AS adr,
-                    SUM(headshots) * 100.0 / NULLIF(SUM(kills), 0) AS headshots_percent,
-                    SUM(kills) * 1.0 / NULLIF(SUM(deaths), 0) AS k_d_ratio,
-                    AVG(hltv) AS hltv
-                FROM player_match_stats
-                GROUP BY season_number, team_id, player_id, player_name, country
-                ORDER BY season_number, team_id, player_id
-            """)
-            
-            all_rows = cursor.fetchall()
-            cols = [desc[0] for desc in cursor.description]
-            for row in all_rows:
-                season_num = row[0]
-                team_id = row[1]
-                player_id = row[2]
-                key = (player_id, team_id, season_num)
-                player_stats_data[key] = dict(zip(cols[3:], row[3:]))
-        
-        # Batch load map stats data
-        map_stats_data = {}
-        
-        map_pools = {}
-        if all_season_numbers:
-            placeholders = ','.join(['%s'] * len(all_season_numbers))
-            cursor.execute(f"""
-                SELECT s.season_number, e.maps 
-                FROM events e
-                JOIN seasons s ON e.event_id = s.event_id
-                WHERE s.season_number IN ({placeholders})
-            """, all_season_numbers)
-            
-            for row in cursor.fetchall():
-                season_num, maps = row
-                # Handle PostgreSQL jsonb format properly
-                if maps:
-                    # For PostgreSQL, maps is already a Python list
-                    if isinstance(maps, list):
-                        map_pools[season_num] = maps
-                    # For string format (SQLite compatibility)
-                    elif isinstance(maps, str):
-                        try:
-                            parsed = json.loads(maps)
-                            map_pools[season_num] = parsed if isinstance(parsed, list) else []
-                        except (json.JSONDecodeError, TypeError):
-                            map_pools[season_num] = []
-                    else:
-                        map_pools[season_num] = []
-                else:
-                    map_pools[season_num] = []
-        
-        if all_team_ids and all_season_numbers:
-            # Create a temporary table for map stats query
-            cursor.execute("""
-                CREATE TEMPORARY TABLE temp_map_stats (
-                    season_number INTEGER,
-                    team_id TEXT
-                ) ON COMMIT DROP
-            """)
-            
-            # Insert combinations into temp table
-            map_stats_combos = []
-            for season_num in all_season_numbers:
-                for team_id in all_team_ids:
-                    map_stats_combos.append((season_num, team_id))
-            
-            insert_values = ','.join(cursor.mogrify("(%s,%s)", combo).decode('utf-8') 
-                                    for combo in map_stats_combos)
-            cursor.execute(f"INSERT INTO temp_map_stats VALUES {insert_values}")
-            
-            # Execute optimized query for all team map stats at once
-            cursor.execute("""
-                SELECT
-                    s.season_number,
-                    tm.team_id,
-                    ma.map,
-                    COUNT(tm.team_id) as played,
-                    SUM(COALESCE(tm.team_win, 0)) as won
-                FROM teams_maps tm
-                JOIN matches m ON tm.match_id = m.match_id
-                JOIN seasons s ON m.event_id = s.event_id
-                JOIN maps ma ON ma.match_id = tm.match_id AND ma.match_round = tm.match_round
-                JOIN temp_map_stats tms ON s.season_number = tms.season_number AND tm.team_id = tms.team_id
-                WHERE ma.map IS NOT NULL
-                GROUP BY s.season_number, tm.team_id, ma.map
-                ORDER BY s.season_number, tm.team_id, ma.map
-            """)
-            
-            # Process all map stats and organize by (team_id, season_number)
-            map_stats_by_map = {}
-            for row in cursor.fetchall():
-                season_num, team_id, map_name, played, won = row
-                key = (team_id, season_num)
-                
-                if key not in map_stats_by_map:
-                    map_stats_by_map[key] = {}
-                
-                # Calculate winrate
-                winrate = round((won / played) * 100, 1) if played > 0 else 0
-                
-                # Store map stats
-                map_stats_by_map[key][map_name] = {
-                    "map_name": map_name,
-                    "played": played,
-                    "won": int(won),
-                    "winrate": winrate
-                }
-            
-            # Ensure all maps from pool exist in final output for each team/season
-            for key in map_stats_combos:
-                team_id, season_num = key[1], key[0]  # Reversed from combos
-                final_map_stats = []
-                map_pool = map_pools.get(season_num, [])
-                
-                # Get map stats for this team/season combo, defaulting to empty dict
-                team_map_stats = map_stats_by_map.get((team_id, season_num), {})
-                
-                # Ensure all maps from pool exist in final output
-                for map_name in map_pool:
-                    stats = team_map_stats.get(map_name, {
-                        "map_name": map_name,
-                        "played": 0,
-                        "won": 0,
-                        "winrate": 0.0
-                    })
-                    final_map_stats.append(stats)
-                
-                # Store the complete map stats for this team/season
-                map_stats_data[(team_id, season_num)] = final_map_stats
-        
         # Now, construct the final nested dictionary output
         esea_data = {}
         for season_number, group_season in df_teams_benelux.sort_values(by=["season_number"], ascending=False).groupby("season_number", sort=False):
@@ -611,9 +329,7 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                     
                     team_name = group_team['team_name'].iloc[0]
                     nickname = group_team['nickname'].iloc[0]
-                    # team_avatar = bytes_to_data_url(group_team['team_avatar'].iloc[0]) if group_team['team_avatar'].iloc[0] else None
                     region_name = group_team['region_name'].iloc[0]
-                    
                     
                     stages = [
                         {
@@ -669,79 +385,11 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         )
                     )
                     players_coach = [players_data.get(p['player_id'], p) for p in players_coach if p['player_id'] in players_data]
-
-                    # Use pre-loaded matches data
-                    df_matches = matches_data.get((team_id, season_number), pd.DataFrame())
-
-                    map_stats_key = (str(team_id), int(season_number) if isinstance(season_number, (int, float)) else season_number)
-                    map_stats = map_stats_data.get(map_stats_key, [])
-                    
-                    # If not found, try with original types (fallback)
-                    if not map_stats:
-                        map_stats = map_stats_data.get((team_id, season_number), [])
-                    
-                    recent_matches = []
-                    upcoming_matches = []
-
-                    for row in df_matches.itertuples(index=False):
-                        if row.status == 'FINISHED':
-                            if row.our_score == 0 and row.opp_score == 0:
-                                score = "FFW" if row.result == "W" else "FFL"
-                            elif row.map_count == 1 and row.bo1_score:
-                                score = row.bo1_score
-                            else:
-                                score = f"{int(row.our_score)}/{int(row.opp_score)}"
-
-                            recent_matches.append({
-                                'match_id': row.match_id,
-                                'result': row.result,
-                                'opponent_id': row.opp_id,
-                                'opponent': row.opp_name,
-                                'opponent_avatar': row.opp_avatar,
-                                'score': score,
-                                'match_time': int(row.match_time) if pd.notna(row.match_time) else 0,
-                                'maps_played': row.maps_played,
-                            })
-
-                        else:  # Upcoming matches
-                            upcoming_matches.append({
-                                'match_id': row.match_id,
-                                'opponent_id': row.opp_id,
-                                'opponent': row.opp_name,
-                                'opponent_avatar': row.opp_avatar,
-                                'match_time': int(row.match_time)
-                            })
-
-                    recent_matches.sort(key=lambda x: x['match_time'])
-                    upcoming_matches.sort(key=lambda x: x['match_time'])
-
-                    # Limit matches
-                    match_limit = 4
-                    recent_matches = recent_matches[-match_limit:]
-                    upcoming_matches = upcoming_matches[:match_limit]
-
-                    # Create the player_stats dict
-                    player_stats = []
-                    for (p_id, t_id, s_num), stats in player_stats_data.items():
-                        if t_id == team_id and s_num == season_number:
-                            player_stats.append({
-                                "player_id": p_id,
-                                **stats
-                            })
-                        
-                    # Order players by hltv
-                    player_stats_main = sorted(player_stats, key=lambda p: p["maps_played"], reverse=True)[:5]
-                    player_stats_main.sort(key=lambda x: x['hltv'], reverse=True)
-                    player_stats_sub = [p for p in player_stats if p not in player_stats_main]
-                    player_stats_sub.sort(key=lambda x: x["hltv"], reverse=True)
-                    
-                    player_stats = player_stats_main + player_stats_sub
                     
                     team_dict = {
                         'team_id': team_id,
                         'team_name': team_name,
                         'nickname': nickname,
-                        # 'team_avatar': team_avatar,
                         'players_main': players_main,
                         'players_sub': players_sub,
                         'players_coach': players_coach,
@@ -749,10 +397,6 @@ def gather_esea_teams_benelux(szn_number: int | str = "ALL") -> dict:
                         'season_number': season_number,
                         'region_name': region_name,
                         'division_name': division_name,
-                        'matches': recent_matches,
-                        'upcoming_matches': upcoming_matches,
-                        'map_stats': map_stats,
-                        'player_stats': player_stats
                     }
 
                     esea_data[season_number][division_name].append(team_dict)
@@ -821,80 +465,6 @@ def gather_teams_benelux(szn_number: int | str = "ALL") -> pd.DataFrame:
         return pd.DataFrame()
     
     finally:   
-        close_database(db)
-        
-def gather_esea_map_stats(team_id, szn_number) -> list:
-    db, cursor = start_database()
-    try:
-        # Gather map pool from events
-        cursor.execute("""
-            SELECT 
-                e.maps 
-            FROM events e
-            LEFT JOIN seasons s ON e.event_id = s.event_id
-            WHERE s.season_number = %s
-        """, (szn_number,))
-        rows = cursor.fetchall()
-        map_pool = []
-        for row in rows:
-            if row[0]:
-                try:
-                    parsed = json.loads(row[0])
-                    if isinstance(parsed, list):
-                        map_pool = parsed
-                        break  # use first valid one found
-                except Exception:
-                    continue
-                
-        # Gather team map stats
-        cursor.execute("""
-            SELECT
-                tm.team_id,
-                tm.team_win,
-                ma.map
-            FROM teams_maps tm
-            LEFT JOIN maps ma ON ma.match_id = tm.match_id AND ma.match_round = tm.match_round
-            LEFT JOIN matches m ON tm.match_id = m.match_id
-            INNER JOIN seasons s ON m.event_id = s.event_id
-            WHERE tm.team_id = %s AND s.season_number = %s
-        """, (team_id, szn_number))
-
-        map_rows = cursor.fetchall()
-        df_team_maps = pd.DataFrame(map_rows, columns=[desc[0] for desc in cursor.description])
-                
-        # --- Calculate stats per map
-        map_stats_dict = {}
-        if not df_team_maps.empty:
-            df_team_maps = df_team_maps[df_team_maps["map"].notna()]  # drop nulls just in case
-            map_group = df_team_maps.groupby("map")
-            for map_name, group in map_group:
-                played = len(group)
-                won = group["team_win"].sum()
-                winrate = round((won / played) * 100, 1) if played > 0 else 0
-                map_stats_dict[map_name] = {
-                    "map_name": map_name,
-                    "played": played,
-                    "won": int(won),
-                    "winrate": winrate
-                }
-
-        # --- Step 3: Ensure all maps from pool exist in final output
-        final_map_stats = []
-        for map_name in map_pool:
-            stats = map_stats_dict.get(map_name, {
-                "map_name": map_name,
-                "played": 0,
-                "won": 0,
-                "winrate": 0.0
-            })
-            final_map_stats.append(stats)
-
-        return final_map_stats
-    except Exception as e:
-        function_logger.error(f"Error gathering ESEA map stats: {e}")
-        return []
-    
-    finally:
         close_database(db)
 
 def gather_esea_seasons_divisions() -> tuple:
@@ -1132,8 +702,6 @@ def get_esea_player_of_the_week() -> list:
         rows = cursor.fetchall()
         avg_dict = dict(zip([desc[0] for desc in cursor.description], rows[0])) if rows else {}
         
-        print(f"Average stats for the week: {avg_dict}")
-        
         # Get player stats for the week
         query = """
             SELECT
@@ -1209,6 +777,299 @@ def get_esea_player_of_the_week() -> list:
     finally:
         close_database(db)
 
+def gather_esea_team_players(team_id: str, szn_number) -> list:
+    db, cursor = start_database()
+    try:
+        cursor.execute("""
+            SELECT
+                players_main
+            FROM teams_benelux tb
+            JOIN seasons s ON tb.event_id = s.event_id
+            WHERE tb.team_id = %s AND s.season_number = %s             
+        """, (team_id, szn_number))
+        rows = cursor.fetchall()
+        
+        if rows:
+            players = safe_load_json(rows[0][0]) if rows[0][0] else []
+        else:
+            players = []
+            
+        return players
+    except Exception as e:
+        function_logger.error(f"Error gathering ESEA team players: {e}")
+        return []
+    finally:
+        close_database(db)
+
+
+def gather_esea_team_stats(team_id, szn_number) -> tuple:
+    recent_matches, upcoming_matches = gather_esea_team_matches(team_id, szn_number)
+    map_stats = gather_esea_team_map_stats(team_id, szn_number)
+    player_stats = gather_esea_team_player_stats(team_id, szn_number)
+    
+    return recent_matches, upcoming_matches, map_stats, player_stats
+
+def gather_esea_team_matches(team_id: str, szn_number):
+    db, cursor = start_database()
+    
+    try: 
+        query = """
+            WITH team_matches AS (
+                SELECT 
+                    m.match_id, m.match_time, m.winner_id, m.status, m.score,
+                    tm.team_id AS our_id, tm.team_name AS our_name,
+                    opp.team_id AS opp_id, opp.team_name AS opp_name, opp.avatar AS opp_avatar,
+                    s.season_number
+                FROM matches m
+                JOIN seasons s ON m.event_id = s.event_id
+                JOIN teams_matches tm ON tm.match_id = m.match_id
+                JOIN teams_matches opp ON opp.match_id = m.match_id AND opp.team_id != tm.team_id
+                WHERE tm.team_id = %s AND s.season_number = %s
+            ),
+            map_counts AS (
+                SELECT match_id, COUNT(DISTINCT match_round) AS map_count FROM maps GROUP BY match_id
+            ),
+            map_scores AS (
+                SELECT match_id, team_id, SUM(COALESCE(team_win, 0)) AS win_count
+                FROM teams_maps
+                GROUP BY match_id, team_id
+            ),
+            bo1_scores AS (
+                SELECT match_id, score FROM maps WHERE match_round = 1
+            ),
+            match_maps AS (
+                SELECT match_id, ARRAY_AGG(map ORDER BY match_round) AS maps_played
+                FROM maps
+                GROUP BY match_id
+            )
+            SELECT
+                t.season_number,
+                t.our_id AS team_id,
+                t.match_id,
+                t.match_time,
+                t.status,
+                t.opp_id,
+                t.opp_name,
+                t.opp_avatar,
+                CASE
+                    WHEN t.status = 'FINISHED' THEN
+                        CASE
+                            WHEN t.our_id = t.winner_id THEN 'W'
+                            ELSE 'L'
+                        END
+                    ELSE NULL
+                END AS result,
+                COALESCE(mc.map_count, 1) AS map_count,
+                COALESCE(ms.win_count, 0) AS our_score,
+                COALESCE(ms_opp.win_count, 0) AS opp_score,
+                bs.score AS bo1_score,
+                mm.maps_played
+            FROM team_matches t
+            LEFT JOIN map_counts mc ON t.match_id = mc.match_id
+            LEFT JOIN map_scores ms ON t.match_id = ms.match_id AND ms.team_id = t.our_id
+            LEFT JOIN map_scores ms_opp ON t.match_id = ms_opp.match_id AND ms_opp.team_id = t.opp_id
+            LEFT JOIN bo1_scores bs ON t.match_id = bs.match_id
+            LEFT JOIN match_maps mm ON t.match_id = mm.match_id
+            
+            ORDER BY t.season_number, t.our_id, t.match_time DESC
+        """
+        
+        cursor.execute(query, (team_id, szn_number))
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+
+        # Convert to list of dicts
+        matches = [dict(zip(columns, row)) for row in rows]
+            
+        recent_matches = []
+        upcoming_matches = []
+        
+        for match in matches:
+            if match.get('status', '') == "FINISHED":
+                if match['our_score'] == 0 and match['opp_score'] == 0:
+                    score = "FFW" if match['result'] == "W" else "FFL"
+                elif match['map_count'] == 1 and match['bo1_score']:
+                    score = match['bo1_score']
+                else:
+                    score = f"{int(match['our_score'])}/{int(match['opp_score'])}"
+
+                recent_matches.append({
+                    'match_id': match['match_id'],
+                    'result': match['result'],
+                    'opponent_id': match['opp_id'],
+                    'opponent': match['opp_name'],
+                    'opponent_avatar': match['opp_avatar'],
+                    'score': score,
+                    'match_time': int(match['match_time']) if pd.notna(match['match_time']) else 0,
+                    'maps_played': match['maps_played'],
+                })
+            else:  # Upcoming matches
+                upcoming_matches.append({
+                    'match_id': match['match_id'],
+                    'opponent_id': match['opp_id'],
+                    'opponent': match['opp_name'],
+                    'opponent_avatar': match['opp_avatar'],
+                    'match_time': int(match['match_time'])
+                })
+
+        recent_matches.sort(key=lambda x: x['match_time'])
+        upcoming_matches.sort(key=lambda x: x['match_time'])
+
+        total_match_limit = 10
+        half_limit = total_match_limit // 2
+
+        # Start with half-limit for each
+        recent_slots = min(len(recent_matches), half_limit)
+        upcoming_slots = min(len(upcoming_matches), half_limit)
+
+        # Distribute any remaining slots dynamically
+        remaining = total_match_limit - (recent_slots + upcoming_slots)
+        recent_slots += min(len(recent_matches) - recent_slots, remaining)
+        remaining -= min(len(recent_matches) - recent_slots, remaining)
+        upcoming_slots += min(len(upcoming_matches) - upcoming_slots, remaining)
+
+        # Slice lists
+        recent_matches = recent_matches[-recent_slots:]
+        upcoming_matches = upcoming_matches[:upcoming_slots]
+        
+        return recent_matches, upcoming_matches
+        
+    except Exception as e:
+        function_logger.error(f"Error gathering ESEA team matches: {e}")
+        return [], []
+    finally:
+        close_database(db)
+    
+def gather_esea_team_map_stats(team_id, szn_number) -> list:
+    db, cursor = start_database()
+    try:
+        # Gather map pool from events
+        cursor.execute("""
+            SELECT 
+                e.maps 
+            FROM events e
+            LEFT JOIN seasons s ON e.event_id = s.event_id
+            WHERE s.season_number = %s
+        """, (szn_number,))
+        rows = cursor.fetchall()
+        map_pool = []
+        for row in rows:
+            if row[0]:
+                try:
+                    parsed = row[0]
+                    if isinstance(parsed, list):
+                        for map_name in parsed:
+                            if map_name not in map_pool:
+                                map_pool.append(map_name)
+                except Exception:
+                    continue
+                
+        # Gather team map stats
+        cursor.execute("""
+            SELECT
+                tm.team_id,
+                tm.team_win,
+                ma.map
+            FROM teams_maps tm
+            LEFT JOIN maps ma ON ma.match_id = tm.match_id AND ma.match_round = tm.match_round
+            LEFT JOIN matches m ON tm.match_id = m.match_id
+            INNER JOIN seasons s ON m.event_id = s.event_id
+            WHERE tm.team_id = %s AND s.season_number = %s
+        """, (team_id, szn_number))
+
+        map_rows = cursor.fetchall()
+        df_team_maps = pd.DataFrame(map_rows, columns=[desc[0] for desc in cursor.description])
+                
+        # Calculate stats per map
+        map_stats_dict = {}
+        if not df_team_maps.empty:
+            df_team_maps = df_team_maps[df_team_maps["map"].notna()]  # drop nulls just in case
+            map_group = df_team_maps.groupby("map")
+            for map_name, group in map_group:
+                played = len(group)
+                won = group["team_win"].sum()
+                winrate = round((won / played) * 100, 1) if played > 0 else 0
+                map_stats_dict[map_name] = {
+                    "map_name": map_name,
+                    "played": played,
+                    "won": int(won),
+                    "winrate": winrate
+                }
+
+        # Ensure all maps from pool exist in final output
+        final_map_stats = []
+        for map_name in map_pool:
+            stats = map_stats_dict.get(map_name, {
+                "map_name": map_name,
+                "played": 0,
+                "won": 0,
+                "winrate": 0.0
+            })
+            final_map_stats.append(stats)
+
+        return final_map_stats
+    except Exception as e:
+        function_logger.error(f"Error gathering ESEA map stats: {e}")
+        return []
+    
+    finally:
+        close_database(db)
+
+def gather_esea_team_player_stats(team_id, szn_number) -> list:
+    db, cursor = start_database()
+    try:          
+        cursor.execute("""
+            SELECT
+                ps.player_id,
+                p.player_name,
+                p.avatar,
+                COALESCE(pc.country, p.country) AS country,
+
+                COUNT(DISTINCT CONCAT(ps.match_id, '-', ps.match_round)) AS maps_played,
+
+                ROUND(AVG(ps.kills)::numeric, 0) AS kills,
+                ROUND(AVG(ps.hltv)::numeric, 2) AS hltv,
+                ROUND(SUM(ps.headshots)::numeric * 100.0 / NULLIF(SUM(ps.kills), 0), 0) AS headshots_percent,
+                ROUND(AVG(ps.adr)::numeric, 0) AS adr,
+                SUM(ps.knife_kills) AS knife_kills,
+                SUM(ps.penta_kills) AS penta_kills,
+                SUM(ps.zeus_kills) AS zeus_kills
+
+            FROM players_stats ps
+            JOIN matches m ON ps.match_id = m.match_id
+            LEFT JOIN players p ON ps.player_id = p.player_id
+            LEFT JOIN players_country pc ON p.player_id = pc.player_id
+            JOIN teams_benelux tb ON ps.team_id = tb.team_id AND m.event_id = tb.event_id
+            JOIN seasons s ON m.event_id = s.event_id
+
+            WHERE tb.team_id = %s AND s.season_number = %s
+
+            GROUP BY
+                ps.player_id,
+                p.player_name,
+                p.avatar,
+                COALESCE(pc.country, p.country)
+
+            ORDER BY
+                maps_played DESC,
+                hltv DESC,
+                headshots_percent DESC,
+                adr DESC
+        """, (team_id, szn_number))
+        
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        player_stats = [dict(zip(columns, row)) for row in rows]
+        
+        return player_stats
+
+    except Exception as e:
+        function_logger.error(f"Error gathering ESEA team player stats: {e}")
+        return []
+    
+    finally:
+        close_database(db)
+        
 # =============================
 #   Stats Page
 # =============================
