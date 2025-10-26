@@ -35,3 +35,27 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    function refreshMatches() {
+      console.log('Refreshing matches...');
+      fetch('/esea/matches')
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('matches-sidebar').innerHTML = html;
+        })
+        .catch(err => console.error('Error fetching matches:', err));
+    }
+
+    socket.on('match_update', (data) => {
+      console.log('Received match update:', data);
+      // Call your refresh function
+      refreshMatches();
+    });
+
+    // Initial load
+    refreshMatches();
+
+  });
+</script>
