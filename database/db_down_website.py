@@ -1027,7 +1027,7 @@ def gather_esea_team_player_stats(team_id, szn_number) -> list:
 
                 COUNT(DISTINCT CONCAT(ps.match_id, '-', ps.match_round)) AS maps_played,
 
-                ROUND(AVG(ps.kills)::numeric, 0) AS kills,
+                ROUND(SUM(ps.kills)::numeric * 1.0 / NULLIF(SUM(ps.deaths), 0), 2) AS k_d_ratio,
                 ROUND(AVG(ps.hltv)::numeric, 2) AS hltv,
                 ROUND(SUM(ps.headshots)::numeric * 100.0 / NULLIF(SUM(ps.kills), 0), 0) AS headshots_percent,
                 ROUND(AVG(ps.adr)::numeric, 0) AS adr,
