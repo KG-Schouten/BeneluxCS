@@ -138,7 +138,7 @@ def gather_current_streams() -> list:
                 SELECT
                     tm.match_id,
                     tm.team_id,
-                    m.match_time,
+                    m.status,
                     m.event_id,
                     tb.players_main,
                     tb.players_sub,
@@ -146,7 +146,7 @@ def gather_current_streams() -> list:
                 FROM teams_matches tm
                 LEFT JOIN matches m ON tm.match_id = m.match_id
                 INNER JOIN teams_benelux tb ON tm.team_id = tb.team_id AND m.event_id = tb.event_id
-                WHERE m.match_time BETWEEN %s AND %s
+                WHERE m.status IN ('VOTING', 'ONGOING', 'READY')
             """
             
             cursor.execute(query, (before, after))
