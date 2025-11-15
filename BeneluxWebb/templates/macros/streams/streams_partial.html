@@ -11,6 +11,8 @@
                         {% if stream['streamer_type'] %}
                             {% if "team" in stream['streamer_type'] or "esea" in stream['streamer_type'] %}
                                 <img src="{{ url_for('static', filename='img/esea/esea_logo.png') }}" alt="Team Stream" class="twitch-team-icon"/>
+                            {% elif "caster" in stream['streamer_type'] %}
+                                <i class="bi bi-mic-fill"></i>
                             {% else %}
                                 <i class="bi bi-twitch"></i>
                             {% endif %}
